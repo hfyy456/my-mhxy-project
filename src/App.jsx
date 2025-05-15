@@ -201,32 +201,11 @@ const App = () => {
         isOpen={isResultRecordModalOpen}
         onClose={closeResultRecord}
       />
-      <div
-        id="skillCatalogModal"
-        className={`fixed inset-0 flex items-center justify-center z-50 bg-black/50 ${
-          isSkillCatalogModalOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        } transition-opacity duration-300`}
-      >
-        <div
-          className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
-          isSkillCatalogModalOpen ? 'scale-100' : 'scale-95'
-        } transition-transform duration-300"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-dark">技能图鉴</h3>
-            <button
-              id="closeSkillCatalogBtn"
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-              onClick={closeSkillCatalogModal}
-            >
-              <i className="fa-solid fa-times"></i>
-            </button>
-          </div>
-          <SkillCatalog />
-        </div>
-      </div>
+      <SkillCatalog
+        isOpen={isSkillCatalogModalOpen}
+        onClose={closeSkillCatalogModal}
+      />
+
       <div
         id="petCatalogModal"
         className={`fixed inset-0 flex items-center justify-center z-50 bg-black/50 ${
