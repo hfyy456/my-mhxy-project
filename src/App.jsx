@@ -205,25 +205,10 @@ const App = () => {
         isOpen={isSkillCatalogModalOpen}
         onClose={closeSkillCatalogModal}
       />
-
-      <div
-        id="petCatalogModal"
-        className={`fixed inset-0 flex items-center justify-center z-50 bg-black/50 ${
-          isPetCatalogModalOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        } transition-opacity duration-300`}
-      >
-        <div
-          className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
-          isPetCatalogModalOpen ? 'scale-100' : 'scale-95'
-        } transition-transform duration-300"
-        >
-          <div className="flex justify-between items-center mb-6">
-            {/* 省略部分代码 */}
-          </div>
-        </div>
-      </div>
+      <PetCatalog
+        isOpen={isPetCatalogModalOpen}
+        onClose={closePetCatalogModal}
+      />
       <ConfirmDialog
         isOpen={isConfirmDialogOpen}
         onConfirm={() => handleConfirmReplaceSkill(true)}
