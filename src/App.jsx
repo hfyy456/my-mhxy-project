@@ -232,20 +232,20 @@ const App = () => {
       <main className="game-panel rounded-xl shadow-lg p-6 md:p-8">
         <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 shadow-lg">
           <h2 className="text-2xl font-bold text-dark mb-4 flex items-center">
-            <i className="fa-solid fa-paw text-primary mr-2" />
+            <i className="fa-solid fa-paw text-emerald-500 mr-2" />
           </h2>
           <SummonInfo summon={summon} updateSummonInfo={() => {}} />
           <div className="flex justify-center mt-8 gap-4">
             <button
               id="refineBtn"
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center"
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center"
               onClick={refineMonster}
             >
               <i className="fa-solid fa-flask mr-2"></i> 炼妖
             </button>
             <button
               id="bookBtn"
-              className="px-6 py-3 bg-secondary hover:bg-secondary/90 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary/50 flex items-center"
+              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-400 flex items-center"
               onClick={bookSkill}
             >
               <i className="fa-solid fa-book mr-2"></i> 打书
@@ -313,9 +313,9 @@ const App = () => {
         } transition-opacity duration-300`}
       >
         <div
-          className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
-          isSkillCatalogModalOpen ? 'scale-100' : 'scale-95'
-        } transition-transform duration-300"
+          className={`bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
+            isSkillCatalogModalOpen ? 'scale-100' : 'scale-95'
+          } transition-transform duration-300`}
         >
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-dark">技能图鉴</h3>
@@ -339,9 +339,9 @@ const App = () => {
         } transition-opacity duration-300`}
       >
         <div
-          className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
-          isPetCatalogModalOpen ? 'scale-100' : 'scale-95'
-        } transition-transform duration-300"
+          className={`bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto transform ${
+            isPetCatalogModalOpen ? 'scale-100' : 'scale-95'
+          } transition-transform duration-300`}
         >
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-dark">宠物图鉴</h3>
