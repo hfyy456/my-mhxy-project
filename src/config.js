@@ -1,0 +1,520 @@
+// 宠物配置
+export const petConfig = {
+  幽灵: {
+    type: "法攻",
+    color: "blue-500",
+    attributeRanges: {
+      attack: [100, 300],
+      defense: [50, 150],
+      speed: [150, 300],
+      hp: [600, 900],
+    },
+    initialSkills: ["高级法术暴击", "高级敏捷", "高级感知", "高级魔之心"],
+  },
+  持国巡守: {
+    type: "物攻",
+    color: "red-500",
+    attributeRanges: {
+      attack: [300, 500],
+      defense: [100, 200],
+      speed: [100, 200],
+      hp: [500, 800],
+    },
+    initialSkills: ["高级必杀", "高级连击", "高级偷袭", "高级强力"],
+  },
+  雷鸟人: {
+    type: "速度",
+    color: "yellow-500",
+    attributeRanges: {
+      attack: [200, 300],
+      defense: [80, 150],
+      speed: [250, 400],
+      hp: [400, 700],
+    },
+    initialSkills: ["高级敏捷", "高级偷袭", "高级感知", "高级幸运"],
+  },
+  吸血鬼: {
+    type: "生命",
+    color: "green-500",
+    attributeRanges: {
+      attack: [100, 200],
+      defense: [200, 300],
+      speed: [80, 150],
+      hp: [800, 1200],
+    },
+    initialSkills: ["高级神佑复生", "高级隐身", "高级反震", "高级防御"],
+  },
+  // 新增召唤兽
+  机关鸟: {
+    type: "法攻",
+    color: "orange-500",
+    attributeRanges: {
+      attack: [200, 400],
+      defense: [100, 200],
+      speed: [200, 350],
+      hp: [500, 800],
+    },
+    initialSkills: ["高级法术连击", "高级魔之心", "高级敏捷"],
+  },
+  猫灵: {
+    type: "物攻",
+    color: "pink-500",
+    attributeRanges: {
+      attack: [350, 550],
+      defense: [120, 220],
+      speed: [180, 280],
+      hp: [550, 850],
+    },
+    initialSkills: ["高级必杀", "高级偷袭", "高级夜战"],
+  },
+  狂豹: {
+    type: "物攻",
+    color: "brown-500",
+    attributeRanges: {
+      attack: [320, 520],
+      defense: [110, 210],
+      speed: [160, 260],
+      hp: [520, 820],
+    },
+    initialSkills: ["高级强力", "高级偷袭", "高级连击"],
+  },
+  混沌兽: {
+    type: "法攻",
+    color: "indigo-500",
+    attributeRanges: {
+      attack: [220, 420],
+      defense: [120, 220],
+      speed: [180, 330],
+      hp: [550, 850],
+    },
+    initialSkills: ["高级法术暴击", "高级魔之心", "高级法术波动"],
+  },
+  夜叉: {
+    type: "物攻",
+    color: "cyan-500",
+    attributeRanges: {
+      attack: [330, 530],
+      defense: [130, 230],
+      speed: [170, 270],
+      hp: [530, 830],
+    },
+    initialSkills: ["高级必杀", "高级偷袭", "高级夜战"],
+  },
+  蛟龙: {
+    type: "法攻",
+    color: "teal-500",
+    attributeRanges: {
+      attack: [210, 410],
+      defense: [100, 200],
+      speed: [190, 340],
+      hp: [540, 840],
+    },
+    initialSkills: ["高级法术连击", "高级魔之心", "高级水漫金山"],
+  },
+  凤凰: {
+    type: "法攻",
+    color: "orange-600",
+    attributeRanges: {
+      attack: [230, 430],
+      defense: [110, 210],
+      speed: [200, 360],
+      hp: [560, 860],
+    },
+    initialSkills: ["高级法术暴击", "高级魔之心", "高级烈火"],
+  },
+  雾中仙: {
+    type: "辅助",
+    color: "purple-600",
+    attributeRanges: {
+      attack: [120, 220],
+      defense: [150, 250],
+      speed: [140, 240],
+      hp: [600, 900],
+    },
+    initialSkills: ["高级法术防御", "高级幸运", "高级反震"],
+  },
+  灵鹤: {
+    type: "法攻",
+    color: "blue-600",
+    attributeRanges: {
+      attack: [240, 440],
+      defense: [120, 220],
+      speed: [210, 370],
+      hp: [570, 870],
+    },
+    initialSkills: ["高级法术暴击", "高级魔之心", "高级泰山压顶"],
+  },
+  星灵仙子: {
+    type: "法攻",
+    color: "pink-600",
+    attributeRanges: {
+      attack: [250, 450],
+      defense: [130, 230],
+      speed: [220, 380],
+      hp: [580, 880],
+    },
+    initialSkills: ["高级法术连击", "高级魔之心", "高级奔雷咒"],
+  },
+  大力金刚: {
+    type: "物攻",
+    color: "red-600",
+    attributeRanges: {
+      attack: [360, 560],
+      defense: [140, 240],
+      speed: [150, 250],
+      hp: [590, 890],
+    },
+    initialSkills: ["高级必杀", "高级强力", "高级偷袭"],
+  },
+  律法女娲: {
+    type: "物攻",
+    color: "brown-600",
+    attributeRanges: {
+      attack: [340, 540],
+      defense: [130, 230],
+      speed: [160, 260],
+      hp: [570, 870],
+    },
+    initialSkills: ["高级必杀", "高级强力", "高级夜战"],
+  },
+  如意仙子: {
+    type: "法攻",
+    color: "indigo-600",
+    attributeRanges: {
+      attack: [260, 460],
+      defense: [140, 240],
+      speed: [230, 390],
+      hp: [590, 890],
+    },
+    initialSkills: ["高级法术暴击", "高级魔之心", "高级水攻"],
+  },
+  踏云兽: {
+    type: "物攻",
+    color: "cyan-600",
+    attributeRanges: {
+      attack: [350, 550],
+      defense: [150, 250],
+      speed: [170, 270],
+      hp: [600, 900],
+    },
+    initialSkills: ["高级必杀", "高级强力", "高级偷袭"],
+  },
+  巨蛙: {
+    type: "物攻",
+    color: "green-600",
+    attributeRanges: {
+      attack: [150, 250],
+      defense: [80, 180],
+      speed: [120, 220],
+      hp: [400, 700],
+    },
+    initialSkills: ["高级偷袭", "高级夜战", "高级反击"],
+  },
+  大海龟: {
+    type: "防御",
+    color: "gray-600",
+    attributeRanges: {
+      attack: [100, 200],
+      defense: [200, 300],
+      speed: [60, 160],
+      hp: [700, 1000],
+    },
+    initialSkills: ["高级防御", "高级反震", "高级神佑复生"],
+  },
+  护卫: {
+    type: "物攻",
+    color: "blue-700",
+    attributeRanges: {
+      attack: [200, 300],
+      defense: [120, 220],
+      speed: [100, 200],
+      hp: [500, 800],
+    },
+    initialSkills: ["高级必杀", "高级强力", "高级偷袭"],
+  },
+  树怪: {
+    type: "法攻",
+    color: "green-700",
+    attributeRanges: {
+      attack: [180, 280],
+      defense: [100, 200],
+      speed: [120, 220],
+      hp: [450, 750],
+    },
+    initialSkills: ["高级法术暴击", "高级魔之心", "高级落岩"],
+  },
+  赌徒: {
+    type: "物攻",
+    color: "red-700",
+    attributeRanges: {
+      attack: [250, 350],
+      defense: [100, 200],
+      speed: [150, 250],
+      hp: [500, 800],
+    },
+    initialSkills: ["高级必杀", "高级连击", "高级偷袭"],
+  },
+  强盗: {
+    type: "物攻",
+    color: "brown-700",
+    attributeRanges: {
+      attack: [220, 320],
+      defense: [100, 200],
+      speed: [130, 230],
+      hp: [480, 780],
+    },
+    initialSkills: ["高级必杀", "高级强力", "高级夜战"],
+  },
+};
+
+// 技能配置
+export const skillConfig = [
+  {
+    name: "高级必杀",
+    description: "物理攻击时有几率造成双倍伤害",
+    type: "物理",
+    icon: "fa-fist-raised",
+    mode: "被动",
+  },
+  {
+    name: "高级连击",
+    description: "物理攻击时可能连续攻击两次",
+    type: "物理",
+    icon: "fa-strikethrough",
+    mode: "被动",
+  },
+  {
+    name: "高级法术暴击",
+    description: "法术攻击时有几率造成双倍伤害",
+    type: "法术",
+    icon: "fa-bolt",
+    mode: "被动",
+  },
+  {
+    name: "高级反震",
+    description: "受到物理攻击时有几率反弹伤害",
+    type: "防御",
+    icon: "fa-shield-alt",
+    mode: "被动",
+  },
+  {
+    name: "高级感知",
+    description: "可以感知到隐身的单位",
+    type: "辅助",
+    icon: "fa-eye",
+    mode: "被动",
+  },
+  {
+    name: "高级偷袭",
+    description: "物理攻击时不会受到反击",
+    type: "物理",
+    icon: "fa-dagger",
+    mode: "被动",
+  },
+  {
+    name: "高级神佑复生",
+    description: "战斗中死亡时有几率复活",
+    type: "生存",
+    icon: "fa-life-ring",
+    mode: "被动",
+  },
+  {
+    name: "高级隐身",
+    description: "可以隐藏自己的身形",
+    type: "辅助",
+    icon: "fa-moon",
+    mode: "主动",
+  },
+  {
+    name: "高级魔之心",
+    description: "增加法术伤害",
+    type: "法术",
+    icon: "fa-fire",
+    mode: "被动",
+  },
+  {
+    name: "高级敏捷",
+    description: "提升自身速度",
+    type: "速度",
+    icon: "fa-running",
+    mode: "被动",
+  },
+  {
+    name: "高级幸运",
+    description: "增加躲避暴击的几率",
+    type: "防御",
+    icon: "fa-four-leaf-clover",
+    mode: "被动",
+  },
+  {
+    name: "高级强力",
+    description: "增加物理攻击伤害",
+    type: "物理",
+    icon: "fa-bullseye",
+    mode: "被动",
+  },
+  {
+    name: "高级法术连击",
+    description: "法术攻击时可能连续攻击两次",
+    type: "法术",
+    icon: "fa-bolt-lightning",
+    mode: "被动",
+  },
+  {
+    name: "高级夜战",
+    description: "夜间战斗能力增强",
+    type: "物理",
+    icon: "fa-moon-stars",
+    mode: "被动",
+  },
+  {
+    name: "高级法术波动",
+    description: "法术伤害在一定范围内波动",
+    type: "法术",
+    icon: "fa-wave-square",
+    mode: "被动",
+  },
+  {
+    name: "高级水漫金山",
+    description: "施展水属性法术攻击多个目标",
+    type: "法术",
+    icon: "fa-water",
+    mode: "主动",
+  },
+  {
+    name: "高级烈火",
+    description: "施展火属性法术攻击目标",
+    type: "法术",
+    icon: "fa-fire-flame-curved",
+    mode: "主动",
+  },
+  {
+    name: "高级法术防御",
+    description: "增加法术防御能力",
+    type: "防御",
+    icon: "fa-shield-magic",
+    mode: "被动",
+  },
+  {
+    name: "高级泰山压顶",
+    description: "施展土属性法术攻击目标",
+    type: "法术",
+    icon: "fa-mountain",
+    mode: "主动",
+  },
+  {
+    name: "高级奔雷咒",
+    description: "施展雷属性法术攻击目标",
+    type: "法术",
+    icon: "fa-bolt-circle",
+    mode: "主动",
+  },
+  {
+    name: "高级反击",
+    description: "受到物理攻击时有几率反击对方",
+    type: "物理",
+    icon: "fa-arrow-rotate-left",
+    mode: "被动",
+  },
+  {
+    name: "高级落岩",
+    description: "施展土属性法术攻击目标",
+    type: "法术",
+    icon: "fa-rock",
+    mode: "主动",
+  },
+  {
+    name: "高级水攻",
+    description: "施展水属性法术攻击目标",
+    type: "法术",
+    icon: "fa-droplet",
+    mode: "主动",
+  },
+  {
+    name: "高级感知强化",
+    description: "增强感知隐身单位的能力",
+    type: "辅助",
+    icon: "fa-eye-dropper",
+    mode: "被动",
+  },
+  {
+    name: "高级隐身强化",
+    description: "延长隐身持续时间",
+    type: "辅助",
+    icon: "fa-moon-stars",
+    mode: "被动",
+  },
+  {
+    name: "高级神佑强化",
+    description: "提高神佑复生的触发几率",
+    type: "生存",
+    icon: "fa-life-ring",
+    mode: "被动",
+  },
+  {
+    name: "高级魔之心强化",
+    description: "进一步增加法术伤害",
+    type: "法术",
+    icon: "fa-fire",
+    mode: "被动",
+  },
+  {
+    name: "高级敏捷强化",
+    description: "大幅提升自身速度",
+    type: "速度",
+    icon: "fa-running",
+    mode: "被动",
+  },
+  {
+    name: "高级幸运强化",
+    description: "极大增加躲避暴击的几率",
+    type: "防御",
+    icon: "fa-four-leaf-clover",
+    mode: "被动",
+  },
+  {
+    name: "高级强力强化",
+    description: "显著增加物理攻击伤害",
+    type: "物理",
+    icon: "fa-bullseye",
+    mode: "被动",
+  },
+  {
+    name: "高级必杀强化",
+    description: "提高必杀触发几率和伤害倍数",
+    type: "物理",
+    icon: "fa-fist-raised",
+    mode: "被动",
+  },
+  {
+    name: "高级连击强化",
+    description: "增加连击次数和触发几率",
+    type: "物理",
+    icon: "fa-strikethrough",
+    mode: "被动",
+  },
+];
+
+// 技能类型配置
+export const skillTypeConfig = {
+  物理: { color: "red-500", icon: "fa-fist-raised" },
+  法术: { color: "blue-500", icon: "fa-bolt" },
+  防御: { color: "green-500", icon: "fa-shield-alt" },
+  辅助: { color: "purple-500", icon: "fa-hand-holding-heart" },
+  生存: { color: "yellow-500", icon: "fa-life-ring" },
+  速度: { color: "teal-500", icon: "fa-running" },
+};
+
+// 品质配置
+export const qualityConfig = {
+  qualities: ["普通", "优秀", "精良", "卓越", "完美"],
+  colors: ["gray-500", "green-500", "blue-500", "purple-500", "yellow-500"],
+  attributeMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
+};
+
+// 概率配置
+export const probabilityConfig = {
+  bookSuccessRate: 0.6, // 打书成功率
+  skillReplaceChance: 0.3, // 替换已有技能的概率
+  initialSkillCount: { min: 1, max: 3 }, // 初始技能数量范围
+};
