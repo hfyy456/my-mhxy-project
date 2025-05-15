@@ -1,28 +1,36 @@
-import React from 'react';
-import { Chart } from 'chart.js/auto';
-import { petConfig, skillConfig, qualityConfig, skillTypeConfig } from '../config';
+import React from "react";
+import { Chart } from "chart.js/auto";
+import {
+  petConfig,
+  skillConfig,
+  qualityConfig,
+  skillTypeConfig,
+} from "../config";
+const images = import.meta.glob("../assets/summons/*.png", { eager: true });
 
 const SummonInfo = ({ summon, updateSummonInfo }) => {
   const { name, quality, attack, defense, speed, hp, skillSet } = summon;
   const qualityIndex = qualityConfig.qualities.indexOf(quality);
   const qualityColor = qualityConfig.colors[qualityIndex];
-
+  const imageUrl =
+    images[`../assets/summons/${name}.png`]?.default ||
+    images["../assets/summons/default.png"].default;
   React.useEffect(() => {
-    const ctx = document.getElementById('radarChart').getContext('2d');
+    const ctx = document.getElementById("radarChart").getContext("2d");
     const radarChart = new Chart(ctx, {
-      type: 'radar',
+      type: "radar",
       data: {
-        labels: ['攻击', '防御', '速度', '气血'],
+        labels: ["攻击", "防御", "速度", "气血"],
         datasets: [
           {
-            label: '属性值',
+            label: "属性值",
             data: [attack, defense, speed, hp],
-            backgroundColor: 'rgba(138, 43, 226, 0.2)',
-            borderColor: 'rgba(138, 43, 226, 1)',
-            pointBackgroundColor: 'rgba(138, 43, 226, 1)',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgba(138, 43, 226, 1)',
+            backgroundColor: "rgba(138, 43, 226, 0.2)",
+            borderColor: "rgba(138, 43, 226, 1)",
+            pointBackgroundColor: "rgba(138, 43, 226, 1)",
+            pointBorderColor: "#fff",
+            pointHoverBackgroundColor: "#fff",
+            pointHoverBorderColor: "rgba(138, 43, 226, 1)",
           },
         ],
       },
@@ -52,13 +60,14 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       <div className="md:col-span-1">
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-6 ">
           <img
-            id="petImage"
-            src={`./images/${name}.jpg`}
-            alt="召唤兽图片"
-            className="w-40 h-40 object-cover rounded-full border-2 border-primary shadow-lg"
-            // onError={(e) => (e.target.src = './images/default.jpg')}
+            className="w-60 h-60 object-cover border-2 border-primary shadow-lg"
+            src={imageUrl}
+            alt="召唤兽"
+            onError={(e) => {
+              e.target.src = images["../assets/summons/default.png"].default;
+            }}
           />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-2">
@@ -114,10 +123,10 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
                     const skillInfo = skillConfig.find((s) => s.name === skill);
                     const skillType = skillInfo.type;
                     const typeConfig = skillTypeConfig[skillType] || {
-                      color: 'gray-500',
-                      icon: 'fa-question',
+                      color: "gray-500",
+                      icon: "fa-question",
                     };
-                    const colorClass = typeConfig.color.replace('-500', '');
+                    const colorClass = typeConfig.color.replace("-500", "");
                     return (
                       <div key={i} className="relative">
                         <div
@@ -133,21 +142,25 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
                             {skillInfo.description}
                           </div>
                           <i
-                            className={`fa-solid ${skillInfo.icon || 'fa-paw'} text-${colorClass} mb-2 text-xl`}
+                            className={`fa-solid ${
+                              skillInfo.icon || "fa-paw"
+                            } text-${colorClass} mb-2 text-xl`}
                           ></i>
                           <span className="font-medium text-lg">{skill}</span>
-                          <span className="text-xs text-gray-500 mt-1">{skillType}</span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            {skillType}
+                          </span>
                         </div>
                       </div>
                     );
                   } else {
                     return (
                       <div key={i} className="relative">
-                        <div
-                          className="bg-gray-50 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center border border-dashed border-gray-200"
-                        >
+                        <div className="bg-gray-50 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center border border-dashed border-gray-200">
                           <i className="fa-solid fa-ban text-gray-300 text-xl"></i>
-                          <span className="text-xs text-gray-400 mt-1">空技能槽</span>
+                          <span className="text-xs text-gray-400 mt-1">
+                            空技能槽
+                          </span>
                         </div>
                       </div>
                     );
