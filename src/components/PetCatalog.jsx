@@ -24,22 +24,31 @@ const PetCatalog = ({ isOpen, onClose }) => {
                 {typeText[config.type]}
               </p>
               <div className="space-y-1 text-xs text-gray-500">
+                {/* 旧属性展示部分，可根据新属性系统删除 */}
                 <p>
-                  攻击: {config.attributeRanges.attack[0]}-
-                  {config.attributeRanges.attack[1]}
+                  体质: {config.basicAttributeRanges.constitution[0]}-
+                  {config.basicAttributeRanges.constitution[1]}
                 </p>
                 <p>
-                  防御: {config.attributeRanges.defense[0]}-
-                  {config.attributeRanges.defense[1]}
+                  力量: {config.basicAttributeRanges.strength[0]}-
+                  {config.basicAttributeRanges.strength[1]}
                 </p>
                 <p>
-                  速度: {config.attributeRanges.speed[0]}-
-                  {config.attributeRanges.speed[1]}
+                  敏捷: {config.basicAttributeRanges.agility[0]}-
+                  {config.basicAttributeRanges.agility[1]}
                 </p>
                 <p>
-                  气血: {config.attributeRanges.hp[0]}-
-                  {config.attributeRanges.hp[1]}
+                  智力: {config.basicAttributeRanges.intelligence[0]}-
+                  {config.basicAttributeRanges.intelligence[1]}
+                </p>{" "}
+                <p>
+                  幸运: {config.basicAttributeRanges.luck[0]}-
+                  {config.basicAttributeRanges.luck[1]}
                 </p>
+                {/* 新属性展示部分，可根据新属性系统修改 */}
+                {/* 示例：假设新属性为新攻击、新防御 */}
+                {/* <p>新攻击: {config.newAttributeRanges.newAttack[0]}-{config.newAttributeRanges.newAttack[1]}</p> */}
+                {/* <p>新防御: {config.newAttributeRanges.newDefense[0]}-{config.newAttributeRanges.newDefense[1]}</p> */}
                 <p className="mt-2 font-medium text-gray-700">初始技能:</p>
                 <div className="flex flex-wrap gap-1">
                   {config.initialSkills.slice(0, 3).map((skill) => (

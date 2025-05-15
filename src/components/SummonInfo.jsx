@@ -6,10 +6,25 @@ import {
   qualityConfig,
   skillTypeConfig,
 } from "../config";
+import {
+  calculateAttributesByLevel,
+  calculateDerivedAttributes,
+} from "../gameLogic";
 const images = import.meta.glob("../assets/summons/*.png", { eager: true });
 
 const SummonInfo = ({ summon, updateSummonInfo }) => {
-  const { name, quality, attack, defense, speed, hp, skillSet } = summon;
+  const { name, quality, basicAttributes, skillSet, level } = summon;
+  console.log(summon);
+  const updatedBasicAttributes = calculateAttributesByLevel(
+    name,
+    level,
+    basicAttributes
+  );
+  const derivedAttributes = calculateDerivedAttributes(
+    updatedBasicAttributes,
+    name,
+    level
+  );
   const qualityIndex = qualityConfig.qualities.indexOf(quality);
   const qualityColor = qualityConfig.colors[qualityIndex];
   const imageUrl =
@@ -20,11 +35,19 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
     const radarChart = new Chart(ctx, {
       type: "radar",
       data: {
-        labels: ["攻击", "防御", "速度", "气血"],
+        labels: ["物攻", "法攻", "法抗", "物抗", "速度", "气血", "法力"],
         datasets: [
           {
             label: "属性值",
-            data: [attack, defense, speed, hp],
+            data: [
+              derivedAttributes.physicalAttack,
+              derivedAttributes.magicalAttack,
+              derivedAttributes.magicalDefense,
+              derivedAttributes.physicalDefense,
+              derivedAttributes.speed,
+              derivedAttributes.hp,
+              derivedAttributes.mp,
+            ],
             backgroundColor: "rgba(138, 43, 226, 0.2)",
             borderColor: "rgba(138, 43, 226, 1)",
             pointBackgroundColor: "rgba(138, 43, 226, 1)",
@@ -37,26 +60,26 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
       options: {
         scales: {
           r: {
-            angleLines: {
-              display: true,
-            },
+            angleLines: { display: true },
             suggestedMin: 0,
             suggestedMax: 500,
           },
         },
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
+        plugins: { legend: { display: false } },
       },
     });
-
     return () => {
       radarChart.destroy();
     };
-  }, [attack, defense, speed, hp]);
-
+  }, [
+    derivedAttributes.physicalAttack,
+    derivedAttributes.magicalAttack,
+    derivedAttributes.magicalDefense,
+    derivedAttributes.physicalDefense,
+    derivedAttributes.speed,
+    derivedAttributes.hp,
+    derivedAttributes.mp,
+  ]);
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       <div className="md:col-span-1">
@@ -73,6 +96,12 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
         <div className="grid grid-cols-2 gap-4 mb-2">
           <div className="bg-white/80 rounded-lg p-2 shadow-sm">
             <p className="text-gray-500 text-sm">名称</p>
+            <div className="bg-white/80 rounded-lg p-2 shadow-sm">
+              <p className="text-gray-500 text-sm">等级</p>
+              <p className="text-l font-bold text-primary">
+                {summon.level || 1}
+              </p>
+            </div>
             <p className="text-l font-bold text-primary">{name}</p>
           </div>
           <div className="bg-white/80 rounded-lg p-2 shadow-sm">
@@ -83,24 +112,98 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
         <div className="bg-white/80 rounded-lg p-4 shadow-sm mb-6">
           <h3 className="text-lg font-semibold text-dark mb-3 flex items-center">
             <i className="fa-solid fa-bolt text-yellow-500 mr-2"></i>
-            属性与属性分布
+            基础属性
           </h3>
           <ul className="space-y-2 mb-2">
             <li className="flex justify-between">
-              <span className="text-gray-600">攻击</span>
-              <span className="font-semibold">{attack}</span>
+              <span className="text-gray-600">体质</span>
+              <span className="font-semibold">
+                {updatedBasicAttributes.constitution}
+              </span>
             </li>
             <li className="flex justify-between">
-              <span className="text-gray-600">防御</span>
-              <span className="font-semibold">{defense}</span>
+              <span className="text-gray-600">力量</span>
+              <span className="font-semibold">
+                {updatedBasicAttributes.strength}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">敏捷</span>
+              <span className="font-semibold">
+                {updatedBasicAttributes.agility}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">智力</span>
+              <span className="font-semibold">
+                {updatedBasicAttributes.intelligence}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">幸运</span>
+              <span className="font-semibold">
+                {updatedBasicAttributes.luck}
+              </span>
+            </li>
+          </ul>
+          <h3 className="text-lg font-semibold text-dark mb-3 flex items-center">
+            <i className="fa-solid fa-star text-yellow-400 mr-2"></i>
+            衍生属性
+          </h3>
+          <ul className="space-y-2 mb-2">
+            <li className="flex justify-between">
+              <span className="text-gray-600">生命值</span>
+              <span className="font-semibold">{derivedAttributes.hp}</span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">法力值</span>
+              <span className="font-semibold">{derivedAttributes.mp}</span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">物攻</span>
+              <span className="font-semibold">
+                {derivedAttributes.physicalAttack}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">法攻</span>
+              <span className="font-semibold">
+                {derivedAttributes.magicalAttack}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">法抗</span>
+              <span className="font-semibold">
+                {derivedAttributes.magicalDefense}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">物抗</span>
+              <span className="font-semibold">
+                {derivedAttributes.physicalDefense}
+              </span>
             </li>
             <li className="flex justify-between">
               <span className="text-gray-600">速度</span>
-              <span className="font-semibold">{speed}</span>
+              <span className="font-semibold">{derivedAttributes.speed}</span>
             </li>
             <li className="flex justify-between">
-              <span className="text-gray-600">气血</span>
-              <span className="font-semibold">{hp}</span>
+              <span className="text-gray-600">暴击率</span>
+              <span className="font-semibold">
+                {derivedAttributes.critRate}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">暴击伤害</span>
+              <span className="font-semibold">
+                {derivedAttributes.critDamage}
+              </span>
+            </li>
+            <li className="flex justify-between">
+              <span className="text-gray-600">闪避率</span>
+              <span className="font-semibold">
+                {derivedAttributes.dodgeRate}
+              </span>
             </li>
           </ul>
           <div className="flex justify-center items-center h-[200px]">
@@ -115,66 +218,57 @@ const SummonInfo = ({ summon, updateSummonInfo }) => {
             (最多12个)
           </h3>
           <ul id="skills" className="space-y-2 h-full overflow-y-auto">
-            {skillSet.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3">
-                {Array.from({ length: 12 }).map((_, i) => {
-                  if (i < skillSet.length) {
-                    const skill = skillSet[i];
-                    const skillInfo = skillConfig.find((s) => s.name === skill);
-                    const skillType = skillInfo.type;
-                    const typeConfig = skillTypeConfig[skillType] || {
-                      color: "gray-500",
-                      icon: "fa-question",
-                    };
-                    const colorClass = typeConfig.color.replace("-500", "");
-                    return (
-                      <div key={i} className="relative">
+            <div className="grid grid-cols-3 gap-3">
+              {Array.from({ length: 12 }).map((_, i) => {
+                if (i < skillSet.length) {
+                  const skill = skillSet[i];
+                  const skillInfo = skillConfig.find((s) => s.name === skill);
+                  const skillType = skillInfo.type;
+                  const typeConfig = skillTypeConfig[skillType] || {
+                    color: "gray-500",
+                    icon: "fa-question",
+                  };
+                  const colorClass = typeConfig.color.replace("-500", "");
+                  return (
+                    <div key={i} className="relative">
+                      <div
+                        className="bg-gray-100 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center 
+                        hover:shadow-md transition-all duration-300 cursor-pointer 
+                        border-l-3 border-${colorClass}
+                        group"
+                      >
                         <div
-                          className="bg-gray-100 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center 
-                            hover:shadow-md transition-all duration-300 cursor-pointer 
-                            border-l-3 border-${colorClass}
-                            group"
+                          className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 
+                            group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 w-max"
                         >
-                          <div
-                            className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 
-                                group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 w-max"
-                          >
-                            {skillInfo.description}
-                          </div>
-                          <i
-                            className={`fa-solid ${
-                              skillInfo.icon || "fa-paw"
-                            } text-${colorClass} mb-2 text-xl`}
-                          ></i>
-                          <span className="font-medium text-lg">{skill}</span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {skillType}
-                          </span>
+                          {skillInfo.description}
                         </div>
+                        <i
+                          className={`fa-solid ${
+                            skillInfo.icon || "fa-paw"
+                          } text-${colorClass} mb-2 text-xl`}
+                        ></i>
+                        <span className="font-medium text-lg">{skill}</span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          {skillType}
+                        </span>
                       </div>
-                    );
-                  } else {
-                    return (
-                      <div key={i} className="relative">
-                        <div className="bg-gray-50 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center border border-dashed border-gray-200">
-                          <i className="fa-solid fa-ban text-gray-300 text-xl"></i>
-                          <span className="text-xs text-gray-400 mt-1">
-                            空技能槽
-                          </span>
-                        </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={i} className="relative">
+                      <div className="bg-gray-50 rounded-lg p-4 text-center h-full flex flex-col justify-center items-center border border-dashed border-gray-200">
+                        <i className="fa-solid fa-ban text-gray-300 text-xl"></i>
+                        <span className="text-xs text-gray-400 mt-1">
+                          空技能槽
+                        </span>
                       </div>
-                    );
-                  }
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-3">
-                  <i className="fa-solid fa-skull-crossbones text-gray-400 text-xl"></i>
-                </div>
-                <p className="text-gray-500 italic">该召唤兽暂无技能</p>
-              </div>
-            )}
+                    </div>
+                  );
+                }
+              })}
+            </div>
           </ul>
         </div>
       </div>

@@ -9,15 +9,8 @@ import ToastContainer from "./components/ToastContainer";
 import { refineMonster, bookSkill, confirmReplaceSkill } from "./gameLogic";
 
 const App = () => {
-  const [summon, setSummon] = useState({
-    name: "幽灵",
-    quality: "普通",
-    attack: 0,
-    defense: 0,
-    speed: 0,
-    hp: 0,
-    skillSet: [],
-  });
+  const { newSummon } = refineMonster();
+  const [summon, setSummon] = useState(newSummon);
   const [pendingSkill, setPendingSkill] = useState(null);
   const [historyList, setHistoryList] = useState([]);
   const [resultRecordList, setResultRecordList] = useState([]);

@@ -1,5 +1,10 @@
 // gameLogic.js
-import { petConfig, skillConfig, qualityConfig, probabilityConfig } from "./config";
+import {
+  petConfig,
+  skillConfig,
+  qualityConfig,
+  probabilityConfig,
+} from "./config";
 
 export const getRandomPet = () => {
   const pets = Object.values(petConfig);
@@ -20,27 +25,72 @@ export const getRandomSkill = () => {
   return skillConfig[Math.floor(Math.random() * skillConfig.length)].name;
 };
 
+// 衍生属性计算逻辑
+import { derivedAttributeConfig } from "./config";
+
+export const calculateDerivedAttributes = (basicAttributes, petName, level) => {
+  console.log(
+    "Calculating derived attributes for:",
+    petName,
+    "at level",
+    level
+  );
+
+  const derived = {};
+  for (const [attribute, config] of Object.entries(derivedAttributeConfig)) {
+    let value = 0;
+    for (const attr of config.attributes) {
+      value += Number(basicAttributes[attr] * config.multiplier);
+    }
+    if (["critRate", "critDamage", "dodgeRate"].includes(attribute)) {
+      value = parseFloat((value * 100).toFixed(1)) + "%";
+    } else {
+      value = Math.floor(value);
+    }
+    derived[attribute] = value;
+  }
+  return derived;
+};
+
+// 修改refineMonster函数
 export const refineMonster = () => {
   const pet = getRandomPet();
+  console.log(pet);
   const quality = getRandomQuality();
   const qualityIndex = qualityConfig.qualities.indexOf(quality);
   const multiplier = qualityConfig.attributeMultipliers[qualityIndex];
 
+  const basicAttributes = {
+    constitution: Math.floor(
+      getRandomAttribute(...pet.basicAttributeRanges.constitution) * multiplier
+    ),
+    strength: Math.floor(
+      getRandomAttribute(...pet.basicAttributeRanges.strength) * multiplier
+    ),
+    agility: Math.floor(
+      getRandomAttribute(...pet.basicAttributeRanges.agility) * multiplier
+    ),
+    intelligence: Math.floor(
+      getRandomAttribute(...pet.basicAttributeRanges.intelligence) * multiplier
+    ),
+    luck: Math.floor(
+      getRandomAttribute(...pet.basicAttributeRanges.luck) * multiplier
+    ),
+  };
+  const level = 100; // 初始等级为1
+
+  const derivedAttributes = calculateDerivedAttributes(
+    basicAttributes,
+    Object.keys(petConfig).find((key) => petConfig[key] === pet),
+    level
+  );
+
   const newSummon = {
     name: Object.keys(petConfig).find((key) => petConfig[key] === pet),
+    level: level, // 初始等级为1
     quality,
-    attack: Math.floor(
-      getRandomAttribute(...pet.attributeRanges.attack) * multiplier
-    ),
-    defense: Math.floor(
-      getRandomAttribute(...pet.attributeRanges.defense) * multiplier
-    ),
-    speed: Math.floor(
-      getRandomAttribute(...pet.attributeRanges.speed) * multiplier
-    ),
-    hp: Math.floor(
-      getRandomAttribute(...pet.attributeRanges.hp) * multiplier
-    ),
+    basicAttributes,
+    derivedAttributes,
     skillSet: [],
   };
 
@@ -48,9 +98,7 @@ export const refineMonster = () => {
     probabilityConfig.initialSkillCount.min,
     probabilityConfig.initialSkillCount.max
   );
-  const shuffledSkills = [...pet.initialSkills].sort(
-    () => 0.5 - Math.random()
-  );
+  const shuffledSkills = [...pet.initialSkills].sort(() => 0.5 - Math.random());
   newSummon.skillSet = shuffledSkills.slice(0, initialSkillCount);
 
   return {
@@ -58,10 +106,8 @@ export const refineMonster = () => {
     historyItem: {
       name: newSummon.name,
       quality: newSummon.quality,
-      attack: newSummon.attack,
-      defense: newSummon.defense,
-      speed: newSummon.speed,
-      hp: newSummon.hp,
+      basicAttributes: newSummon.basicAttributes,
+      derivedAttributes: newSummon.derivedAttributes,
       skills: [...newSummon.skillSet],
     },
     message: `炼妖成功！召唤兽 ${newSummon.name} (${newSummon.quality}) 生成完毕。`,
@@ -132,4 +178,38 @@ export const confirmReplaceSkill = (summon, pendingSkill) => {
     newSummon,
     message: `打书成功！技能“${replaced}”被“${pendingSkill}”覆盖。 (${skillInfo.description})`,
   };
+};
+
+/**
+ * 计算指定等级的基础属性
+ * @param {string} petName - 宠物名称
+ * @param {number} level - 目标等级
+ * @param {object} currentAttributes - 当前等级的基础属性
+ * @returns {object} - 指定等级的基础属性
+ */
+export const calculateAttributesByLevel = (
+  petName,
+  level,
+  currentAttributes
+) => {
+  const pet = petConfig[petName];
+  if (!pet) {
+    throw new Error("未找到该宠物的配置信息");
+  }
+
+  let attributes = { ...currentAttributes };
+  for (let i = 1; i < level; i++) {
+    for (const attr in attributes) {
+      if (
+        attributes.hasOwnProperty(attr) &&
+        pet.growthRates[attr] !== undefined
+      ) {
+        attributes[attr] = Math.floor(
+          attributes[attr] + attributes[attr] * (pet.growthRates[attr] * 0.04)
+        );
+      }
+    }
+  }
+
+  return attributes;
 };
