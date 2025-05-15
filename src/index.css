@@ -1,5 +1,10 @@
 /* src/index.css */
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
+
 @layer utilities {
   .content-auto {
     content-visibility: auto;
@@ -16,3 +21,44 @@
       0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 }
+:root {
+        --base-font-size: 10px; /* 初始基准值 */
+      }
+
+      @media (min-width: 640px) {
+        :root {
+          --base-font-size: 12px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        :root {
+          --base-font-size: 14px;
+        }
+      }
+
+      html {
+        font-size: var(--base-font-size);
+      }
+
+      /* 游戏视口样式 */
+      .game-viewport {
+        background-image: url("./images/game_bg.jpg"); /* 替换为你的游戏背景图片 */
+        background-size: cover;
+        background-position: center;
+        min-height: calc(100vh - 6rem); /* 考虑头部和页脚的高度 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center; /* 垂直居中主要内容 */
+        padding: 2rem;
+      }
+
+      .game-panel {
+        background-color: rgba(255, 255, 255, 0.8); /* 半透明背景 */
+        border-radius: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        padding: 2rem;
+        max-width: 90%;
+        width: 1200px; /* 固定主面板宽度以模拟视口 */
+      }
