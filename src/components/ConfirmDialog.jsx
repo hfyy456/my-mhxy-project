@@ -10,20 +10,19 @@ import CommonModal from "./CommonModal";
 const ConfirmDialog = ({ isOpen, onConfirm, onCancel }) => {
   return (
     <CommonModal isOpen={isOpen} onClose={onCancel} title="技能替换确认">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 transform scale-100 transition-transform duration-300">
-        <h3 className="text-xl font-bold text-dark mb-4">技能替换确认</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="max-w-md w-full mx-auto text-center">
+        <p className="text-gray-300 mb-6 text-base">
           当前召唤兽技能已满。是否替换一个技能？
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-4 mt-8">
           <button
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            className="px-4 py-2 border border-slate-600 rounded-lg hover:bg-slate-700 hover:text-gray-100 text-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500"
             onClick={onCancel}
           >
             否
           </button>
           <button
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 border border-purple-700 hover:border-purple-400 shadow-md hover:shadow-lg shadow-purple-500/30"
             onClick={onConfirm}
           >
             是

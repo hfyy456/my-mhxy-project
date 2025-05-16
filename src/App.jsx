@@ -1,213 +1,267 @@
-import React, { useState } from "react";
-import SummonInfo from "./components/SummonInfo";
-import SkillCatalog from "./components/SkillCatalog";
-import PetCatalog from "./components/PetCatalog";
-import HistoryModal from "./components/HistoryModal";
-import ResultRecordModal from "./components/ResultRecordModal";
-import ConfirmDialog from "./components/ConfirmDialog";
+import React, { useState, useEffect } from "react";
+import MainMenu from "./components/MainMenu";
+import SummonSystem from "./features/summon/components/SummonSystem";
+import { useGameState } from "./hooks/useGameState";
+import { useToast } from "./hooks/useToast";
+import { useModalState } from "./hooks/useModalState";
+import { useGameActions } from "./hooks/useGameActions";
 import ToastContainer from "./components/ToastContainer";
-import { refineMonster, bookSkill, confirmReplaceSkill } from "./gameLogic";
+import InventoryPanel from "./components/InventoryPanel";
+import Inventory from "./entities/Inventory";
+import { generateInitialEquipment } from "./gameLogic";
+import summonManagerInstance from "./managers/SummonManager";
 
 const App = () => {
-  const { newSummon } = refineMonster();
-  const [summon, setSummon] = useState(newSummon);
-  const [pendingSkill, setPendingSkill] = useState(null);
-  const [historyList, setHistoryList] = useState([]);
-  const [resultRecordList, setResultRecordList] = useState([]);
+  const [currentSystem, setCurrentSystem] = useState("main");
   const [toasts, setToasts] = useState([]);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isResultRecordModalOpen, setIsResultRecordModalOpen] = useState(false);
-  const [isSkillCatalogModalOpen, setIsSkillCatalogModalOpen] = useState(false);
-  const [isPetCatalogModalOpen, setIsPetCatalogModalOpen] = useState(false);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const { gameManager, summon, setSummon, historyList, resultRecordList } =
+    useGameState();
+  const { showResult } = useToast(toasts, setToasts, gameManager);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [inventory] = useState(new Inventory());
+  // 添加状态以持有背包数据的快照，用于触发UI更新
+  const [inventoryState, setInventoryState] = useState(inventory.getState());
 
-  const showResult = (message, type) => {
-    const now = new Date();
-    const timeString = now.toLocaleString();
-    let iconClass;
-    if (type === "success") {
-      iconClass = "fa-solid fa-check-circle text-green-500";
-    } else if (type === "error") {
-      iconClass = "fa-solid fa-times-circle text-red-500";
-    } else {
-      iconClass = "fa-solid fa-info-circle text-blue-500";
+  // 初始化背包及设置onChange回调
+  useEffect(() => {
+    // 生成5件随机装备并添加到背包
+    const initialEquipment = generateInitialEquipment(5);
+    initialEquipment.forEach((equipment) => {
+      const result = inventory.addItem({
+        ...equipment,
+        type: "equipment",
+      });
+      if (result.success) {
+        showResult(`获得装备：${equipment.name} (${equipment.quality})`);
+      }
+    });
+
+    // 设置 inventory 的 onChange 回调以更新UI
+    const handleInventoryChange = (newState) => {
+      setInventoryState(newState);
+      console.log("[App.jsx] Inventory changed, UI state updated.");
+    };
+    inventory.setOnChange(handleInventoryChange);
+
+    // 组件卸载时清理回调
+    return () => {
+      inventory.setOnChange(null);
+    };
+    // 注意：这里的依赖项。如果 showResult 或 inventory 实例本身会变，需要加入。
+    // 但 inventory 是 useState(new Inventory()) 创建的，通常不会变。
+    // showResult 来自 useToast，如果其依赖会变，也可能需要考虑。为简化，暂时只放 inventory。
+  }, [inventory]); // 依赖 inventory 实例，确保仅在 inventory 初始化后设置回调
+
+  // 添加调试日志
+  useEffect(() => {
+    console.log("[App] toasts updated:", toasts);
+  }, [toasts]);
+
+  const {
+    isHistoryModalOpen,
+    setIsHistoryModalOpen,
+    isResultRecordModalOpen,
+    setIsResultRecordModalOpen,
+    isSkillCatalogModalOpen,
+    setIsSkillCatalogModalOpen,
+    isPetCatalogModalOpen,
+    setIsPetCatalogModalOpen,
+    isConfirmDialogOpen,
+    setIsConfirmDialogOpen,
+    isMoreFeaturesOpen,
+    setIsMoreFeaturesOpen,
+  } = useModalState();
+
+  const {
+    handleRefineMonster: originalHandleRefineMonster,
+    handleBookSkill,
+    handleConfirmReplaceSkill,
+    handleLevelUp,
+    handleEquipItem: handleEquipItemFromActions,
+    handleAllocatePoint,
+    handleResetPoints,
+    handleOpenSummonSystem,
+    handleBackToMain,
+  } = useGameActions(gameManager, showResult, setSummon);
+
+  // 包装 handleRefineMonster 以添加日志记录
+  const handleRefineMonster = async () => {
+    // 调用原始的炼妖函数
+    const result = await originalHandleRefineMonster();
+    
+    // 打印所有召唤兽
+    const allSummons = summonManagerInstance.getAllSummonsAsArray();
+    console.log("当前所有召唤兽:", allSummons);
+    
+    // 如果原始函数有返回值，则返回它
+    return result;
+  };
+
+  const handleSystemChange = (system) => {
+    setCurrentSystem(system);
+  };
+
+  // 处理装备物品
+  const handleEquipItem = (inventoryItem) => {
+    if (!summon) {
+      showResult("请先选择一个召唤兽", "error");
+      return { success: false, message: "请先选择一个召唤兽" };
     }
 
-    const newToast = {
-      message,
-      iconClass,
-      timeString,
+    if (!inventoryItem || inventoryItem.itemType !== "equipment") {
+      showResult("无效的装备物品", "error");
+      return { success: false, message: "无效的装备物品" };
+    }
+
+    const equipmentEntity = inventoryItem.getEquipmentEntity();
+
+    if (!equipmentEntity) {
+      showResult("无法获取装备的详细信息", "error");
+      console.error(
+        "[App.jsx] Failed to get EquipmentEntity for InventoryItem:",
+        inventoryItem
+      );
+      return { success: false, message: "无法获取装备的详细信息" };
+    }
+
+    //  slotType 现在应该直接从 equipmentEntity 获取，因为它是装备本身的属性
+    const slotTypeToUse = equipmentEntity.slotType;
+    //  或者，如果 EquipmentEntity 实例没有直接存储 slotType （它应该从 baseConfig 获取），
+    //  我们也可以从 inventoryItem.slotType 获取（如果 InventoryItem 存储了它）
+    //  EquipmentEntity 从 baseConfig 中可以获取 category (即 slotType)
+    //  const slotTypeToUse = equipmentEntity.category; // EquipmentEntity 内部有 this.category (即 slotType)
+    //  确保 EquipmentEntity 有一个可访问的 slotType 或 category 属性。
+    //  当前 EquipmentEntity.js (line 15) sets this.category = category;
+
+    if (!slotTypeToUse) {
+      showResult("装备缺少类型信息", "error");
+      console.error(
+        "[App.jsx] EquipmentEntity is missing slotType/category:",
+        equipmentEntity
+      );
+      return { success: false, message: "装备缺少类型信息" };
+    }
+
+    try {
+      // gameManager (src/game/GameManager.js) equipItem(itemData, slotType)
+      // itemData is used to find itemIndex in summon's equipment list.
+      // We should pass the equipmentEntity itself, and GameManager will use its ID.
+      const result = gameManager.equipItem(equipmentEntity, slotTypeToUse);
+
+      if (result.success) {
+        showResult(result.message || "装备成功", "success");
+        // setSummon(result.updatedSummon); // GameManager不再返回updatedSummon，Summon实例是直接修改并通过事件更新
+
+        // 更新刚被装备上的物品在背包中的状态
+        inventoryItem.setEquipped(true, summon);
+        console.log(
+          `[App.jsx] InventoryItem for equipped entity ${equipmentEntity.id} (${inventoryItem.name}) marked as equipped.`
+        );
+
+        // 如果有旧物品被替换下来，更新其在背包中的状态
+        if (result.unequippedItemEntityId) {
+          const unequippedInventoryItem = inventory.findItemByEntityId(
+            result.unequippedItemEntityId
+          );
+          if (unequippedInventoryItem) {
+            unequippedInventoryItem.setEquipped(false, null);
+            console.log(
+              `[App.jsx] InventoryItem for unequipped entity ${result.unequippedItemEntityId} (${unequippedInventoryItem.name}) marked as unequipped.`
+            );
+          } else {
+            console.warn(
+              `[App.jsx] Failed to find InventoryItem in global inventory for UNequipped entity ID: ${result.unequippedItemEntityId}. This item might not be managed by the main inventory, or was an initial equipment not added to global inventory.`
+            );
+          }
+        }
+        // inventory.notifyChange(); // 移除：现在通过 setOnChange 自动处理UI更新
+
+        return {
+          success: true,
+          message: result.message,
+          equippedItemEntityId: result.equippedItemEntityId, // 与GameManager的返回保持一致
+          unequippedItemEntityId: result.unequippedItemEntityId,
+        };
+      } else {
+        showResult(result.message || "装备失败", "error");
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error("装备物品失败 (App.jsx):", error);
+      showResult("装备物品时发生意外错误", "error");
+      return { success: false, message: "装备物品时发生意外错误" };
+    }
+  };
+
+  // 禁用右键菜单
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
     };
 
-    setToasts((prev) => [...prev, newToast]);
-
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast !== newToast));
-    }, 3000);
-
-    setResultRecordList((prev) => [...prev, message]);
-  };
-
-  const handleRefineMonster = () => {
-    const { newSummon, historyItem, message } = refineMonster();
-    setHistoryList((prev) => [...prev, historyItem]);
-    setSummon(newSummon);
-    showResult(message, "success");
-  };
-
-  const handleBookSkill = () => {
-    const result = bookSkill(summon);
-    if (!result.success) {
-      showResult(result.message, "error");
-      return;
-    }
-
-    if (result.needConfirm) {
-      setPendingSkill(result.pendingSkill);
-      setIsConfirmDialogOpen(true);
-    } else {
-      setSummon(result.newSummon);
-      showResult(result.message, "success");
-    }
-  };
-
-  const handleConfirmReplaceSkill = (confirm) => {
-    setIsConfirmDialogOpen(false);
-
-    if (confirm && pendingSkill) {
-      const { newSummon, message } = confirmReplaceSkill(summon, pendingSkill);
-      setSummon(newSummon);
-      showResult(message, "success");
-    } else {
-      showResult("操作取消，未替换任何技能。", "info");
-    }
-
-    setPendingSkill(null);
-  };
-
-  const viewHistory = () => {
-    setIsHistoryModalOpen(true);
-  };
-
-  const closeHistory = () => {
-    setIsHistoryModalOpen(false);
-  };
-
-  const viewResultRecord = () => {
-    setIsResultRecordModalOpen(true);
-  };
-
-  const closeResultRecord = () => {
-    setIsResultRecordModalOpen(false);
-  };
-
-  const showSkillCatalogModal = () => {
-    setIsSkillCatalogModalOpen(true);
-  };
-
-  const closeSkillCatalogModal = () => {
-    setIsSkillCatalogModalOpen(false);
-  };
-
-  const showPetCatalogModal = () => {
-    setIsPetCatalogModalOpen(true);
-  };
-
-  const closePetCatalogModal = () => {
-    setIsPetCatalogModalOpen(false);
-  };
+    document.addEventListener("contextmenu", handleContextMenu);
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, []);
 
   return (
-    <div className="game-viewport">
-      <main className="game-panel rounded-xl shadow-lg p-6 md:p-8">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 shadow-lg">
-          <h2 className="text-2xl font-bold text-dark mb-4 flex items-center">
-            <i className="fa-solid fa-paw text-primary mr-2" />
-          </h2>
-          <SummonInfo summon={summon} updateSummonInfo={() => {}} />
-          <div className="flex justify-center mt-8 gap-4">
-            <button
-              id="refineBtn"
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center"
-              onClick={handleRefineMonster}
-            >
-              <i className="fa-solid fa-flask mr-2"></i> 炼妖
-            </button>
-            <button
-              id="bookBtn"
-              className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary/50 flex items-center"
-              onClick={handleBookSkill}
-            >
-              <i className="fa-solid fa-book mr-2"></i> 打书
-            </button>
-          </div>
-          <details className="mb-8">
-            <summary className="text-gray-600 hover:text-gray-800 cursor-pointer">
-              更多功能
-            </summary>
-            <div className="flex flex-wrap justify-center mt-4 gap-4">
-              <button
-                id="exportBtn"
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center text-sm"
-              >
-                <i className="fa-solid fa-download mr-2"></i> 导出
-              </button>
-              <button
-                id="historyBtn"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center text-sm"
-                onClick={viewHistory}
-              >
-                <i className="fa-solid fa-history mr-2"></i> 历史
-              </button>
-              <button
-                id="skillCatalogBtn"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center text-sm"
-                onClick={showSkillCatalogModal}
-              >
-                <i className="fa-solid fa-book-open mr-2"></i> 技能图鉴
-              </button>
-              <button
-                id="petCatalogBtn"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center text-sm"
-                onClick={showPetCatalogModal}
-              >
-                <i className="fa-solid fa-book-open mr-2"></i> 宠物图鉴
-              </button>
-              <button
-                id="resultRecordBtn"
-                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500 flex items-center text-sm"
-                onClick={viewResultRecord}
-              >
-                <i className="fa-solid fa-list mr-2"></i> 结果记录
-              </button>
-            </div>
-          </details>
-        </div>
-      </main>
-      <HistoryModal
-        historyList={historyList}
-        isOpen={isHistoryModalOpen}
-        onClose={closeHistory}
-      />
-      <ResultRecordModal
-        resultRecordList={resultRecordList}
-        isOpen={isResultRecordModalOpen}
-        onClose={closeResultRecord}
-      />
-      <SkillCatalog
-        isOpen={isSkillCatalogModalOpen}
-        onClose={closeSkillCatalogModal}
-      />
-      <PetCatalog
-        isOpen={isPetCatalogModalOpen}
-        onClose={closePetCatalogModal}
-      />
-      <ConfirmDialog
-        isOpen={isConfirmDialogOpen}
-        onConfirm={() => handleConfirmReplaceSkill(true)}
-        onCancel={() => handleConfirmReplaceSkill(false)}
-      />
-      <ToastContainer toasts={toasts} />
+    <div
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        backgroundColor: "#0f172a",
+      }}
+    >
+      {currentSystem === "main" ? (
+        <MainMenu onOpenSummonSystem={() => handleSystemChange("summon")} />
+      ) : (
+        <SummonSystem
+          summon={summon}
+          onBackToMain={() => handleSystemChange("main")}
+          toasts={toasts}
+          setToasts={setToasts}
+        />
+      )}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: "none",
+          zIndex: 99999,
+        }}
+      >
+        <ToastContainer toasts={toasts} setToasts={setToasts} />
+      </div>
+
+      {/* 添加背包按钮 */}
+      <button
+        onClick={() => setIsInventoryOpen(true)}
+        className="fixed bottom-6 right-6 bg-purple-600 hover:bg-purple-500 text-white px-5 py-3 rounded-xl shadow-lg 
+          flex items-center gap-3 transition-all duration-200 hover:scale-105 hover:shadow-xl
+          border border-purple-500/30"
+      >
+        <i className="fas fa-backpack text-xl"></i>
+        <span className="font-medium">背包</span>
+      </button>
+
+      {/* 背包面板 */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
+          isInventoryOpen ? "" : "hidden"
+        }`}
+      >
+        <InventoryPanel
+          isOpen={isInventoryOpen}
+          onClose={() => setIsInventoryOpen(false)}
+          currentSummon={summon}
+          onEquipItem={handleEquipItem}
+          inventory={inventory}
+        />
+      </div>
     </div>
   );
 };

@@ -2,7 +2,13 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:44:31
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-16 05:44:38
+ * @LastEditTime: 2025-05-17 03:14:55
+ */
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-16 01:44:31
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-16 21:11:17
  */
 import { petConfig } from "./petConfig";
 import { skillConfig } from "./skillConfig";
@@ -27,8 +33,14 @@ export const skillTypeConfig = {
 
 // 品质配置
 export const qualityConfig = {
-  qualities: ["普通", "优秀", "精良", "卓越", "完美"],
-  colors: ["gray-500", "green-500", "blue-500", "purple-500", "yellow-500"],
+  names: ["普通", "优秀", "精良", "卓越", "完美"],
+  colors: {
+    普通: "normal",
+    优秀: "excellent",
+    精良: "rare",
+    卓越: "epic",
+    完美: "perfect",
+  },
   attributeMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
 };
 
@@ -58,3 +70,27 @@ export const probabilityConfig = {
   skillReplaceChance: 0.3, // 替换已有技能的概率
   initialSkillCount: { min: 1, max: 3 }, // 初始技能数量范围
 };
+
+export const STANDARD_EQUIPMENT_SLOTS = [
+  "饰品",
+  "遗物",
+  "血脉",
+  "符文",
+];
+
+// 等级经验配置
+// levelExperienceRequirements[level] 表示从 level 级升到 level + 1 级所需的经验值
+// 例如 levelExperienceRequirements[1] 是从1级升到2级所需经验
+export const levelExperienceRequirements = [
+  null, // level 0 (哨兵或未使用)
+  100,  // 从 1 级到 2 级
+  250,  // 从 2 级到 3 级
+  500,  // 从 3 级到 4 级
+  800,  // 从 4 级到 5 级
+  1200, // 从 5 级到 6 级
+  1700, // 从 6 级到 7 级
+  2300, // 从 7 级到 8 级
+  3000, // 从 8 级到 9 级
+  3800, // 从 9 级到 10 级
+  5000, // 从 10 级到 11 级 (示例，可以继续添加)
+];

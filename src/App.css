@@ -1,8 +1,9 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* max-width: 1280px; Removed */
+  /* margin: 0 auto; Removed */
+  /* padding: 1rem; Removed */
+  min-height: 100vh; /* Added to ensure #root takes full viewport height */
+  text-align: center; /* Kept, though flex centering in child is primary */
 }
 
 .logo {
