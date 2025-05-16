@@ -1,10 +1,15 @@
 import { useCallback } from 'react';
+import summonManagerInstance from '../managers/SummonManager';
 
 export const useGameActions = (gameManager, showResult, setSummon) => {
   const handleRefineMonster = useCallback(() => {
     console.log('[useGameActions] handleRefineMonster called');
     const result = gameManager.refineMonster();
     console.log('[useGameActions] refineMonster result:', result);
+    
+    const allSummons = summonManagerInstance.getAllSummonsAsArray();
+    console.log("当前所有召唤兽 (from useGameActions):", allSummons);
+
     if (result && result.message) {
       showResult(result.message, result.type);
       setSummon(gameManager.getCurrentSummon());

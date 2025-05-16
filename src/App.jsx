@@ -9,7 +9,6 @@ import ToastContainer from "./components/ToastContainer";
 import InventoryPanel from "./components/InventoryPanel";
 import Inventory from "./entities/Inventory";
 import { generateInitialEquipment } from "./gameLogic";
-import summonManagerInstance from "./managers/SummonManager";
 
 const App = () => {
   const [currentSystem, setCurrentSystem] = useState("main");
@@ -73,7 +72,7 @@ const App = () => {
   } = useModalState();
 
   const {
-    handleRefineMonster: originalHandleRefineMonster,
+    handleRefineMonster,
     handleBookSkill,
     handleConfirmReplaceSkill,
     handleLevelUp,
@@ -83,19 +82,6 @@ const App = () => {
     handleOpenSummonSystem,
     handleBackToMain,
   } = useGameActions(gameManager, showResult, setSummon);
-
-  // 包装 handleRefineMonster 以添加日志记录
-  const handleRefineMonster = async () => {
-    // 调用原始的炼妖函数
-    const result = await originalHandleRefineMonster();
-    
-    // 打印所有召唤兽
-    const allSummons = summonManagerInstance.getAllSummonsAsArray();
-    console.log("当前所有召唤兽:", allSummons);
-    
-    // 如果原始函数有返回值，则返回它
-    return result;
-  };
 
   const handleSystemChange = (system) => {
     setCurrentSystem(system);
