@@ -5,16 +5,15 @@ export const useGameActions = (gameManager, showResult, setSummon) => {
   const handleRefineMonster = useCallback(() => {
     console.log('[useGameActions] handleRefineMonster called');
     const result = gameManager.refineMonster();
-    console.log('[useGameActions] refineMonster result:', result);
+    console.log('[useGameActions] refineMonster result (from GameManager):', result);
     
     const allSummons = summonManagerInstance.getAllSummonsAsArray();
-    console.log("当前所有召唤兽 (from useGameActions):", allSummons);
+    console.log("当前所有召唤兽 (from useGameActions after refineMonster call):", allSummons);
 
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleBookSkill = useCallback(() => {
     console.log('[useGameActions] handleBookSkill called');
@@ -24,30 +23,27 @@ export const useGameActions = (gameManager, showResult, setSummon) => {
       return;
     }
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleConfirmReplaceSkill = useCallback((confirm) => {
     console.log('[useGameActions] handleConfirmReplaceSkill called:', confirm);
     const result = gameManager.confirmReplaceSkill(confirm);
     console.log('[useGameActions] confirmReplaceSkill result:', result);
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleLevelUp = useCallback(() => {
     console.log('[useGameActions] handleLevelUp called');
     const result = gameManager.addExperience(100);
     console.log('[useGameActions] addExperience result:', result);
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleEquipItem = useCallback((itemData, slotType) => {
     console.log('[useGameActions] handleEquipItem called:', { itemData, slotType });
@@ -59,30 +55,27 @@ export const useGameActions = (gameManager, showResult, setSummon) => {
     const result = gameManager.equipItem(itemData, slotType);
     console.log('[useGameActions] equipItem result:', result);
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleAllocatePoint = useCallback((attributeName, amount) => {
     console.log('[useGameActions] handleAllocatePoint called:', { attributeName, amount });
     const result = gameManager.allocatePotentialPoint(attributeName, amount);
     console.log('[useGameActions] allocatePotentialPoint result:', result);
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   const handleResetPoints = useCallback(() => {
     console.log('[useGameActions] handleResetPoints called');
     const result = gameManager.resetPotentialPoints();
     console.log('[useGameActions] resetPotentialPoints result:', result);
     if (result && result.message) {
-      showResult(result.message, result.type);
-      setSummon(gameManager.getCurrentSummon());
+      showResult(result.message, result.type || 'info');
     }
-  }, [gameManager, showResult, setSummon]);
+  }, [gameManager, showResult]);
 
   return {
     handleRefineMonster,

@@ -9,6 +9,7 @@ import ToastContainer from "./components/ToastContainer";
 import InventoryPanel from "./components/InventoryPanel";
 import Inventory from "./entities/Inventory";
 import { generateInitialEquipment } from "./gameLogic";
+import summonManagerInstance from "./managers/SummonManager"; // 需要导入 SummonManager
 
 const App = () => {
   const [currentSystem, setCurrentSystem] = useState("main");
@@ -84,6 +85,32 @@ const App = () => {
   } = useGameActions(gameManager, showResult, setSummon);
 
   const handleSystemChange = (system) => {
+    if (system === "summon") {
+      const allSummonsArray = summonManagerInstance.getAllSummonsAsArray();
+      if (allSummonsArray.length > 0) {
+        // 检查当前选中的 summon 是否仍然在 manager 中，或者是否需要总是选择第一个
+        // 为简单起见，这里总是尝试选择第一个，或者如果当前 summon 无效则选择第一个
+        const currentSummonId = summon ? summon.id : null;
+        const currentSummonStillExists = currentSummonId ? summonManagerInstance.getSummonById(currentSummonId) : false;
+
+        if (!currentSummonStillExists) {
+             setSummon(allSummonsArray[0]);
+             console.log("[App.jsx] Switched to Summon System, selected first summon:", allSummonsArray[0]);
+        } else {
+            // 如果当前选中的召唤兽仍然有效，则不改变它
+            console.log("[App.jsx] Switched to Summon System, current summon is still valid:", summon);
+        }
+        // 如果希望总是默认选中第一个，则取消上面的if/else逻辑，直接用下面的代码:
+        // setSummon(allSummonsArray[0]);
+        // console.log("[App.jsx] Switched to Summon System, selected first summon:", allSummonsArray[0]);
+      } else {
+        // 如果没有召唤兽了，确保当前选中的召唤兽被清空
+        if (summon !== null) {
+            setSummon(null);
+            console.log("[App.jsx] Switched to Summon System, no summons available, cleared current summon.");
+        }
+      }
+    }
     setCurrentSystem(system);
   };
 
