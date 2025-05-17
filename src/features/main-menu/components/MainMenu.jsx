@@ -61,4 +61,4 @@ const MainMenu = ({ onOpenSummonSystem }) => {
   );
 };
 
-export default MainMenu;
+export default MainMenu; 

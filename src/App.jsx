@@ -1,61 +1,62 @@
 import React, { useState, useEffect } from "react";
-import MainMenu from "./components/MainMenu";
-import SummonSystem from "./features/summon/components/SummonSystem";
-import { useGameState } from "./hooks/useGameState";
-import { useToast } from "./hooks/useToast";
-import { useModalState } from "./hooks/useModalState";
-import { useGameActions } from "./hooks/useGameActions";
-import ToastContainer from "./components/ToastContainer";
-import InventoryPanel from "./components/InventoryPanel";
-import Inventory from "./entities/Inventory";
-import { generateInitialEquipment } from "./gameLogic";
-import summonManagerInstance from "./managers/SummonManager"; // 需要导入 SummonManager
+import { useDispatch, useSelector } from "react-redux";
+import MainMenu from "@/features/main-menu/components/MainMenu";
+import SummonSystem from "@/features/summon/components/SummonSystem";
+import { useToast } from "@/hooks/useToast";
+import { useModalState } from "@/hooks/useModalState";
+import ToastContainer from "@/features/ui/components/ToastContainer";
+import InventoryPanel from "@/features/inventory/components/InventoryPanel";
+// import Inventory from "@/entities/Inventory"; // Removed
+import { generateInitialEquipment } from "@/gameLogic";
+// 引入Redux集成和选择器
+import { initializeReduxIntegration, useCurrentSummon, useSummons } from "@/store/reduxSetup";
+import { setCurrentSummon } from "@/store/slices/summonSlice";
+import { addItem } from "@/store/slices/itemSlice";
+import { addToInventory } from "@/store/slices/inventorySlice";
 
 const App = () => {
+  const dispatch = useDispatch();
   const [currentSystem, setCurrentSystem] = useState("main");
   const [toasts, setToasts] = useState([]);
-  const { gameManager, summon, setSummon, historyList, resultRecordList } =
-    useGameState();
-  const { showResult } = useToast(toasts, setToasts, gameManager);
+  const { showResult } = useToast(toasts, setToasts);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [inventory] = useState(new Inventory());
-  // 添加状态以持有背包数据的快照，用于触发UI更新
-  const [inventoryState, setInventoryState] = useState(inventory.getState());
+  // const [inventory] = useState(new Inventory()); // Removed
+  
+  // 从Redux获取召唤兽数据
+  const summons = useSummons();
+  const summon = useCurrentSummon();
 
-  // 初始化背包及设置onChange回调
+  // 初始化背包及设置物品
   useEffect(() => {
-    // 生成5件随机装备并添加到背包
+    // 生成5件随机装备并添加到Redux
     const initialEquipment = generateInitialEquipment(5);
     initialEquipment.forEach((equipment) => {
-      const result = inventory.addItem({
+      // 添加物品到Redux
+      dispatch(addItem({
         ...equipment,
+        id: equipment.id,
         type: "equipment",
-      });
-      if (result.success) {
-        showResult(`获得装备：${equipment.name} (${equipment.quality})`);
-      }
+      }));
+      
+      // 添加物品到背包 - 使用自动分配的空槽位
+      dispatch(addToInventory({
+        itemId: equipment.id
+      }));
     });
+    
+    showResult("初始装备已添加到背包");
+    // 只在组件第一次渲染时执行一次
+  }, []);
 
-    // 设置 inventory 的 onChange 回调以更新UI
-    const handleInventoryChange = (newState) => {
-      setInventoryState(newState);
-      console.log("[App.jsx] Inventory changed, UI state updated.");
-    };
-    inventory.setOnChange(handleInventoryChange);
-
-    // 组件卸载时清理回调
-    return () => {
-      inventory.setOnChange(null);
-    };
-    // 注意：这里的依赖项。如果 showResult 或 inventory 实例本身会变，需要加入。
-    // 但 inventory 是 useState(new Inventory()) 创建的，通常不会变。
-    // showResult 来自 useToast，如果其依赖会变，也可能需要考虑。为简化，暂时只放 inventory。
-  }, [inventory]); // 依赖 inventory 实例，确保仅在 inventory 初始化后设置回调
-
-  // 添加调试日志
+  // 初始化Redux集成
   useEffect(() => {
-    console.log("[App] toasts updated:", toasts);
-  }, [toasts]);
+    // 将现有系统与Redux集成
+    const cleanup = initializeReduxIntegration(); // Removed inventory instance argument
+    console.log("[App.jsx] Redux集成已初始化");
+    
+    // 组件卸载时清理
+    return cleanup;
+  }, []); // Removed inventory from dependency array
 
   const {
     isHistoryModalOpen,
@@ -72,138 +73,23 @@ const App = () => {
     setIsMoreFeaturesOpen,
   } = useModalState();
 
-  const {
-    handleRefineMonster,
-    handleBookSkill,
-    handleConfirmReplaceSkill,
-    handleLevelUp,
-    handleEquipItem: handleEquipItemFromActions,
-    handleAllocatePoint,
-    handleResetPoints,
-    handleOpenSummonSystem,
-    handleBackToMain,
-  } = useGameActions(gameManager, showResult, setSummon);
-
   const handleSystemChange = (system) => {
     if (system === "summon") {
-      const allSummonsArray = summonManagerInstance.getAllSummonsAsArray();
-      if (allSummonsArray.length > 0) {
-        // 检查当前选中的 summon 是否仍然在 manager 中，或者是否需要总是选择第一个
-        // 为简单起见，这里总是尝试选择第一个，或者如果当前 summon 无效则选择第一个
-        const currentSummonId = summon ? summon.id : null;
-        const currentSummonStillExists = currentSummonId ? summonManagerInstance.getSummonById(currentSummonId) : false;
-
-        if (!currentSummonStillExists) {
-             setSummon(allSummonsArray[0]);
-             console.log("[App.jsx] Switched to Summon System, selected first summon:", allSummonsArray[0]);
-        } else {
-            // 如果当前选中的召唤兽仍然有效，则不改变它
-            console.log("[App.jsx] Switched to Summon System, current summon is still valid:", summon);
+      if (summons.length > 0) {
+        // 如果当前没有选中召唤兽，则选择第一个
+        if (!summon) {
+          dispatch(setCurrentSummon(summons[0].id));
+          console.log("[App.jsx] Switched to Summon System, selected first summon:", summons[0]);
         }
-        // 如果希望总是默认选中第一个，则取消上面的if/else逻辑，直接用下面的代码:
-        // setSummon(allSummonsArray[0]);
-        // console.log("[App.jsx] Switched to Summon System, selected first summon:", allSummonsArray[0]);
       } else {
-        // 如果没有召唤兽了，确保当前选中的召唤兽被清空
-        if (summon !== null) {
-            setSummon(null);
-            console.log("[App.jsx] Switched to Summon System, no summons available, cleared current summon.");
+        // 如果没有召唤兽，确保当前选中为null
+        if (summon) {
+          dispatch(setCurrentSummon(null));
+          console.log("[App.jsx] Switched to Summon System, no summons available");
         }
       }
     }
     setCurrentSystem(system);
-  };
-
-  // 处理装备物品
-  const handleEquipItem = (inventoryItem) => {
-    if (!summon) {
-      showResult("请先选择一个召唤兽", "error");
-      return { success: false, message: "请先选择一个召唤兽" };
-    }
-
-    if (!inventoryItem || inventoryItem.itemType !== "equipment") {
-      showResult("无效的装备物品", "error");
-      return { success: false, message: "无效的装备物品" };
-    }
-
-    const equipmentEntity = inventoryItem.getEquipmentEntity();
-
-    if (!equipmentEntity) {
-      showResult("无法获取装备的详细信息", "error");
-      console.error(
-        "[App.jsx] Failed to get EquipmentEntity for InventoryItem:",
-        inventoryItem
-      );
-      return { success: false, message: "无法获取装备的详细信息" };
-    }
-
-    //  slotType 现在应该直接从 equipmentEntity 获取，因为它是装备本身的属性
-    const slotTypeToUse = equipmentEntity.slotType;
-    //  或者，如果 EquipmentEntity 实例没有直接存储 slotType （它应该从 baseConfig 获取），
-    //  我们也可以从 inventoryItem.slotType 获取（如果 InventoryItem 存储了它）
-    //  EquipmentEntity 从 baseConfig 中可以获取 category (即 slotType)
-    //  const slotTypeToUse = equipmentEntity.category; // EquipmentEntity 内部有 this.category (即 slotType)
-    //  确保 EquipmentEntity 有一个可访问的 slotType 或 category 属性。
-    //  当前 EquipmentEntity.js (line 15) sets this.category = category;
-
-    if (!slotTypeToUse) {
-      showResult("装备缺少类型信息", "error");
-      console.error(
-        "[App.jsx] EquipmentEntity is missing slotType/category:",
-        equipmentEntity
-      );
-      return { success: false, message: "装备缺少类型信息" };
-    }
-
-    try {
-      // gameManager (src/game/GameManager.js) equipItem(itemData, slotType)
-      // itemData is used to find itemIndex in summon's equipment list.
-      // We should pass the equipmentEntity itself, and GameManager will use its ID.
-      const result = gameManager.equipItem(equipmentEntity, slotTypeToUse);
-
-      if (result.success) {
-        showResult(result.message || "装备成功", "success");
-        // setSummon(result.updatedSummon); // GameManager不再返回updatedSummon，Summon实例是直接修改并通过事件更新
-
-        // 更新刚被装备上的物品在背包中的状态
-        inventoryItem.setEquipped(true, summon);
-        console.log(
-          `[App.jsx] InventoryItem for equipped entity ${equipmentEntity.id} (${inventoryItem.name}) marked as equipped.`
-        );
-
-        // 如果有旧物品被替换下来，更新其在背包中的状态
-        if (result.unequippedItemEntityId) {
-          const unequippedInventoryItem = inventory.findItemByEntityId(
-            result.unequippedItemEntityId
-          );
-          if (unequippedInventoryItem) {
-            unequippedInventoryItem.setEquipped(false, null);
-            console.log(
-              `[App.jsx] InventoryItem for unequipped entity ${result.unequippedItemEntityId} (${unequippedInventoryItem.name}) marked as unequipped.`
-            );
-          } else {
-            console.warn(
-              `[App.jsx] Failed to find InventoryItem in global inventory for UNequipped entity ID: ${result.unequippedItemEntityId}. This item might not be managed by the main inventory, or was an initial equipment not added to global inventory.`
-            );
-          }
-        }
-        // inventory.notifyChange(); // 移除：现在通过 setOnChange 自动处理UI更新
-
-        return {
-          success: true,
-          message: result.message,
-          equippedItemEntityId: result.equippedItemEntityId, // 与GameManager的返回保持一致
-          unequippedItemEntityId: result.unequippedItemEntityId,
-        };
-      } else {
-        showResult(result.message || "装备失败", "error");
-        return { success: false, message: result.message };
-      }
-    } catch (error) {
-      console.error("装备物品失败 (App.jsx):", error);
-      showResult("装备物品时发生意外错误", "error");
-      return { success: false, message: "装备物品时发生意外错误" };
-    }
   };
 
   // 禁用右键菜单
@@ -230,7 +116,6 @@ const App = () => {
         <MainMenu onOpenSummonSystem={() => handleSystemChange("summon")} />
       ) : (
         <SummonSystem
-          summon={summon}
           onBackToMain={() => handleSystemChange("main")}
           toasts={toasts}
           setToasts={setToasts}
@@ -253,11 +138,11 @@ const App = () => {
       {/* 添加背包按钮 */}
       <button
         onClick={() => setIsInventoryOpen(true)}
-        className="fixed bottom-6 right-6 bg-purple-600 hover:bg-purple-500 text-white px-5 py-3 rounded-xl shadow-lg 
-          flex items-center gap-3 transition-all duration-200 hover:scale-105 hover:shadow-xl
-          border border-purple-500/30"
+        className="fixed bottom-6 right-6 bg-slate-800/90 hover:bg-slate-700/90 
+          text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
+          transition-all duration-200 border border-slate-600/30 group"
       >
-        <i className="fas fa-backpack text-xl"></i>
+        <i className="fas fa-backpack text-lg text-purple-400"></i>
         <span className="font-medium">背包</span>
       </button>
 
@@ -270,9 +155,6 @@ const App = () => {
         <InventoryPanel
           isOpen={isInventoryOpen}
           onClose={() => setIsInventoryOpen(false)}
-          currentSummon={summon}
-          onEquipItem={handleEquipItem}
-          inventory={inventory}
         />
       </div>
     </div>

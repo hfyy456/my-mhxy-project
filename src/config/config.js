@@ -10,8 +10,8 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-16 21:11:17
  */
-import { petConfig } from "./petConfig";
-import { skillConfig } from "./skillConfig";
+import { petConfig } from "@/config/petConfig";
+import { skillConfig } from "@/config/skillConfig";
 // 此处可继续导入其他拆分的配置文件
 
 // 合并所有配置，可根据实际需求修改合并方式
@@ -33,15 +33,15 @@ export const skillTypeConfig = {
 
 // 品质配置
 export const qualityConfig = {
-  names: ["普通", "优秀", "精良", "卓越", "完美"],
+  names: ["普通", "稀有", "史诗", "传说", "神话"],
   colors: {
-    普通: "normal",
-    优秀: "excellent",
-    精良: "rare",
-    卓越: "epic",
-    完美: "perfect",
+    普通: "quality-normal",
+    稀有: "quality-rare",
+    史诗: "quality-epic",
+    传说: "quality-legendary",
+    神话: "quality-mythic",
   },
-  attributeMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
+  attributeMultipliers: [1.0, 1.5, 2.0, 2.5, 3.0],
 };
 
 // 衍生属性配置
@@ -93,4 +93,11 @@ export const levelExperienceRequirements = [
   3000, // 从 8 级到 9 级
   3800, // 从 9 级到 10 级
   5000, // 从 10 级到 11 级 (示例，可以继续添加)
+  // ... add more levels or use a formula if max level is high
 ];
+
+// 游戏核心设定常量
+export const MAX_LEVEL = 100; // 召唤兽最大等级
+export const POINTS_PER_LEVEL = 5; // 每升一级获得的潜力点 (注意: petConfig 中也可能有此设定，需协调)
+export const MAX_SKILLS = 12; // 召唤兽最大技能槽数量
+export const ACTIVE_SKILL_LIMIT = 2; // 最大可拥有主动技能数量

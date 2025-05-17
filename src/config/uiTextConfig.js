@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 22:46:29
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-16 22:48:05
+ * @LastEditTime: 2025-05-18 02:20:37
  */
 export const uiText = {
   // General
@@ -50,6 +50,22 @@ export const uiText = {
     血脉: "血脉",
     符文: "符文",
   },
+
+  // Button Texts
+  buttons: {
+    petCatalog: "召唤兽图鉴",
+    refineHistory: "炼妖历史",
+    refineToGetSummon: "炼妖获取召唤兽",
+    refine: "炼妖",
+    // Add other button texts here as needed
+  },
+
+  // Notifications & Messages
+  notifications: {
+    selectSummonFirst: "请先选择一个召唤兽",
+    noSummonData: "当前没有召唤兽数据，请先创建或选择一个召唤兽",
+    // Add other notifications here
+  }
   // You can add more specific texts as needed
 };
 

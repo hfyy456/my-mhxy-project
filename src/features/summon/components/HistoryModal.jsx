@@ -10,7 +10,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
           <p className="text-gray-400 italic text-center py-8">暂无历史记录。</p>
         ) : (
           historyList.map((pet, index) => {
-            const qualityColorName = qualityConfig.colors[pet.quality] || 'normal';
+            const qualityColorName = `text-quality-${qualityConfig.colors[pet.quality]?.split('-')[1] || 'normal'}`;
             return (
               <div
                 key={index}
@@ -20,7 +20,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                   <h3 className="text-lg font-semibold text-gray-100">
                     {pet.name}
                   </h3>
-                  <span className={`text-sm font-medium text-${qualityColorName}`}>
+                  <span className={`text-sm font-medium ${qualityColorName}`}>
                     {pet.quality}
                   </span>
                 </div>

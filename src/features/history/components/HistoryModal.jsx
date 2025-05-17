@@ -5,8 +5,8 @@
  * @LastEditTime: 2025-05-16 03:19:34
  */
 import React from "react";
-import { qualityConfig, skillConfig, skillTypeConfig } from "../config/config";
-import CommonModal from "./CommonModal";
+import { qualityConfig, skillConfig, skillTypeConfig } from "@/config/config";
+import CommonModal from "@/features/ui/components/CommonModal";
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (
@@ -79,4 +79,4 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
   );
 };
 
-export default HistoryModal;
+export default HistoryModal; 

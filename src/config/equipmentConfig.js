@@ -115,15 +115,15 @@ export const equipmentConfig = {
 
 // 装备品质配置 (如果需要统一管理)
 export const equipmentQualityConfig = {
-  names: ["普通", "优秀", "精良", "卓越", "完美"],
+  names: ["普通", "稀有", "史诗", "传说", "神话"],
   colors: {
-    普通: "normal",
-    优秀: "excellent",
-    精良: "rare",
-    卓越: "epic",
-    完美: "perfect",
+    普通: "quality-normal",
+    稀有: "quality-rare",
+    史诗: "quality-epic",
+    传说: "quality-legendary",
+    神话: "quality-mythic",
   },
-  effectMultiplier: [1.0, 1.2, 1.5, 1.8, 2.2], // 品质对效果的乘数
+  effectMultiplier: [1.0, 1.5, 2.0, 2.5, 3.0], // 品质对效果的乘数
 };
 
 // 示例：根据品质调整装备效果

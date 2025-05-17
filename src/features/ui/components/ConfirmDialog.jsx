@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-16 03:19:07
  */
 import React from "react";
-import CommonModal from "./CommonModal";
+import CommonModal from "@/features/ui/components/CommonModal";
 
 const ConfirmDialog = ({ isOpen, onConfirm, onCancel }) => {
   return (
@@ -33,4 +33,4 @@ const ConfirmDialog = ({ isOpen, onConfirm, onCancel }) => {
   );
 };
 
-export default ConfirmDialog;
+export default ConfirmDialog; 

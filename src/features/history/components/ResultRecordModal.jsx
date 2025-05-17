@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-17 02:19:03
  */
 import React from "react";
-import CommonModal from "./CommonModal";
+import CommonModal from "@/features/ui/components/CommonModal";
 
 const ResultRecordModal = ({ resultRecordList, isOpen, onClose }) => {
   return (
@@ -25,4 +25,4 @@ const ResultRecordModal = ({ resultRecordList, isOpen, onClose }) => {
   );
 };
 
-export default ResultRecordModal;
+export default ResultRecordModal; 

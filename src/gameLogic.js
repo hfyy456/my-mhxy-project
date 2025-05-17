@@ -5,12 +5,13 @@ import {
   qualityConfig,
   probabilityConfig,
   STANDARD_EQUIPMENT_SLOTS,
-} from "./config/config";
-import { equipmentConfig } from "./config/equipmentConfig";
-import Summon from "./entities/Summon";
-import EquipmentEntity from "./entities/EquipmentEntity";
-import EquipmentManager from "./managers/EquipmentManager";
-import summonManagerInstance from "./managers/SummonManager";
+  // levelExperienceRequirements // Not directly used here, summonSlice will handle
+} from "@/config/config";
+import { equipmentConfig } from "@/config/equipmentConfig";
+// import Summon from "@/entities/Summon"; // Removed
+// import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
+// import EquipmentManager from "@/managers/EquipmentManager"; // Removed
+// import summonManagerInstance from "@/managers/SummonManager"; // Removed
 
 export const getRandomPet = () => {
   const pets = Object.values(petConfig);
@@ -44,199 +45,198 @@ export const getRandomEquipment = () => {
   // 随机选择一个品质
   const randomQuality = getRandomQuality();
   
-  // 创建EquipmentEntity实例
-  const equipmentInstance = new EquipmentEntity(randomEquipmentConfig.name, randomQuality); // level 默认为 1
-
-  // 将实例注册到EquipmentManager
-  try {
-    EquipmentManager.registerEquipment(equipmentInstance);
-    // 立即验证注册是否成功
-    const registeredEntity = EquipmentManager.getEquipmentById(equipmentInstance.id);
-    if (!registeredEntity || registeredEntity !== equipmentInstance) {
-      console.error(`[gameLogic] CRITICAL: Equipment registration validation failed for ID ${equipmentInstance.id}. Manager returned:`, registeredEntity);
-      // 根据游戏的健壮性需求，这里可能需要抛出错误或返回一个表示失败的状态
-      throw new Error(`Failed to validate equipment registration for ${equipmentInstance.name} (ID: ${equipmentInstance.id})`);
-    }
-  } catch (error) {
-    console.error(`[gameLogic] CRITICAL: Failed to register equipment ${equipmentInstance.name} (ID: ${equipmentInstance.id}) with EquipmentManager.`, error);
-    // 抛出错误，阻止后续创建无效的 InventoryItem
-    throw error;
-  }
-  
-  // 返回给背包或召唤兽的初始装备数据结构
-  return {
-    id: equipmentInstance.id, // 这是 EquipmentEntity 的唯一 ID
-    name: equipmentInstance.name,
-    quality: equipmentInstance.quality,
-    description: randomEquipmentConfig.description, // 从原始配置获取
-    icon: randomEquipmentConfig.icon,             // 从原始配置获取
-    itemType: 'equipment', // 用于 InventoryItem 区分物品大类 (equipment, consumable, etc.)
-    slotType: randomCategory,   // 装备槽类型 (饰品, 遗物, etc.)
-    // 注意：这里不再包含 ...equipmentInstance 或其 effects。效果将通过 ID 从 Manager 获取。
-    level: equipmentInstance.level // 包含等级信息
+  // 返回给背包或召唤兽的初始装备数据结构 (纯数据对象)
+  // 注意：这个对象现在是纯数据，用于后续 dispatch(addItem(newEquipmentData))。
+  // finalEffects 将由 itemSlice.addItem reducer 计算。
+  const newEquipmentData = {
+    id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7), // 生成唯一ID
+    name: randomEquipmentConfig.name, // 必须与 equipmentConfig.js 中的 name 匹配
+    quality: randomQuality,
+    level: 1, // 初始等级为1
+    itemType: 'equipment',
+    // slotType, icon, description 将由 itemSlice.addItem 根据 name 从 baseConfig 填充
+    // 因此这里不需要显式提供，除非希望覆盖
+    slotType: randomCategory, // 也可以让 addItem 填充，但这里已知，可以提供
+    icon: randomEquipmentConfig.icon, // 提供基础信息，addItem 也可以从 baseConfig 获取
+    description: randomEquipmentConfig.description // 提供基础信息，addItem 也可以从 baseConfig 获取
   };
+
+  return newEquipmentData;
 };
 
 // 生成初始装备
 export const generateInitialEquipment = (count = 5) => {
-  const equipment = [];
+  const equipmentDataArray = [];
   for (let i = 0; i < count; i++) {
-    equipment.push(getRandomEquipment());
+    equipmentDataArray.push(getRandomEquipment()); // getRandomEquipment() 现在返回纯数据对象
   }
-  return equipment;
+  return equipmentDataArray; // 返回纯数据对象数组
 };
 
 // 修改refineMonster函数
 export const refineMonster = () => {
-  const petDetails = getRandomPet();
+  const petDetails = getRandomPet(); // petDetails is the config object for the pet
   const petName = Object.keys(petConfig).find(key => petConfig[key] === petDetails);
   if (!petName) {
     throw new Error("Failed to find pet name from pet details.");
   }
+  const basePetConfig = petConfig[petName]; // Get the base config using the found name
 
   const quality = getRandomQuality();
   const level = 1;
 
-  // 生成初始装备
-  const initialEquipmentData = generateInitialEquipment(5); // 这返回的是描述性对象
-  const initialEquipmentEntities = initialEquipmentData.map(data => {
-    // 需要从 EquipmentManager 获取或确认 EquipmentEntity 实例
-    // 如果 getRandomEquipment 已经注册并返回了ID，那么应该通过ID去Manager获取
-    const entity = EquipmentManager.getEquipmentById(data.id);
-    if (!entity) {
-        // 如果实体在 getRandomEquipment 中创建但未在此处找到，则可能存在问题
-        // 或者，如果 Summon 构造函数期望的是 EquipmentEntity 实例，则需要确保传递的是这些实例
-        console.error(`[refineMonster] Could not find equipment entity with ID: ${data.id} in EquipmentManager. This should not happen if getRandomEquipment registers it.`);
-        // 为了演示，如果找不到，尝试基于data重新构建一个（但这可能导致重复或不一致）
-        // 更好的做法是确保 getRandomEquipment 总是正确注册并返回可用的ID，然后用这些ID获取实体
-        // 假设 Summon 构造函数可以处理 null 或 undefined 的装备项
-        return null; 
-    }
-    return entity;
-  }).filter(entity => entity !== null); // 过滤掉任何未找到的实体
+  // 生成初始装备 (纯数据对象数组) - 这些物品将被添加到背包
+  const initialEquipmentData = generateInitialEquipment(3); // 生成3件到背包，可以调整数量
 
   // Prepare initial skills
   const initialSkillCount = getRandomAttribute(
     probabilityConfig.initialSkillCount.min,
     probabilityConfig.initialSkillCount.max
   );
-  const shuffledSkills = [...petDetails.initialSkills].sort(() => 0.5 - Math.random());
+  const shuffledSkills = [...basePetConfig.initialSkills].sort(() => 0.5 - Math.random());
   const initialSkills = shuffledSkills.slice(0, initialSkillCount);
 
-  // Create a new Summon instance
-  const newSummonInstance = new Summon(petName, quality, level, initialEquipmentEntities, initialSkills);
+  // --- Construct newSummonPayload for Redux ---
+  const summonId = `${petName}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-  // 将新的召唤兽实例添加到 SummonManager
-  summonManagerInstance.addSummon(newSummonInstance);
+  // Calculate initial basicAttributes (logic from Summon constructor)
+  const qualityIndex = qualityConfig.names.indexOf(quality);
+  const qualityMultiplier = qualityConfig.attributeMultipliers[qualityIndex] || 1;
+  
+  const initialBasicAttributes = {
+    constitution: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.constitution) * qualityMultiplier),
+    strength: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.strength) * qualityMultiplier),
+    agility: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.agility) * qualityMultiplier),
+    intelligence: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.intelligence) * qualityMultiplier),
+    luck: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.luck) * qualityMultiplier),
+  };
 
-  // 为历史记录准备可序列化的装备信息
-  const serializableEquippedItems = {};
-  if (newSummonInstance.equippedItems) { // 确保 equippedItems 存在
-    for (const slot in newSummonInstance.equippedItems) {
-      const entity = newSummonInstance.equippedItems[slot];
-      if (entity && typeof entity === 'object') { // 确保 entity 是一个对象
-        serializableEquippedItems[slot] = {
-          id: entity.id,
-          name: entity.name,
-          quality: entity.quality,
-          level: entity.level,
-          slotType: entity.slotType
-        };
-      } else {
-        serializableEquippedItems[slot] = null;
-      }
-    }
-  }
+  // 初始化 equippedItemIds 为全 null, 新召唤兽初始不装备任何物品
+  const equippedItemIds = {};
+  STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
+    equippedItemIds[slot] = null;
+  });
+
+  const newSummonPayload = {
+    id: summonId,
+    name: petName,
+    level: level,
+    quality: quality,
+    experience: 0,
+    potentialPoints: 0,
+    allocatedPoints: { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
+    basicAttributes: initialBasicAttributes,
+    skillSet: initialSkills,
+    equippedItemIds: equippedItemIds, // 所有槽位均为 null
+  };
+
+  // 为历史记录准备可序列化的装备信息 (将显示无装备)
+  const serializableEquippedItemsForHistory = {};
+  STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
+    serializableEquippedItemsForHistory[slot] = null;
+  });
+  
+  const historyItem = {
+    id: newSummonPayload.id,
+    name: newSummonPayload.name,
+    quality: newSummonPayload.quality,
+    level: newSummonPayload.level,
+    basicAttributes: { ...newSummonPayload.basicAttributes },
+    derivedAttributes: {}, // Will be populated from Redux state by UI
+    skills: [...newSummonPayload.skillSet],
+    equipment: serializableEquippedItemsForHistory, // 历史记录显示无装备
+  };
 
   return {
-    newSummon: newSummonInstance,
-    historyItem: {
-      id: newSummonInstance.id,
-      name: newSummonInstance.name,
-      quality: newSummonInstance.quality,
-      level: newSummonInstance.level,
-      basicAttributes: { ...newSummonInstance.basicAttributes },
-      derivedAttributes: { ...newSummonInstance.derivedAttributes },
-      skills: [...newSummonInstance.skillSet],
-      // 使用处理后的 serializableEquippedItems，避免直接序列化 EquipmentEntity 实例
-      equipment: serializableEquippedItems 
-    },
-    message: `炼妖成功！召唤兽 ${newSummonInstance.name} (${newSummonInstance.quality}) 生成完毕，并获得5件随机装备。`,
+    newSummonPayload: newSummonPayload,
+    newlyCreatedItems: initialEquipmentData, // 这些物品会进入背包
+    historyItem: historyItem,
+    message: `炼妖成功！召唤兽 ${newSummonPayload.name} (${newSummonPayload.quality}) 生成完毕，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
   };
 };
 
-export const bookSkill = (summonInstance) => {
+export const bookSkill = (summonId, currentSkillSet) => {
   const skillToAdd = getRandomSkill();
-  const success = Math.random() < probabilityConfig.bookSuccessRate;
+  const successProbability = Math.random();
 
-  if (!success) {
+  if (successProbability >= probabilityConfig.bookSuccessRate) { // Adjusted condition based on typical probability checks
     return {
-      success: false,
+      outcome: 'FAILURE_NO_SKILL_CHANGE',
       message: "打书失败，技能未添加",
-      newSummon: summonInstance,
+      skillAttempted: skillToAdd
     };
   }
 
   const skillInfo = skillConfig.find((s) => s.name === skillToAdd);
   if (!skillInfo) {
     return { 
-        success: false, 
-        message: `打书失败：技能 ${skillToAdd} 配置未找到。`, 
-        newSummon: summonInstance 
+      outcome: 'FAILURE_CONFIG_NOT_FOUND', 
+      message: `打书失败：技能 ${skillToAdd} 配置未找到。`, 
+      skillAttempted: skillToAdd 
     };
   }
 
-  const activeSkillsCount = summonInstance.skillSet.filter((skillName) => {
+  const activeSkillsCount = currentSkillSet.filter((skillName) => {
     const sk = skillConfig.find((s) => s.name === skillName);
     return sk?.mode === "主动";
   }).length;
 
   if (skillInfo.mode === "主动" && activeSkillsCount >= 2) {
     return {
-      success: false,
+      outcome: 'FAILURE_ACTIVE_SKILL_LIMIT',
       message: "打书失败：最多只能拥有2个主动技能。",
-      newSummon: summonInstance,
+      skillAttempted: skillToAdd,
+      currentActiveSkills: activeSkillsCount
     };
   }
 
-  if (summonInstance.skillSet.includes(skillToAdd)) {
+  if (currentSkillSet.includes(skillToAdd)) {
     return {
-      success: true,
-      newSummon: summonInstance,
+      outcome: 'SUCCESS_SKILL_ALREADY_PRESENT',
+      skill: skillToAdd,
       message: `打书成功！但是技能 "${skillToAdd}" 已存在，无需添加。`,
     };
-  } else if (summonInstance.skillSet.length >= 12) {
+  } else if (currentSkillSet.length >= 12) {
     return {
-      success: true,
-      needConfirm: true,
+      outcome: 'SUCCESS_REPLACEMENT_NEEDED',
       pendingSkill: skillToAdd,
-      newSummon: summonInstance,
+      message: "打书成功！但技能列表已满 (12/12)，需要替换一个旧技能。", // More informative message
     };
   } else {
-    summonInstance.skillSet.push(skillToAdd);
+    // The actual addition will be handled by a Redux action dispatched by the caller.
     return {
-      success: true,
-      newSummon: summonInstance,
+      outcome: 'SUCCESS_ADD_SKILL',
+      skillToAdd: skillToAdd,
+      skillInfo: skillInfo, // Pass skillInfo for description etc.
       message: `打书成功！获得技能：${skillToAdd} (${skillInfo.description})`,
     };
   }
 };
 
-export const confirmReplaceSkill = (summonInstance, pendingSkill) => {
-  if (!pendingSkill || summonInstance.skillSet.length === 0) {
+export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkill) => {
+  if (!pendingSkill || !currentSkillSet || currentSkillSet.length === 0) {
     return { 
-        newSummon: summonInstance, 
-        message: "操作无效，没有待定技能或召唤兽没有技能可替换。"
+      outcome: 'INVALID_OPERATION',
+      message: "操作无效，没有待定技能或召唤兽没有技能可替换。"
     };
   }
-  const indexToReplace = Math.floor(Math.random() * summonInstance.skillSet.length);
-  const replacedSkill = summonInstance.skillSet[indexToReplace];
   
-  summonInstance.skillSet[indexToReplace] = pendingSkill;
+  const indexToReplace = Math.floor(Math.random() * currentSkillSet.length);
+  const replacedSkill = currentSkillSet[indexToReplace];
+  
+  // The actual replacement will be handled by a Redux action dispatched by the caller.
+  // The action will take summonId, pendingSkill (as skillToAdd), and replacedSkill (as skillToRemove).
 
   const newSkillInfo = skillConfig.find((s) => s.name === pendingSkill);
+  // It's possible newSkillInfo is null if pendingSkill is somehow invalid, though bookSkill should have caught this.
+  // However, the original code didn't explicitly re-check skillConfig for pendingSkill here, relying on it being valid.
+
   return {
-    newSummon: summonInstance,
+    outcome: 'SKILL_REPLACED',
+    summonId: summonId, // Pass summonId back for consistency, though caller already has it.
+    skillAdded: pendingSkill,
+    skillRemoved: replacedSkill,
+    newSkillDescription: newSkillInfo ? newSkillInfo.description : '',
     message: `打书成功！技能 "${replacedSkill}" 被 "${pendingSkill}" 覆盖。 (${newSkillInfo ? newSkillInfo.description : ''})`,
   };
 };

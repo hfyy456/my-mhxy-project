@@ -84,4 +84,4 @@ const CommonModal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-export default CommonModal;
+export default CommonModal; 

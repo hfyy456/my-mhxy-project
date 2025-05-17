@@ -1,15 +1,31 @@
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   skillConfig,
   qualityConfig,
   skillTypeConfig,
   STANDARD_EQUIPMENT_SLOTS,
-} from "../../../config/config";
-import { equipmentConfig, equipmentQualityConfig } from "../../../config/equipmentConfig";
-import EquipmentEntity from "../../../entities/EquipmentEntity";
-import { uiText, getAttributeDisplayName } from "../../../config/uiTextConfig";
+} from "@/config/config";
+import {
+  equipmentConfig,
+  equipmentQualityConfig,
+} from "@/config/equipmentConfig";
+import { uiText, getAttributeDisplayName } from "@/config/uiTextConfig";
+import {
+  selectCurrentSummonFullData,
+  selectEquippedItemsForSummon,
+  addExperienceToSummon,
+  allocatePointToSummon,
+  resetAllocatedPointsForSummon,
+  learnSkill,
+  replaceSkill,
+} from "@/store/slices/summonSlice";
 
-const images = import.meta.glob("../../../assets/summons/*.png", { eager: true });
+const images = import.meta.glob("@/assets/summons/*.png", {
+  eager: true,
+});
+console.log("DEBUG: images object from import.meta.glob:", images);
+console.log("DEBUG: images keys:", Object.keys(images));
 
 // 定义基础属性的键和显示名称，以便于迭代
 const BASIC_ATTRIBUTE_KEYS = [
@@ -20,16 +36,24 @@ const BASIC_ATTRIBUTE_KEYS = [
   { key: "luck", name: "运气" },
 ];
 
-const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAllocatePoint, onResetPoints }) => {
+const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot }) => {
+  const dispatch = useDispatch();
+  const summon = useSelector(selectCurrentSummonFullData);
+  
+  // 获取装备槽数据
+  const equippedItems = useSelector(state => 
+    summon ? selectEquippedItemsForSummon(state, summon.id) : {}
+  );
+
   // Destructure all necessary properties directly from the Summon instance
   const {
+    id: summonId,
     name,
     quality,
     level,
     experience,
     experienceToNextLevel,
     skillSet = [], // Default to empty array if undefined
-    equippedItems = {}, // MODIFIED: Was 'equipment', to match Summon.js
     basicAttributes = {}, // Default to empty object
     derivedAttributes = {}, // Default to empty object
     equipmentContributions = {}, // Default to empty object
@@ -41,15 +65,21 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
       agility: 0,
       intelligence: 0,
       luck: 0,
-    }, // 提供默认值
-  } = summon || {}; // Ensure summon itself is not null/undefined
+    },
+  } = summon || {};
+
+  // 添加调试日志
+  React.useEffect(() => {
+    console.log("[SummonInfo] Received summon from Redux:", summon);
+    console.log("[SummonInfo] Equipped items:", equippedItems);
+  }, [summon, equippedItems]);
 
   const qualityIndex = qualityConfig.names.indexOf(quality);
-  const qualityColorName = quality ? qualityConfig.colors[quality] : "normal"; // Use direct mapping
+  const qualityColorName = quality ? `text-quality-${qualityConfig.colors[quality].split('-')[1]}` : "text-gray-400";
 
   const imageUrl =
-    (name && images[`../../../assets/summons/${name}.png`]?.default) ||
-    images["../../../assets/summons/default.png"].default;
+    (name && images[`/src/assets/summons/${name}.png`]?.default) ||
+    images["/src/assets/summons/default.png"].default;
 
   // 计算经验百分比
   let progressPercentage = 0;
@@ -62,30 +92,15 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
   } else if (targetExperience > 0) {
     progressPercentage = (currentExperience / targetExperience) * 100;
   }
-  progressPercentage = Math.min(Math.max(progressPercentage, 0), 100); // 确保在 0-100之间
+  progressPercentage = Math.min(Math.max(progressPercentage, 0), 100);
 
-  // 处理装备物品
   const handleEquipItem = (slotType) => {
-    if (!summon) {
-      return { success: false, message: '请先选择一个召唤兽' };
-    }
-
-    try {
-      const result = onEquipItem(slotType);
-      
-      if (result && result.success) {
-        return { 
-          success: true, 
-          message: result.message,
-          equippedItem: result.equippedItem,
-          unequippedItem: result.unequippedItem
-        };
-      } else {
-        return { success: false, message: result?.message || '装备失败' };
-      }
-    } catch (error) {
-      console.error('装备物品失败:', error);
-      return { success: false, message: '装备物品失败' };
+    if (!summon) return;
+    console.log("[SummonInfo] handleEquipItem called for slot:", slotType);
+    if (typeof onOpenEquipmentSelectorForSlot === 'function') {
+      onOpenEquipmentSelectorForSlot(slotType);
+    } else {
+      console.warn("[SummonInfo] onOpenEquipmentSelectorForSlot is not a function");
     }
   };
 
@@ -108,21 +123,51 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
     return <div className="text-white">{uiText.loading}</div>;
   }
 
-  console.log("[SummonInfo] Rendering with summon prop:", summon);
+  const handleLevelUp = () => {
+    if (!summon || !summonId) return;
+    if (summon.experience !== undefined && summon.experienceToNextLevel !== Infinity) {
+      const experienceNeeded = Math.max(0, (Number(summon.experienceToNextLevel) || 0) - (Number(summon.experience) || 0));
+      if (experienceNeeded > 0) {
+        dispatch(addExperienceToSummon({ summonId, experienceAmount: experienceNeeded }));
+      } else {
+        dispatch(addExperienceToSummon({ summonId, experienceAmount: 1 }));
+      }
+    } else if (summon.experienceToNextLevel === Infinity) {
+      console.log("[SummonInfo] Summon is already at max level.");
+    }
+  };
+
+  const handleAllocatePoint = (attributeName, amount) => {
+    if (!summon || !summonId) return;
+    console.log("[SummonInfo] dispatching allocatePointToSummon:", {
+      summonId,
+      attributeName,
+      amount,
+    });
+    dispatch(allocatePointToSummon({ summonId, attributeName, amount }));
+  };
+
+  const handleResetPoints = () => {
+    if (!summon || !summonId) {
+      console.error("[SummonInfo] Cannot reset points: summon or summonId is missing.");
+      return;
+    }
+    dispatch(resetAllocatedPointsForSummon({ summonId }));
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {/* Left Column */}
       <div className="md:col-span-1 flex flex-col gap-3">
-        <div className="flex justify-center">
-          <img
-            className="w-70 h-70 object-cover border-2 border-purple-500 shadow-lg"
-            src={imageUrl}
-            alt={name}
-            onError={(e) => {
-              e.target.src = images["../../../assets/summons/default.png"].default;
-            }}
-          />
+                  <div className="flex justify-center">
+            <img
+              className={`w-70 h-70 object-cover border-2 ${quality ? `border-quality-${qualityConfig.colors[quality].split('-')[1]}` : 'border-slate-500'} shadow-lg rounded-lg transition-all duration-300`}
+              src={imageUrl}
+              alt={name}
+              onError={(e) => {
+                e.target.src = images["/src/assets/summons/default.png"].default;
+              }}
+            />
         </div>
         <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm text-center">
           <h2 className="text-xl font-bold text-purple-400 mb-1">{name}</h2>
@@ -133,12 +178,11 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
             </p>
             <p className="text-sm text-gray-300">
               {uiText.qualityLabel}{" "}
-              <span className={`font-semibold text-${qualityColorName}`}>
+              <span className={`font-semibold ${qualityColorName}`}>
                 {quality}
               </span>
             </p>
           </div>
-          {/* 经验进度条 */}
           <div className="mt-2 px-2">
             <div className="flex justify-between mb-0.5">
               <span className="text-xs font-medium text-purple-300">
@@ -175,37 +219,38 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
               { key: "critDamage", isPercent: true },
               { key: "dodgeRate", isPercent: true },
             ].map(
-              (attr) => (
-                <li className="flex justify-between" key={attr.key}>
-                  <span className="text-gray-300">
-                    {getAttributeDisplayName(attr.key)}
-                  </span>
-                  <span className="font-semibold text-white">
-                    {attr.isPercent
-                      ? `${(derivedAttributes[attr.key] * 100).toFixed(1)}%`
-                      : derivedAttributes[attr.key]}
-                    {equipmentContributions &&
-                    equipmentContributions[attr.key] !== undefined &&
-                    equipmentContributions[attr.key] !== 0 ? (
-                      <span className="text-green-400 ml-1">
-                        (+
-                        {attr.isPercent
-                          ? `${(
-                              equipmentContributions[attr.key] * 100
-                            ).toFixed(1)}%`
-                          : equipmentContributions[attr.key]}
-                        )
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              )
+              (attr) =>
+                derivedAttributes.hasOwnProperty(attr.key) && (
+                  <li className="flex justify-between" key={attr.key}>
+                    <span className="text-gray-300">
+                      {getAttributeDisplayName(attr.key)}
+                    </span>
+                    <span className="font-semibold text-white">
+                      {attr.isPercent
+                        ? `${(derivedAttributes[attr.key] * 100).toFixed(1)}%`
+                        : derivedAttributes[attr.key]}
+                      {equipmentContributions &&
+                      equipmentContributions[attr.key] !== undefined &&
+                      equipmentContributions[attr.key] !== 0 ? (
+                        <span className="text-green-400 ml-1">
+                          (+
+                          {attr.isPercent
+                            ? `${(
+                                equipmentContributions[attr.key] * 100
+                              ).toFixed(1)}%`
+                            : equipmentContributions[attr.key]}
+                          )
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                )
             )}
           </ul>
         </div>
       </div>
 
-      {/* Right Column */}
+      {/* Right Column (was Middle Column) */}
       <div className="md:col-span-2 flex flex-col gap-3">
         <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
@@ -214,90 +259,48 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {displayEquipmentSlots.map((slot) => {
-              const equippedEntity = equippedItems[slot.type];
-              const isEntity = equippedEntity instanceof EquipmentEntity;
-              const itemQualityColorName = isEntity
-                ? equipmentQualityConfig.colors[equippedEntity.quality] ||
-                  "normal"
+              const equippedItem = equippedItems[slot.type];
+              
+              const itemQualityColorName = equippedItem
+                ? equipmentQualityConfig.colors[equippedItem.quality] || "normal"
                 : "slate-600";
-              const borderColorClass = isEntity
+              const borderColorClass = equippedItem
                 ? `border-${itemQualityColorName}`
                 : "border-slate-600";
-              const iconColorClass = isEntity
+              const iconColorClass = equippedItem
                 ? `text-${itemQualityColorName}`
                 : "text-slate-400";
-              const nameColorClass = isEntity
+              const nameColorClass = equippedItem
                 ? `text-${itemQualityColorName}`
                 : "text-slate-300";
-
-              const displayName = isEntity ? equippedEntity.name : "";
-              const displayIcon =
-                isEntity && equippedEntity.baseConfig
-                  ? equippedEntity.baseConfig.icon
-                  : slot.defaultIcon;
-              const displayQuality = isEntity ? equippedEntity.quality : "";
-              const displayLevel = isEntity ? equippedEntity.level : "";
-              const displayDescription =
-                isEntity && equippedEntity.baseConfig
-                  ? equippedEntity.baseConfig.description
-                  : uiText.equipActionLabel;
-              const displayEffects = isEntity
-                ? equippedEntity.getEffects()
-                : {};
 
               return (
                 <div
                   key={slot.type}
                   className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group ${
-                    isEntity ? "" : "hover:border-yellow-500"
+                    equippedItem ? "" : "hover:border-yellow-500"
                   }`}
                   onClick={() => handleEquipItem(slot.type)}
                 >
-                  {isEntity ? (
+                  {equippedItem ? (
                     <>
                       <i
-                        className={`fa-solid ${displayIcon} ${iconColorClass} text-3xl mb-1`}
+                        className={`fa-solid ${equippedItem.icon || slot.defaultIcon} ${iconColorClass} text-3xl mb-1`}
                       ></i>
                       <span
                         className={`text-xs ${nameColorClass} font-medium text-center leading-tight`}
                       >
-                        {displayName}
+                        {equippedItem.name}
                       </span>
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-30 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 whitespace-normal text-center shadow-lg pointer-events-none">
-                        <p className={`font-bold text-${itemQualityColorName}`}>
-                          {displayName} <br />
-                          (Lvl: {displayLevel}, {displayQuality})
-                        </p>
-                        <p className="text-slate-300 italic">
-                          {displayDescription}
-                        </p>
-                        <hr className="border-slate-600 my-1" />
-                        <ul className="text-left text-slate-300 space-y-0.5">
-                          {Object.entries(displayEffects).map(
-                            ([effectKey, effectValue]) => {
-                              const currentDisplayName =
-                                getAttributeDisplayName(effectKey);
-                              let displayValue = effectValue;
-                              if (
-                                [
-                                  "critRate",
-                                  "critDamage",
-                                  "dodgeRate",
-                                  "fireResistance",
-                                ].includes(effectKey)
-                              ) {
-                                displayValue = `${(effectValue * 100).toFixed(
-                                  1
-                                )}%`;
-                              }
-                              return (
-                                <li key={effectKey}>
-                                  {currentDisplayName}: +{displayValue}
-                                </li>
-                              );
-                            }
-                          )}
-                        </ul>
+                      <div className="absolute inset-0 bg-black bg-opacity-90 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                        <p className="text-xs font-medium mb-1">{equippedItem.name}</p>
+                        <p className="text-xs text-gray-300">{equippedItem.description}</p>
+                        {Object.entries(equippedItem.effects || {}).map(([stat, value]) => (
+                          <p key={stat} className="text-xs">
+                            <span className="text-gray-400">{getAttributeDisplayName(stat)}: </span>
+                            <span className="text-green-400">+{value}</span>
+                          </p>
+                        ))}
                       </div>
                     </>
                   ) : (
@@ -338,12 +341,9 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
                   className="flex items-center py-2 border-b border-slate-800 last:border-b-0"
                   key={key}
                 >
-                  {/* Column 1: Attribute Name */}
                   <span className="w-16 text-gray-300 text-sm flex-shrink-0">
                     {attrDisplayName}
                   </span>
-
-                  {/* Column 2: Breakdown & Total Value */}
                   <div className="flex-grow px-2 text-right">
                     <span className="text-xs text-gray-500 mr-1.5 whitespace-nowrap">
                       (基:{currentBaseAttr} 加:{allocatedVal} 装:
@@ -353,18 +353,16 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
                       {totalVal}
                     </span>
                   </div>
-
-                  {/* Column 3: Buttons */}
                   <div className="flex items-center space-x-1.5 flex-shrink-0">
                     <button
-                      onClick={() => onAllocatePoint(key, 1)}
+                      onClick={() => handleAllocatePoint(key, 1)}
                       disabled={potentialPoints < 1}
                       className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150"
                     >
                       +1
                     </button>
                     <button
-                      onClick={() => onAllocatePoint(key, 5)}
+                      onClick={() => handleAllocatePoint(key, 5)}
                       disabled={potentialPoints < 5}
                       className="px-1.5 py-0.5 bg-green-700 hover:bg-green-600 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150"
                     >
@@ -375,6 +373,16 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
               );
             })}
           </ul>
+          {potentialPoints > 0 && (
+            <div className="mt-2">
+              <button
+                onClick={handleResetPoints}
+                className="w-full bg-red-600 hover:bg-red-500 text-white font-medium py-1.5 px-3 rounded-md text-xs shadow-sm transition-colors duration-150 mb-1.5"
+              >
+                {uiText.resetPointsButton}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
@@ -407,11 +415,20 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
                 const baseSlotClasses =
                   "w-20 h-20 rounded flex flex-col justify-center items-center p-1 shadow-md relative group cursor-pointer border-2";
 
-                if (!skillName) {
+                const handleSkillSlotClick = () => {
+                  if (typeof onOpenSkillEditorForSlot === 'function') {
+                    onOpenSkillEditorForSlot(i, skillName);
+                  } else {
+                    console.warn("[SummonInfo] onOpenSkillEditorForSlot is not defined.");
+                  }
+                };
+
+                if (!skillInfo) {
                   return (
                     <div
                       key={`empty-skill-${i}`}
-                      className={`${baseSlotClasses} bg-slate-800 border-slate-700`}
+                      className={`${baseSlotClasses} bg-slate-800 border-slate-700 hover:border-yellow-500`}
+                      onClick={handleSkillSlotClick}
                     >
                       <div className="h-6 w-6 mb-1 flex items-center justify-center">
                         <i className="fa-solid fa-plus text-slate-600 text-2xl"></i>
@@ -426,15 +443,20 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
                 return (
                   <div
                     key={skillName || i}
-                    className={`${baseSlotClasses} bg-slate-800 border-slate-700`}
+                    className={`${baseSlotClasses} bg-slate-800 border-slate-700 hover:border-${colorForSkill} hover:border-opacity-70`}
+                    onClick={handleSkillSlotClick}
                   >
                     <div className="h-6 w-6 flex items-center justify-center">
                       <i
                         className={`fa-solid ${iconToDisplay} text-4xl text-${colorForSkill}`}
                       ></i>
                     </div>
-                    <div className={`text-xs text-center text-gray-200 relative top-3`}>
-                      <span className={`text-xs text-center text-gray-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full`}>
+                    <div
+                      className={`text-xs text-center text-gray-200 relative top-3 `}
+                    >
+                      <span
+                        className={`text-xs text-center text-gray-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full`}
+                      >
                         {skillInfo.name}
                       </span>
                     </div>
@@ -461,4 +483,4 @@ const SummonInfo = ({ summon, updateSummonInfo, onLevelUp, onEquipItem, onAlloca
   );
 };
 
-export default SummonInfo; 
+export default SummonInfo;

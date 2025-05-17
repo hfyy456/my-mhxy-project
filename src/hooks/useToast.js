@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-export const useToast = (toasts, setToasts, gameManager) => {
+export const useToast = (toasts, setToasts) => {
   const showResult = useCallback((message, type) => {
     // console.log('[useToast] showResult called:', { message, type });
     if (!message) {
@@ -24,6 +24,7 @@ export const useToast = (toasts, setToasts, gameManager) => {
       message,
       iconClass,
       timeString,
+      type,
     };
 
     // console.log('[useToast] Adding new toast:', newToast);
@@ -36,18 +37,26 @@ export const useToast = (toasts, setToasts, gameManager) => {
       return newToasts;
     });
     
-    if (gameManager) {
-      gameManager.addResultRecord(message);
-    }
-
+    // 根据消息类型设置不同的显示时间
+    const duration = type === 'error' ? 5000 : 3000;
+    
     setTimeout(() => {
       setToasts(prevToasts => {
-        const filteredToasts = prevToasts.filter(toast => toast.id !== newToast.id);
-        // console.log('[useToast] Removing toast, remaining toasts:', filteredToasts);
-        return filteredToasts;
+        // 添加淡出动画类
+        const updatedToasts = prevToasts.map(toast => 
+          toast.id === newToast.id 
+            ? { ...toast, isExiting: true }
+            : toast
+        );
+        return updatedToasts;
       });
-    }, 3000);
-  }, [toasts, setToasts, gameManager]);
+
+      // 等待动画完成后再移除
+      setTimeout(() => {
+        setToasts(prevToasts => prevToasts.filter(toast => toast.id !== newToast.id));
+      }, 300); // 动画持续时间
+    }, duration);
+  }, [setToasts]);
 
   return {
     showResult

@@ -1,6 +1,12 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-18 02:20:33
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-18 02:53:59
+ */
 import React from "react";
-import { skillConfig, skillTypeConfig } from "../config/config";
-import CommonModal from "./CommonModal";
+import { skillConfig, skillTypeConfig } from "@/config/config";
+import CommonModal from "@/features/ui/components/CommonModal";
 
 const SkillCatalog = ({ isOpen, onClose }) => {
   const [filteredSkills, setFilteredSkills] = React.useState(
@@ -73,4 +79,4 @@ const SkillCatalog = ({ isOpen, onClose }) => {
   );
 };
 
-export default SkillCatalog;
+export default SkillCatalog; 

@@ -20,19 +20,19 @@ export const INVENTORY_CONFIG = {
   // 物品品质
   ITEM_QUALITY: {
     NORMAL: 'normal',     // 普通
-    FINE: 'fine',         // 精良
-    RARE: 'rare',         // 稀有
-    EPIC: 'epic',         // 史诗
-    LEGENDARY: 'legendary' // 传说
+    RARE: 'rare',        // 稀有
+    EPIC: 'epic',        // 史诗
+    LEGENDARY: 'legendary', // 传说
+    MYTHIC: 'mythic'     // 神话
   },
 
   // 物品品质颜色映射
   QUALITY_COLORS: {
-    normal: 'gray-500',
-    fine: 'green-500',
-    rare: 'blue-500',
-    epic: 'purple-500',
-    legendary: 'orange-500'
+    normal: 'quality-normal',
+    rare: 'quality-rare',
+    epic: 'quality-epic',
+    legendary: 'quality-legendary',
+    mythic: 'quality-mythic'
   },
 
   // 物品堆叠规则
@@ -62,7 +62,7 @@ export const ITEM_BASE_CONFIG = {
     '中级经验丹': {
       name: '中级经验丹',
       type: 'consumable',
-      quality: 'fine',
+      quality: 'rare',
       description: '使用后获得5000点经验值',
       icon: 'fa-pills',
       effect: {
@@ -73,7 +73,7 @@ export const ITEM_BASE_CONFIG = {
     '高级经验丹': {
       name: '高级经验丹',
       type: 'consumable',
-      quality: 'rare',
+      quality: 'epic',
       description: '使用后获得20000点经验值',
       icon: 'fa-pills',
       effect: {
@@ -95,7 +95,7 @@ export const ITEM_BASE_CONFIG = {
     '高级炼妖石': {
       name: '高级炼妖石',
       type: 'material',
-      quality: 'fine',
+      quality: 'rare',
       description: '用于炼妖的高级材料',
       icon: 'fa-gem'
     }

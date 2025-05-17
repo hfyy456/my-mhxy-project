@@ -1,5 +1,7 @@
 /* src/index.css */
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 html,
 body {
@@ -11,18 +13,17 @@ body {
   height: 100%;
 }
 
-@theme {
-  --color-normal: #808080;
-  --color-excellent: #00ff00;
-  --color-fine: #0000ff;
-  --color-epic: #ff00ff;
-  --color-perfect: #ffa500;
+@theme inline {
   --color-primary: #8a2be2;
   --color-secondary: #ffa500;
-  --color-neutral: #f0f8ff;
+  --color-neutral: #f0f8ff; 
   --color-dark: #1a202c;
   --color-light: #ffffff;
-  --font-family-sans: "ZCOOL KuaiLe", "Inter", "system-ui", "sans-serif";
+  --color-quality-normal: #808080;
+  --color-quality-rare: #3b82f6;
+  --color-quality-epic: #a855f7;
+  --color-quality-legendary: #ff8000;
+  --color-quality-mythic: #ff1493;
 }
 @layer utilities {
   .content-auto {
@@ -123,7 +124,7 @@ html {
   }
 }
 
-@keyframes toastFadeIn {
+@keyframes toastEnter {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -134,7 +135,7 @@ html {
   }
 }
 
-@keyframes toastFadeOut {
+@keyframes toastExit {
   from {
     opacity: 1;
     transform: translateY(0);
@@ -142,5 +143,83 @@ html {
   to {
     opacity: 0;
     transform: translateY(-20px);
+  }
+}
+
+.animate-toastEnter {
+  animation: toastEnter 0.3s ease-out forwards;
+}
+
+.animate-toastExit {
+  animation: toastExit 0.3s ease-out forwards;
+}
+
+/* 品质相关的全局样式 */
+@layer components {
+  .quality-text {
+    @apply font-medium;
+  }
+  
+  .quality-border {
+    @apply border-2;
+  }
+  
+  .quality-bg {
+    @apply bg-opacity-10;
+  }
+  
+  /* 普通品质 */
+  .quality-normal {
+    @apply text-quality-normal;
+  }
+  .quality-border-normal {
+    @apply border-quality-normal;
+  }
+  .quality-bg-normal {
+    @apply bg-quality-normal;
+  }
+  
+  /* 稀有品质 */
+  .quality-rare {
+    @apply text-quality-rare;
+  }
+  .quality-border-rare {
+    @apply border-quality-rare;
+  }
+  .quality-bg-rare {
+    @apply bg-quality-rare;
+  }
+  
+  /* 史诗品质 */
+  .quality-epic {
+    @apply text-quality-epic;
+  }
+  .quality-border-epic {
+    @apply border-quality-epic;
+  }
+  .quality-bg-epic {
+    @apply bg-quality-epic;
+  }
+  
+  /* 传说品质 */
+  .quality-legendary {
+    @apply text-quality-legendary;
+  }
+  .quality-border-legendary {
+    @apply border-quality-legendary;
+  }
+  .quality-bg-legendary {
+    @apply bg-quality-legendary;
+  }
+  
+  /* 神话品质 */
+  .quality-mythic {
+    @apply text-quality-mythic;
+  }
+  .quality-border-mythic {
+    @apply border-quality-mythic;
+  }
+  .quality-bg-mythic {
+    @apply bg-quality-mythic;
   }
 }
