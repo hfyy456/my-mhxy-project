@@ -2,11 +2,11 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 02:54:01
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-17 02:57:07
+ * @LastEditTime: 2025-05-19 02:08:10
  */
 import React from 'react';
 
-const MainMenu = ({ onOpenSummonSystem }) => {
+const MainMenu = ({ onOpenSummonSystem, onOpenIncubator }) => {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center overflow-hidden">
       <div className="bg-slate-800/80 p-8 rounded-xl shadow-2xl shadow-purple-500/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -26,12 +26,12 @@ const MainMenu = ({ onOpenSummonSystem }) => {
           </button>
 
           <button
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg p-6 shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 flex flex-col items-center justify-center group opacity-50 cursor-not-allowed"
-            disabled
+            onClick={onOpenIncubator}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg p-6 shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 flex flex-col items-center justify-center group"
           >
-            <i className="fa-solid fa-sword text-4xl mb-3 text-blue-300 group-hover:text-blue-200 transition-colors duration-300"></i>
-            <span className="text-xl font-semibold">战斗系统</span>
-            <p className="text-sm text-gray-300 mt-2 text-center">即将推出</p>
+            <i className="fa-solid fa-egg text-4xl mb-3 text-blue-300 group-hover:text-blue-200 transition-colors duration-300"></i>
+            <span className="text-xl font-semibold">培养皿系统</span>
+            <p className="text-sm text-gray-300 mt-2 text-center">孵化各种稀有蛋，获得独特的召唤兽</p>
           </button>
 
           <button

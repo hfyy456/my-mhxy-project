@@ -8,6 +8,12 @@ import {
   // levelExperienceRequirements // Not directly used here, summonSlice will handle
 } from "@/config/config";
 import { equipmentConfig } from "@/config/equipmentConfig";
+import { SKILL_MODES } from './config/enumConfig';
+import { 
+  uiText, 
+  getRaceTypeDisplayName,
+  getQualityDisplayName
+} from "@/config/uiTextConfig";
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -29,7 +35,8 @@ export const getRandomAttribute = (min, max) => {
 };
 
 export const getRandomSkill = () => {
-  return skillConfig[Math.floor(Math.random() * skillConfig.length)].name;
+  const skill = skillConfig[Math.floor(Math.random() * skillConfig.length)];
+  return skill.id;
 };
 
 // 获取随机装备
@@ -120,6 +127,7 @@ export const refineMonster = () => {
   const newSummonPayload = {
     id: summonId,
     name: petName,
+    nickname: basePetConfig.name, // 将昵称默认设置为召唤兽的中文名称
     level: level,
     quality: quality,
     experience: 0,
@@ -127,7 +135,8 @@ export const refineMonster = () => {
     allocatedPoints: { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
     basicAttributes: initialBasicAttributes,
     skillSet: initialSkills,
-    equippedItemIds: equippedItemIds, // 所有槽位均为 null
+    equippedItemIds: equippedItemIds,
+    race: basePetConfig.race,
   };
 
   // 为历史记录准备可序列化的装备信息 (将显示无装备)
@@ -145,76 +154,77 @@ export const refineMonster = () => {
     derivedAttributes: {}, // Will be populated from Redux state by UI
     skills: [...newSummonPayload.skillSet],
     equipment: serializableEquippedItemsForHistory, // 历史记录显示无装备
+    race: newSummonPayload.race, // 在历史记录中添加种族信息
   };
 
   return {
     newSummonPayload: newSummonPayload,
-    newlyCreatedItems: initialEquipmentData, // 这些物品会进入背包
+    newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
-    message: `炼妖成功！召唤兽 ${newSummonPayload.name} (${newSummonPayload.quality}) 生成完毕，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
+    requireNickname: false, // 不再需要设置昵称
+    message: `炼妖成功！召唤兽 ${basePetConfig.name} (${getQualityDisplayName(newSummonPayload.quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(newSummonPayload.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
   };
 };
 
 export const bookSkill = (summonId, currentSkillSet) => {
-  const skillToAdd = getRandomSkill();
+  const skillId = getRandomSkill();
   const successProbability = Math.random();
 
-  if (successProbability >= probabilityConfig.bookSuccessRate) { // Adjusted condition based on typical probability checks
+  if (successProbability >= probabilityConfig.bookSuccessRate) {
     return {
       outcome: 'FAILURE_NO_SKILL_CHANGE',
       message: "打书失败，技能未添加",
-      skillAttempted: skillToAdd
+      skillAttempted: skillId
     };
   }
 
-  const skillInfo = skillConfig.find((s) => s.name === skillToAdd);
+  const skillInfo = skillConfig.find((s) => s.id === skillId);
   if (!skillInfo) {
     return { 
       outcome: 'FAILURE_CONFIG_NOT_FOUND', 
-      message: `打书失败：技能 ${skillToAdd} 配置未找到。`, 
-      skillAttempted: skillToAdd 
+      message: `打书失败：技能 ${skillId} 配置未找到。`, 
+      skillAttempted: skillId 
     };
   }
 
-  const activeSkillsCount = currentSkillSet.filter((skillName) => {
-    const sk = skillConfig.find((s) => s.name === skillName);
-    return sk?.mode === "主动";
+  const activeSkillsCount = currentSkillSet.filter((skillId) => {
+    const sk = skillConfig.find((s) => s.id === skillId);
+    return sk?.mode === SKILL_MODES.ACTIVE;
   }).length;
 
-  if (skillInfo.mode === "主动" && activeSkillsCount >= 2) {
+  if (skillInfo.mode === SKILL_MODES.ACTIVE && activeSkillsCount >= 2) {
     return {
       outcome: 'FAILURE_ACTIVE_SKILL_LIMIT',
       message: "打书失败：最多只能拥有2个主动技能。",
-      skillAttempted: skillToAdd,
+      skillAttempted: skillId,
       currentActiveSkills: activeSkillsCount
     };
   }
 
-  if (currentSkillSet.includes(skillToAdd)) {
+  if (currentSkillSet.includes(skillId)) {
     return {
       outcome: 'SUCCESS_SKILL_ALREADY_PRESENT',
-      skill: skillToAdd,
-      message: `打书成功！但是技能 "${skillToAdd}" 已存在，无需添加。`,
+      skill: skillId,
+      message: `打书成功！但是技能 "${skillInfo.name}" 已存在，无需添加。`,
     };
   } else if (currentSkillSet.length >= 12) {
     return {
       outcome: 'SUCCESS_REPLACEMENT_NEEDED',
-      pendingSkill: skillToAdd,
-      message: "打书成功！但技能列表已满 (12/12)，需要替换一个旧技能。", // More informative message
+      pendingSkill: skillId,
+      message: "打书成功！但技能列表已满 (12/12)，需要替换一个旧技能。",
     };
   } else {
-    // The actual addition will be handled by a Redux action dispatched by the caller.
     return {
       outcome: 'SUCCESS_ADD_SKILL',
-      skillToAdd: skillToAdd,
-      skillInfo: skillInfo, // Pass skillInfo for description etc.
-      message: `打书成功！获得技能：${skillToAdd} (${skillInfo.description})`,
+      skillToAdd: skillId,
+      skillInfo: skillInfo,
+      message: `打书成功！获得技能：${skillInfo.name} (${skillInfo.description})`,
     };
   }
 };
 
-export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkill) => {
-  if (!pendingSkill || !currentSkillSet || currentSkillSet.length === 0) {
+export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkillId) => {
+  if (!pendingSkillId || !currentSkillSet || currentSkillSet.length === 0) {
     return { 
       outcome: 'INVALID_OPERATION',
       message: "操作无效，没有待定技能或召唤兽没有技能可替换。"
@@ -222,22 +232,18 @@ export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkill) => 
   }
   
   const indexToReplace = Math.floor(Math.random() * currentSkillSet.length);
-  const replacedSkill = currentSkillSet[indexToReplace];
+  const replacedSkillId = currentSkillSet[indexToReplace];
   
-  // The actual replacement will be handled by a Redux action dispatched by the caller.
-  // The action will take summonId, pendingSkill (as skillToAdd), and replacedSkill (as skillToRemove).
-
-  const newSkillInfo = skillConfig.find((s) => s.name === pendingSkill);
-  // It's possible newSkillInfo is null if pendingSkill is somehow invalid, though bookSkill should have caught this.
-  // However, the original code didn't explicitly re-check skillConfig for pendingSkill here, relying on it being valid.
+  const newSkillInfo = skillConfig.find((s) => s.id === pendingSkillId);
+  const replacedSkillInfo = skillConfig.find((s) => s.id === replacedSkillId);
 
   return {
     outcome: 'SKILL_REPLACED',
-    summonId: summonId, // Pass summonId back for consistency, though caller already has it.
-    skillAdded: pendingSkill,
-    skillRemoved: replacedSkill,
+    summonId: summonId,
+    skillAdded: pendingSkillId,
+    skillRemoved: replacedSkillId,
     newSkillDescription: newSkillInfo ? newSkillInfo.description : '',
-    message: `打书成功！技能 "${replacedSkill}" 被 "${pendingSkill}" 覆盖。 (${newSkillInfo ? newSkillInfo.description : ''})`,
+    message: `打书成功！技能 "${replacedSkillInfo?.name || replacedSkillId}" 被 "${newSkillInfo?.name || pendingSkillId}" 覆盖。 (${newSkillInfo ? newSkillInfo.description : ''})`,
   };
 };
 

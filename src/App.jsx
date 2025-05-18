@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { useModalState } from "@/hooks/useModalState";
 import ToastContainer from "@/features/ui/components/ToastContainer";
 import InventoryPanel from "@/features/inventory/components/InventoryPanel";
+import { Incubator } from "@/features/incubator/components/Incubator";
 // import Inventory from "@/entities/Inventory"; // Removed
 import { generateInitialEquipment } from "@/gameLogic";
 // 引入Redux集成和选择器
@@ -20,6 +21,7 @@ const App = () => {
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
   // const [inventory] = useState(new Inventory()); // Removed
   
   // 从Redux获取召唤兽数据
@@ -113,7 +115,10 @@ const App = () => {
       }}
     >
       {currentSystem === "main" ? (
-        <MainMenu onOpenSummonSystem={() => handleSystemChange("summon")} />
+        <MainMenu 
+          onOpenSummonSystem={() => handleSystemChange("summon")} 
+          onOpenIncubator={() => setIsIncubatorOpen(true)}
+        />
       ) : (
         <SummonSystem
           onBackToMain={() => handleSystemChange("main")}
@@ -136,15 +141,17 @@ const App = () => {
       </div>
 
       {/* 添加背包按钮 */}
-      <button
-        onClick={() => setIsInventoryOpen(true)}
-        className="fixed bottom-6 right-6 bg-slate-800/90 hover:bg-slate-700/90 
-          text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
-          transition-all duration-200 border border-slate-600/30 group"
-      >
-        <i className="fas fa-backpack text-lg text-purple-400"></i>
-        <span className="font-medium">背包</span>
-      </button>
+      <div className="fixed bottom-6 right-6 flex flex-col gap-4">
+        <button
+          onClick={() => setIsInventoryOpen(true)}
+          className="bg-slate-800/90 hover:bg-slate-700/90 
+            text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
+            transition-all duration-200 border border-slate-600/30 group"
+        >
+          <i className="fas fa-backpack text-lg text-purple-400"></i>
+          <span className="font-medium">背包</span>
+        </button>
+      </div>
 
       {/* 背包面板 */}
       <div
@@ -156,6 +163,24 @@ const App = () => {
           isOpen={isInventoryOpen}
           onClose={() => setIsInventoryOpen(false)}
         />
+      </div>
+
+      {/* 培养皿面板 */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
+          isIncubatorOpen ? "" : "hidden"
+        }`}
+        style={{ zIndex: 1000 }}
+      >
+        <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
+          <button
+            onClick={() => setIsIncubatorOpen(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          >
+            <i className="fas fa-times text-xl"></i>
+          </button>
+          <Incubator />
+        </div>
       </div>
     </div>
   );

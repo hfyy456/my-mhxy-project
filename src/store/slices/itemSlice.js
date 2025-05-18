@@ -112,6 +112,7 @@ const itemSlice = createSlice({
       
       processedItemData.isEquipped = processedItemData.isEquipped || false;
       processedItemData.equippedBy = processedItemData.equippedBy || null;
+      processedItemData.equippedBySummonName = processedItemData.equippedBySummonName || null;
       processedItemData.addedTimestamp = Date.now();
 
       state.allItems[processedItemData.id] = processedItemData;
@@ -152,7 +153,7 @@ const itemSlice = createSlice({
       const { id, isEquipped, equippedBy } = action.payload;
       if (state.allItems[id]) {
         state.allItems[id].isEquipped = isEquipped;
-        state.allItems[id].equippedBy = equippedBy || null; 
+        state.allItems[id].equippedBy = equippedBy || null;
       }
     },
 
@@ -224,6 +225,35 @@ export const selectSortedItems = state => {
         return 0;
     }
   });
+};
+
+export const selectItemWithSummonInfo = (state, itemId) => {
+  const item = state.items.allItems[itemId];
+  if (!item) return null;
+
+  const result = { ...item };
+  if (item.equippedBy) {
+    const summon = state.summons.allSummons[item.equippedBy];
+    if (summon) {
+      result.equippedBySummonName = summon.nickname || summon.name;
+    }
+  }
+  return result;
+};
+
+export const selectEquippedItemsWithSummonInfo = state => {
+  return Object.values(state.items.allItems)
+    .filter(item => item.isEquipped)
+    .map(item => {
+      const result = { ...item };
+      if (item.equippedBy) {
+        const summon = state.summons.allSummons[item.equippedBy];
+        if (summon) {
+          result.equippedBySummonName = summon.nickname || summon.name;
+        }
+      }
+      return result;
+    });
 };
 
 export default itemSlice.reducer; 

@@ -2,33 +2,56 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 22:46:29
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-18 02:20:37
+ * @LastEditTime: 2025-05-19 03:14:40
  */
+import { EQUIPMENT_SLOT_TYPES, SKILL_TYPES, ELEMENT_TYPES, RACE_TYPES, PET_TYPES, QUALITY_TYPES, SKILL_MODES } from './enumConfig';
+
 export const uiText = {
-  // General
-  loading: "加载中...",
-  levelLabel: "等级:",
-  qualityLabel: "品质:",
-  experienceLabel: "经验:",
-  equipActionLabel: "可装备", // For empty equipment slot tooltip
-  emptySlotLabel: "空栏位", // For empty skill slot
-  typeLabel: "类型:", // For skill tooltip
+  // 通用文本
+  general: {
+    loading: "加载中...",
+    confirm: "确认",
+    cancel: "取消",
+    back: "返回",
+    save: "保存",
+    delete: "删除",
+    edit: "编辑",
+    unknown: "未知"
+  },
 
-  // Section Titles
-  coreAttributesTitle: "核心属性",
-  equipmentBarTitle: "装备栏",
-  basicAttributesTitle: "基础属性",
-  skillsTitle: "技能",
-  skillsMaxCountInfo: "(最多12个)",
+  // 标签文本
+  labels: {
+    level: "等级:",
+    quality: "品质:",
+    experience: "经验:",
+    race: "种族:",
+    type: "类型:",
+    currentValue: "当前值:",
+    maxValue: "最大值:",
+    remainingPoints: "剩余点数:",
+    skillCount: "(最多12个)",
+  },
 
-  // Attributes - used in core, basic, and equipment tooltips
-  attr: {
+  // 标题文本
+  titles: {
+    coreAttributes: "核心属性",
+    equipmentBar: "装备栏",
+    basicAttributes: "基础属性",
+    skills: "技能",
+    petList: "召唤兽列表",
+    petDetails: "召唤兽详情",
+    skillEditor: "技能编辑",
+    equipmentSelector: "装备选择"
+  },
+
+  // 属性名称
+  attributes: {
     hp: "生命值",
     mp: "法力值",
-    physicalAttack: "物攻", // Could be "物攻" for brevity if preferred
-    magicalAttack: "法攻", // Could be "法攻"
-    physicalDefense: "物防", // Could be "物抗"
-    magicalDefense: "法防", // Could be "法抗"
+    physicalAttack: "物理攻击",
+    magicalAttack: "法术攻击",
+    physicalDefense: "物理防御",
+    magicalDefense: "法术防御",
     speed: "速度",
     critRate: "暴击率",
     critDamage: "暴击伤害",
@@ -39,37 +62,164 @@ export const uiText = {
     intelligence: "智力",
     luck: "幸运",
     fireResistance: "火抗性",
-    mpRecovery: "法力恢复",
-    // Add any other attributes that appear in UI here
+    waterResistance: "水抗性",
+    thunderResistance: "雷抗性",
+    windResistance: "风抗性",
+    earthResistance: "土抗性",
+    lightResistance: "光抗性",
+    darkResistance: "暗抗性",
+    mpRecovery: "法力恢复"
   },
 
-  // Equipment Slot Types (display names for empty slots, and potentially for titles if needed)
-  slotTypes: {
-    饰品: "饰品",
-    遗物: "遗物",
-    血脉: "血脉",
-    符文: "符文",
+  // 装备槽位类型
+  equipmentSlots: {
+    [EQUIPMENT_SLOT_TYPES.ACCESSORY]: "饰品",
+    [EQUIPMENT_SLOT_TYPES.RELIC]: "遗物",
+    [EQUIPMENT_SLOT_TYPES.BLOODLINE]: "血脉",
+    [EQUIPMENT_SLOT_TYPES.RUNE]: "符文"
   },
 
-  // Button Texts
+  // 技能类型
+  skillTypes: {
+    [SKILL_TYPES.PHYSICAL]: "物理",
+    [SKILL_TYPES.MAGICAL]: "法术",
+    [SKILL_TYPES.DEFENSIVE]: "防御",
+    [SKILL_TYPES.SUPPORT]: "辅助",
+    [SKILL_TYPES.SURVIVAL]: "生存",
+    [SKILL_TYPES.SPEED]: "速度"
+  },
+
+  // 元素类型
+  elementTypes: {
+    [ELEMENT_TYPES.PHYSICAL]: "物理",
+    [ELEMENT_TYPES.FIRE]: "火",
+    [ELEMENT_TYPES.WATER]: "水",
+    [ELEMENT_TYPES.THUNDER]: "雷",
+    [ELEMENT_TYPES.WIND]: "风",
+    [ELEMENT_TYPES.EARTH]: "土",
+    [ELEMENT_TYPES.LIGHT]: "光",
+    [ELEMENT_TYPES.DARK]: "暗",
+    [ELEMENT_TYPES.POISON]: "毒",
+    [ELEMENT_TYPES.NATURE]: "自然"
+  },
+
+  // 品质类型
+  qualityTypes: {
+    [QUALITY_TYPES.NORMAL]: "普通",
+    [QUALITY_TYPES.RARE]: "稀有",
+    [QUALITY_TYPES.EPIC]: "史诗",
+    [QUALITY_TYPES.LEGENDARY]: "传说",
+    [QUALITY_TYPES.MYTHIC]: "神话"
+  },
+
+  // 宠物类型
+  petTypes: {
+    [PET_TYPES.PHYSICAL]: "物理攻击型",
+    [PET_TYPES.MAGICAL]: "法术攻击型",
+    [PET_TYPES.DEFENSE]: "生命防御型",
+    [PET_TYPES.SPEED]: "速度敏捷型",
+    [PET_TYPES.SUPPORT]: "辅助支援型"
+  },
+
+  // 种族类型
+  raceTypes: {
+    [RACE_TYPES.CELESTIAL]: "仙灵",
+    [RACE_TYPES.NETHER]: "冥灵",
+    [RACE_TYPES.BEAST]: "瑞兽",
+    [RACE_TYPES.SPIRIT]: "精怪",
+    [RACE_TYPES.MACHINE]: "机关",
+    [RACE_TYPES.WARRIOR]: "神兵"
+  },
+
+  // 技能模式
+  skillModes: {
+    [SKILL_MODES.PASSIVE]: "被动技能",
+    [SKILL_MODES.ACTIVE]: "主动技能"
+  },
+
+  // 按钮文本
   buttons: {
     petCatalog: "召唤兽图鉴",
     refineHistory: "炼妖历史",
     refineToGetSummon: "炼妖获取召唤兽",
     refine: "炼妖",
-    // Add other button texts here as needed
+    levelUp: "升级",
+    resetPoints: "重置点数",
+    learnSkill: "学习技能",
+    replaceSkill: "替换技能",
+    equipItem: "装备",
+    unequipItem: "卸下",
+    evolve: "进化",
+    train: "培养",
+    selectSummon: "选择此召唤兽",
+    confirmSelect: "确认选择",
+    cancelSelect: "取消选择"
   },
 
-  // Notifications & Messages
+  // 提示和消息
+  messages: {
+    maxLevelReached: "已达到最高等级",
+    skillLearnSuccess: "技能学习成功",
+    skillLearnFailed: "技能学习失败",
+    equipmentSuccess: "装备成功",
+    equipmentFailed: "装备失败",
+    confirmDelete: "确认要删除吗？",
+    confirmReset: "确认要重置吗？",
+    saveSuccess: "保存成功",
+    saveFailed: "保存失败"
+  },
+
+  // 通知消息
   notifications: {
     selectSummonFirst: "请先选择一个召唤兽",
     noSummonData: "当前没有召唤兽数据，请先创建或选择一个召唤兽",
-    // Add other notifications here
+    maxLevelReached: "已达到最高等级",
+    skillLearnSuccess: "技能学习成功",
+    skillLearnFailed: "技能学习失败",
+    equipmentSuccess: "装备成功",
+    equipmentFailed: "装备失败"
+  },
+
+  // 空状态提示
+  emptyStates: {
+    noSkills: "暂无技能",
+    noEquipment: "暂无装备",
+    emptySlot: "空栏位",
+    noData: "暂无数据"
   }
-  // You can add more specific texts as needed
 };
 
-// Helper function to get attribute display name
+// 获取属性显示名称
 export const getAttributeDisplayName = (key) => {
-  return uiText.attr[key] || key;
+  return uiText.attributes[key] || key;
+};
+
+// 获取技能类型显示名称
+export const getSkillTypeDisplayName = (type) => {
+  return uiText.skillTypes[type] || uiText.general.unknown;
+};
+
+// 获取元素类型显示名称
+export const getElementTypeDisplayName = (type) => {
+  return uiText.elementTypes[type] || uiText.general.unknown;
+};
+
+// 获取种族类型显示名称
+export const getRaceTypeDisplayName = (type) => {
+  return uiText.raceTypes[type] || uiText.general.unknown;
+};
+
+// 获取品质显示名称
+export const getQualityDisplayName = (quality) => {
+  return uiText.qualityTypes[quality] || uiText.general.unknown;
+};
+
+// 获取宠物类型显示名称
+export const getPetTypeDisplayName = (type) => {
+  return uiText.petTypes[type] || uiText.general.unknown;
+};
+
+// 获取技能模式显示名称
+export const getSkillModeDisplayName = (mode) => {
+  return uiText.skillModes[mode] || uiText.general.unknown;
 };

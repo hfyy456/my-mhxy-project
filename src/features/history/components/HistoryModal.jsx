@@ -5,8 +5,9 @@
  * @LastEditTime: 2025-05-16 03:19:34
  */
 import React from "react";
-import { qualityConfig, skillConfig, skillTypeConfig } from "@/config/config";
+import { qualityConfig, skillConfig, skillTypeConfig, petConfig } from "@/config/config";
 import CommonModal from "@/features/ui/components/CommonModal";
+import { getQualityDisplayName, getSkillTypeDisplayName } from "@/config/uiTextConfig";
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (
@@ -16,6 +17,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
           <p className="text-gray-400 italic text-center py-8">暂无历史记录。</p>
         ) : (
           historyList.map((pet, index) => {
+            const displayName = petConfig[pet.name]?.name || pet.name;
             const qualityColorName = qualityConfig.colors[pet.quality] || 'normal';
             return (
               <div
@@ -24,9 +26,9 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
               >
                 <div className="flex justify-between items-start mb-3">
                   <h4 className="font-bold text-purple-300">
-                    {pet.name}{" "}
-                    <span className={`text-${qualityColorName}`}>
-                      ({pet.quality})
+                    {displayName}
+                    <span className={`text-${qualityColorName} ml-2`}>
+                      ({getQualityDisplayName(pet.quality)})
                     </span>
                   </h4>
                   <span className="text-xs text-gray-400">
@@ -64,6 +66,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                       <span
                         key={skillName}
                         className={`px-2 py-1 rounded text-xs font-medium ${bgColorClass} ${textColorClass} border border-transparent hover:border-current`}
+                        title={`${getSkillTypeDisplayName(skillInfo?.type || '')}`}
                       >
                         {skillName}
                       </span>

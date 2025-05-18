@@ -4,16 +4,21 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-18 02:48:12
  */
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { petConfig } from "../../../config/config";
 import CommonModal from "../../ui/components/CommonModal";
 import { selectAllSummons, setCurrentSummon } from "../../../store/slices/summonSlice";
+import { getAllRaces } from '@/config/raceConfig';
+import { getPetTypeDisplayName, getRaceTypeDisplayName } from "@/config/uiTextConfig";
 
 const PetCatalog = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const allSummons = useSelector(selectAllSummons);
   const summonsList = Object.values(allSummons || {});
+  const petEntries = Object.entries(petConfig);
+  const allRaces = getAllRaces();
+  const [selectedRace, setSelectedRace] = useState('全部');
 
   const typeText = {
     法攻: "法术攻击型",
@@ -28,113 +33,65 @@ const PetCatalog = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  return (
-    <CommonModal isOpen={isOpen} onClose={onClose} title="召唤兽图鉴">
-      <div className="mt-2 rounded-xl">
-        {/* 已有召唤兽列表 */}
-        {summonsList.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-100 mb-3">我的召唤兽</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-              {summonsList.map((summon) => (
-                <div
-                  key={summon.id}
-                  className={`bg-slate-700/70 rounded-lg p-4 shadow-lg hover:shadow-purple-500/20 transition-all duration-300 border-l-4 border-${petConfig[summon.name]?.color || 'slate-500'} border-t border-r border-b border-slate-600 hover:border-purple-500/50 cursor-pointer`}
-                  onClick={() => handleSelectSummon(summon.id)}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold text-gray-100">{summon.name}</h3>
-                    <span className={`text-sm font-medium text-${petConfig[summon.name]?.color || 'slate-400'}`}>
-                      {summon.quality}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-400 w-20">等级：</span>
-                      <span className="text-sm text-gray-200">{summon.level}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-400 w-20">类型：</span>
-                      <span className={`text-sm font-medium text-${petConfig[summon.name]?.color || 'slate-400'}`}>
-                        {typeText[petConfig[summon.name]?.type] || petConfig[summon.name]?.type}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-400 w-20">技能：</span>
-                      <div className="flex flex-wrap gap-1">
-                        {summon.skillSet.filter(Boolean).map((skill, index) => (
-                          <span
-                            key={index}
-                            className="text-xs bg-slate-600 text-gray-200 px-2 py-0.5 rounded"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+  const filteredPets = selectedRace === '全部' 
+    ? petEntries 
+    : petEntries.filter(([_, pet]) => pet.race === selectedRace);
 
-        {/* 可获得的召唤兽列表 */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-100 mb-3">可获得的召唤兽</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-            {Object.entries(petConfig).map(([name, config]) => (
-              <div
-                key={name}
-                className={`bg-slate-700/70 rounded-lg p-4 shadow-lg hover:shadow-purple-500/20 transition-all duration-300 border-l-4 border-${config.color || 'slate-500'} border-t border-r border-b border-slate-600 hover:border-purple-500/50`}
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-10">
+      <div className="bg-slate-800 rounded-lg w-full max-w-5xl max-h-[80vh] overflow-hidden shadow-xl flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b border-slate-700">
+          <h2 className="text-xl font-bold text-white">召唤兽图鉴</h2>
+          <button
+            className="text-slate-400 hover:text-white"
+            onClick={onClose}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div className="p-4 border-b border-slate-700 bg-slate-700/50">
+          <div className="flex flex-wrap gap-2">
+            <button 
+              className={`px-3 py-1 rounded-full text-sm ${selectedRace === '全部' ? 'bg-blue-500 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
+              onClick={() => setSelectedRace('全部')}
+            >
+              全部
+            </button>
+            {allRaces.map(race => (
+              <button 
+                key={race}
+                className={`px-3 py-1 rounded-full text-sm ${selectedRace === race ? 'bg-blue-500 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
+                onClick={() => setSelectedRace(race)}
               >
-                <h3 className="text-lg font-semibold text-gray-100 mb-2">{name}</h3>
-                <p className="text-sm text-gray-300 mb-3">{config.background}</p>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-400 w-20">类型：</span>
-                    <span className={`text-sm font-medium text-${config.color || 'slate-400'}`}>
-                      {typeText[config.type] || config.type}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-400 w-20">初始技能：</span>
-                    <div className="flex flex-wrap gap-1">
-                      {config.initialSkills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="text-xs bg-slate-600 text-gray-200 px-2 py-0.5 rounded"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-400 w-20">成长率：</span>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(config.growthRates).map(([attr, rate]) => (
-                        <span
-                          key={attr}
-                          className="text-xs bg-slate-600 text-gray-200 px-2 py-0.5 rounded"
-                        >
-                          {attr === 'constitution' && '体质'}
-                          {attr === 'strength' && '力量'}
-                          {attr === 'agility' && '敏捷'}
-                          {attr === 'intelligence' && '智力'}
-                          {attr === 'luck' && '运气'}
-                          : {(rate * 100).toFixed(1)}%
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                {race}
+              </button>
             ))}
           </div>
         </div>
+
+        <div className="overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredPets.map(([petId, pet]) => (
+            <div key={petId} className="bg-slate-700 rounded-lg p-2 shadow">
+              <h3 className="text-lg font-semibold text-white mb-2">{pet.name}</h3>
+              <div className="text-sm text-slate-300">
+                <div className="mb-1">
+                  <span className="font-medium text-slate-200">类型: </span>
+                  <span className={`text-${pet.color}`}>{getPetTypeDisplayName(pet.type)}</span>
+                </div>
+                <div className="mb-1">
+                  <span className="font-medium text-slate-200">种族: </span>
+                  <span>{getRaceTypeDisplayName(pet.race)}</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 line-clamp-3">{pet.background}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </CommonModal>
+    </div>
   );
 };
 

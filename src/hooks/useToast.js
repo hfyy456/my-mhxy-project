@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-17 02:57:11
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-19 04:53:06
+ */
 import { useCallback } from 'react';
 
 export const useToast = (toasts, setToasts) => {

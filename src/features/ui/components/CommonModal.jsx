@@ -6,7 +6,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 
-const CommonModal = ({ isOpen, onClose, title, children }) => {
+const CommonModal = ({ isOpen, onClose, title, children, className = "" }) => {
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
 
@@ -48,7 +48,6 @@ const CommonModal = ({ isOpen, onClose, title, children }) => {
     }
   }, [isOpen]);
 
-
   if (!isOpen) return null;
 
   return (
@@ -58,7 +57,7 @@ const CommonModal = ({ isOpen, onClose, title, children }) => {
     >
       <div 
         ref={modalRef} 
-        className={`bg-slate-800 rounded-xl max-w-4xl w-full mx-4 max-h-[80vh] transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
+        className={`bg-slate-800 rounded-xl mx-4 max-h-[80vh] transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${className || 'w-full max-w-4xl'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

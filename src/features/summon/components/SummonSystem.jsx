@@ -21,10 +21,13 @@ import {
   addRefinementHistoryItem,
   selectCurrentSummonFullData,
   selectAllSummons,
-  recalculateSummonStats
+  recalculateSummonStats,
+  updateSummonNickname
 } from "../../../store/slices/summonSlice";
-import { addItems, selectAllItemsArray } from "../../../store/slices/itemSlice";
+import { addItems, selectAllItemsArray, setItemStatus } from "../../../store/slices/itemSlice";
 import { uiText } from "@/config/uiTextConfig";
+import { petConfig } from "@/config/config";
+import NicknameModal from "./NicknameModal";
 
 const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const dispatch = useDispatch();
@@ -48,6 +51,9 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const [selectedSkillSlotIndex, setSelectedSkillSlotIndex] = useState(null);
   const [currentSkillForSlot, setCurrentSkillForSlot] = useState(null);
   const [isSummonListOpen, setIsSummonListOpen] = useState(false);
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const [selectedPetForNickname, setSelectedPetForNickname] = useState(null);
+  const [tempSummonData, setTempSummonData] = useState(null);
 
   const handleOpenEquipmentSelector = useCallback((slotType) => {
     if (!currentSummon) {
@@ -70,6 +76,40 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
     console.log(`[SummonSystem] Opening skill editor for slot index: ${skillIndex}, current skill: ${existingSkillName}`);
   }, [currentSummon]);
 
+  const handleOpenNicknameModal = useCallback((pet) => {
+    setSelectedPetForNickname(pet);
+    setIsNicknameModalOpen(true);
+  }, []);
+
+  const handleNicknameConfirm = useCallback((nickname) => {
+    if (selectedPetForNickname) {
+      if (tempSummonData) {
+        // 处理新召唤兽的昵称设置
+        const updatedSummonPayload = {
+          ...tempSummonData.summonPayload,
+          nickname
+        };
+        dispatch(addSummon(updatedSummonPayload));
+        dispatch(setCurrentSummon(updatedSummonPayload.id));
+        dispatch(addRefinementHistoryItem(tempSummonData.historyItem));
+        setTempSummonData(null);
+      } else {
+        // 直接更新昵称即可，不需要更新装备显示
+        dispatch(updateSummonNickname({ 
+          id: selectedPetForNickname.id, 
+          nickname 
+        }));
+      }
+      
+      setToasts(prev => [...prev, {
+        type: "success",
+        message: `成功为${selectedPetForNickname.name}设置昵称：${nickname}`,
+      }]);
+    }
+    setSelectedPetForNickname(null);
+    setIsNicknameModalOpen(false);
+  }, [selectedPetForNickname, tempSummonData, dispatch, setToasts]);
+
   const handleRefineMonster = useCallback(async () => {
     const { refineMonster } = await import('../../../gameLogic');
     
@@ -78,15 +118,29 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
         dispatch(addItems(result.newlyCreatedItems));
-        dispatch(addSummon(result.newSummonPayload));
-        dispatch(setCurrentSummon(result.newSummonPayload.id));
-        dispatch(addRefinementHistoryItem(result.historyItem));
+        
+        if (result.requireNickname) {
+          setSelectedPetForNickname({
+            ...result.newSummonPayload,
+            name: petConfig[result.newSummonPayload.name]?.name || result.newSummonPayload.name
+          });
+          setIsNicknameModalOpen(true);
+          
+          setTempSummonData({
+            summonPayload: result.newSummonPayload,
+            historyItem: result.historyItem
+          });
+        } else {
+          dispatch(addSummon(result.newSummonPayload));
+          dispatch(setCurrentSummon(result.newSummonPayload.id));
+          dispatch(addRefinementHistoryItem(result.historyItem));
+        }
 
-      setToasts(prev => [...prev, {
-        id: Date.now(),
+        setToasts(prev => [...prev, {
+          id: Date.now(),
           message: result.message || "炼妖成功！获得了新的召唤兽和初始装备！",
-        type: 'success'
-      }]);
+          type: 'success'
+        }]);
       } else {
         throw new Error(result.message || "炼妖失败，未能返回完整的召唤兽、物品或历史数据");
       }
@@ -121,11 +175,29 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const handleConfirmEquipItem = (itemId) => {
     if (currentSummon && selectedSlotForEquipping && itemId) {
       const summonIdToUpdate = currentSummon.id;
-      dispatch(equipItemToSummon({ summonId: summonIdToUpdate, itemId, slotType: selectedSlotForEquipping }));
-      if (summonIdToUpdate) {
-        dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
-      }
-      setToasts(prev => [...prev, { id: Date.now(), message: `物品已装备到 ${selectedSlotForEquipping}`, type: 'success' }]);
+      
+      // 更新物品状态，只保存ID关联
+      dispatch(setItemStatus({
+        id: itemId,
+        isEquipped: true,
+        equippedBy: summonIdToUpdate
+      }));
+      
+      // 装备到召唤兽身上
+      dispatch(equipItemToSummon({ 
+        summonId: summonIdToUpdate, 
+        itemId, 
+        slotType: selectedSlotForEquipping 
+      }));
+      
+      // 重新计算属性
+      dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
+      
+      setToasts(prev => [...prev, { 
+        id: Date.now(), 
+        message: `物品已装备到 ${selectedSlotForEquipping}`, 
+        type: 'success' 
+      }]);
     }
     setIsEquipmentSelectorOpen(false);
     setSelectedSlotForEquipping(null);
@@ -134,11 +206,31 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const handleUnequipItem = () => {
     if (currentSummon && selectedSlotForEquipping) {
       const summonIdToUpdate = currentSummon.id;
-      dispatch(unequipItemFromSummon({ summonId: summonIdToUpdate, slotType: selectedSlotForEquipping }));
-      if (summonIdToUpdate) {
+      const equippedItemId = currentSummon.equippedItemIds[selectedSlotForEquipping];
+      
+      if (equippedItemId) {
+        // 清除物品的装备状态，只需要清除ID关联
+        dispatch(setItemStatus({
+          id: equippedItemId,
+          isEquipped: false,
+          equippedBy: null
+        }));
+        
+        // 从召唤兽身上卸下装备
+        dispatch(unequipItemFromSummon({ 
+          summonId: summonIdToUpdate, 
+          slotType: selectedSlotForEquipping 
+        }));
+        
+        // 重新计算属性
         dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
       }
-      setToasts(prev => [...prev, { id: Date.now(), message: `${selectedSlotForEquipping} 上的物品已卸下`, type: 'success' }]);
+      
+      setToasts(prev => [...prev, { 
+        id: Date.now(), 
+        message: `${selectedSlotForEquipping} 上的物品已卸下`, 
+        type: 'success' 
+      }]);
     }
     setIsEquipmentSelectorOpen(false);
     setSelectedSlotForEquipping(null);
@@ -203,18 +295,19 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
 
             {!currentSummon ? (
               <div className="text-center text-white p-10">
-                <p>{uiText.notifications.noSummonData || "当前没有召唤兽数据，请先创建或选择一个召唤兽"}</p>
+                <p>{uiText.notifications.noSummonData}</p>
                 <button 
                   onClick={handleRefineMonster}
                   className="mt-4 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors"
                 >
-                  <i className="fa-solid fa-flask mr-2"></i> {uiText.buttons.refineToGetSummon || "炼妖获取召唤兽"}
+                  <i className="fa-solid fa-flask mr-2"></i> {uiText.buttons.refineToGetSummon}
                 </button>
               </div>
             ) : (
             <SummonInfo
                 onOpenEquipmentSelectorForSlot={handleOpenEquipmentSelector}
                 onOpenSkillEditorForSlot={handleOpenSkillEditor}
+                onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}
             />
             )}
             
@@ -248,6 +341,14 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
         <SummonList
           isOpen={isSummonListOpen}
           onClose={() => setIsSummonListOpen(false)}
+        />
+      )}
+      {isNicknameModalOpen && (
+        <NicknameModal
+          isOpen={isNicknameModalOpen}
+          onClose={() => setIsNicknameModalOpen(false)}
+          onConfirm={handleNicknameConfirm}
+          petName={selectedPetForNickname?.name}
         />
       )}
     </div>

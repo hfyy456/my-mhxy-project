@@ -2,12 +2,41 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:44:18
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-17 05:08:46
+ * @LastEditTime: 2025-05-19 05:01:34
  */
-import React from "react";
+import React, { useEffect } from "react";
 
 const ToastContainer = ({ toasts, setToasts }) => {
-  // console.log("[ToastContainer] Rendering with toasts:", toasts);
+  // 处理toast的自动消失
+  useEffect(() => {
+    if (!toasts || toasts.length === 0) return;
+
+    // 为每个toast设置自动消失的定时器
+    const timers = toasts.map(toast => {
+      const duration = toast.type === 'error' ? 5000 : 3000;
+      
+      return setTimeout(() => {
+        // 添加淡出动画
+        setToasts(prevToasts => 
+          prevToasts.map(t => 
+            t.id === toast.id 
+              ? { ...t, isExiting: true }
+              : t
+          )
+        );
+
+        // 等待动画完成后移除
+        setTimeout(() => {
+          setToasts(prevToasts => prevToasts.filter(t => t.id !== toast.id));
+        }, 300);
+      }, duration);
+    });
+
+    // 清理定时器
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+    };
+  }, [toasts, setToasts]);
 
   if (!toasts || toasts.length === 0) {
     // console.log("[ToastContainer] No toasts to display");
@@ -35,7 +64,7 @@ const ToastContainer = ({ toasts, setToasts }) => {
       id="toastContainer"
       style={{
         position: "fixed",
-        top: "50%",
+        top: "33%",
         left: "50%",
         transform: "translate(-50%, -50%)",
         zIndex: 99999,

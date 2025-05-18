@@ -8,34 +8,61 @@ import {
   removeFromInventory,
   sortInventory,
 } from "@/store/slices/inventorySlice";
-import { setItemStatus } from "@/store/slices/itemSlice";
+import { setItemStatus, selectAllItemsArray, selectItemWithSummonInfo, selectEquippedItemsWithSummonInfo } from "@/store/slices/itemSlice";
 import {
   equipItemToSummon,
   recalculateSummonStats,
   unequipItemFromSummon,
 } from "@/store/slices/summonSlice";
 import { STANDARD_EQUIPMENT_SLOTS } from "@/config/config";
+import { uiText, getQualityDisplayName, getAttributeDisplayName } from "@/config/uiTextConfig";
 
 // 新的 Tooltip 组件
 const ItemTooltip = ({ item, position }) => {
-  if (!item) return null;
+  // 获取包含召唤兽信息的完整物品数据
+  const itemWithSummonInfo = useSelector(state => selectItemWithSummonInfo(state, item.id));
 
   const rarityColor =
     INVENTORY_CONFIG.QUALITY_COLORS[item.quality] || "text-gray-300";
 
   const qualityColorName = `text-quality-${INVENTORY_CONFIG.QUALITY_COLORS[item.quality]?.split('-')[1] || 'normal'}`;
 
+  // 获取物品类型的中文显示
+  const getItemTypeDisplay = (type) => {
+    const typeMap = {
+      equipment: "装备",
+      consumable: "消耗品",
+      material: "材料",
+      quest: "任务物品"
+    };
+    return typeMap[type] || type;
+  };
+
+  // 获取属性的中文显示和格式化值
+  const formatAttributeValue = (stat, value) => {
+    // 处理百分比属性
+    const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
+    if (percentageStats.includes(stat)) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+    // 处理整数属性
+    return Math.floor(value);
+  };
+
   return (
     <div
       className="fixed bg-slate-900 border border-slate-700 rounded-md shadow-2xl p-3 text-sm text-white z-[100] pointer-events-none transition-opacity duration-150 opacity-100 max-w-xs"
-      style={{ top: position.y + 15, left: position.x + 15 }} // Position tooltip slightly offset from cursor
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`
+      }}
     >
       <div className="flex justify-between items-center mb-2">
         <span className={`font-medium ${qualityColorName}`}>{item.name}</span>
-        <span className={`text-sm ${qualityColorName}`}>({item.quality})</span>
+        <span className={`text-sm ${qualityColorName}`}>({getQualityDisplayName(item.quality)})</span>
       </div>
       <p className="text-xs text-slate-400 mb-2 capitalize">
-        {item.quality} {item.type === "equipment" ? item.slotType : item.type}
+        {getQualityDisplayName(item.quality)} {item.type === "equipment" ? uiText.equipmentSlots[item.slotType] : getItemTypeDisplay(item.type)}
       </p>
 
       {item.description && (
@@ -47,7 +74,7 @@ const ItemTooltip = ({ item, position }) => {
           <p className="text-slate-200 font-semibold mb-1 text-xs">属性:</p>
           {Object.entries(item.finalEffects).map(([stat, value]) => (
             <p key={stat} className="text-slate-400 text-xs ml-2">
-              {stat}: <span className="text-green-400">+{value}</span>
+              {getAttributeDisplayName(stat)}: <span className="text-green-400">+{formatAttributeValue(stat, value)}</span>
             </p>
           ))}
         </div>
@@ -58,10 +85,9 @@ const ItemTooltip = ({ item, position }) => {
       )}
 
       {/* 如果物品已装备，显示装备者 */}
-      {item.isEquipped && item.equippedBy && (
+      {itemWithSummonInfo.isEquipped && itemWithSummonInfo.equippedBy && (
         <p className="text-xs text-blue-400 mt-2 pt-2 border-t border-slate-700">
-          装备于: {item.equippedBySummonName || item.equippedBy}{" "}
-          {/* 优先使用传入的召唤兽名称 */}
+          装备于: {itemWithSummonInfo.equippedBySummonName}
         </p>
       )}
     </div>
@@ -278,6 +304,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
         id: itemToEquip.id,
         isEquipped: true,
         equippedBy: summonIdToUpdate,
+        equippedBySummonName: currentSummon.name
       })
     );
 
@@ -290,15 +317,8 @@ const InventoryPanel = ({ isOpen, onClose }) => {
 
   // 处理卸下装备
   const handleUnequipItem = (itemToUnequip) => {
-    if (
-      !itemToUnequip ||
-      !itemToUnequip.isEquipped ||
-      !itemToUnequip.equippedBy
-    ) {
-      console.error(
-        "handleUnequipItem: 无效的物品或物品未装备:",
-        itemToUnequip
-      );
+    if (!itemToUnequip || !itemToUnequip.isEquipped || !itemToUnequip.equippedBy) {
+      console.error("handleUnequipItem: 无效的物品或物品未装备:", itemToUnequip);
       alert("无法卸下该物品。");
       return;
     }
@@ -309,56 +329,25 @@ const InventoryPanel = ({ isOpen, onClose }) => {
       return;
     }
 
-    // 检查背包是否有空位
-    let hasEmptySlot = false;
-    const occupiedSlotCount = Object.keys(slots).filter(
-      (slotId) => slots[slotId] !== null && slots[slotId] !== undefined
-    ).length;
-
-    if (occupiedSlotCount < capacity) {
-      hasEmptySlot = true;
-    } else {
-      // 再次精确检查，因为 Object.keys(slots).length 可能不准确如果存在空的 slotId (虽然不应该)
-      for (let i = 0; i < capacity; i++) {
-        if (!slots[String(i)]) {
-          // slots 的 key 是字符串
-          hasEmptySlot = true;
-          break;
-        }
-      }
-    }
-
-    if (!hasEmptySlot) {
-      alert("背包已满，无法卸下装备！");
-      return;
-    }
-
     // 1. 更新物品状态 (isEquipped: false, equippedBy: null)
-    dispatch(
-      setItemStatus({
-        id: itemToUnequip.id,
-        isEquipped: false,
-        equippedBy: null,
-      })
-    );
+    dispatch(setItemStatus({
+      id: itemToUnequip.id,
+      isEquipped: false,
+      equippedBy: null
+    }));
 
     // 2. 从召唤兽身上移除装备记录
-    dispatch(
-      unequipItemFromSummon({
-        summonId: summonId,
-        itemId: itemToUnequip.id,
-        slotType: itemToUnequip.slotType,
-      })
-    );
+    dispatch(unequipItemFromSummon({
+      summonId,
+      itemId: itemToUnequip.id,
+      slotType: itemToUnequip.slotType,
+    }));
 
-    // 3. 将物品添加回背包 (addToInventory 会自动寻找空格)
-    dispatch(addToInventory({ itemId: itemToUnequip.id }));
+    // 3. 重新计算召唤兽属性
+    dispatch(recalculateSummonStats({ summonId }));
 
-    // 4. 重新计算召唤兽属性
-    dispatch(recalculateSummonStats({ summonId: summonId }));
-
-    alert(`"${itemToUnequip.name}" 已成功卸下并放回背包。`);
-    setSelectedSlot(null); // 清除选择或关闭详情
+    alert(`"${itemToUnequip.name}" 已成功卸下。`);
+    setSelectedSlot(null);
   };
 
   // 处理物品使用
@@ -574,7 +563,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               setActiveFilter("all");
               setSelectedSlot(null);
               setShowEquipmentMenu(false);
-              setTooltipVisible(false);
             }}
             className={`flex items-center justify-center space-x-2 px-3 py-2 rounded transition-all duration-150 ${
               activeFilter === "all"
@@ -590,7 +578,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               setActiveFilter("equipment");
               setSelectedSlot(null);
               setShowEquipmentMenu(false);
-              setTooltipVisible(false);
             }}
             className={`flex items-center justify-center space-x-2 px-3 py-2 rounded transition-all duration-150 ${
               activeFilter === "equipment"
@@ -606,7 +593,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               setActiveFilter("consumable");
               setSelectedSlot(null);
               setShowEquipmentMenu(false);
-              setTooltipVisible(false);
             }}
             className={`flex items-center justify-center space-x-2 px-3 py-2 rounded transition-all duration-150 ${
               activeFilter === "consumable"
@@ -622,7 +608,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               setActiveFilter("material");
               setSelectedSlot(null);
               setShowEquipmentMenu(false);
-              setTooltipVisible(false);
             }}
             className={`flex items-center justify-center space-x-2 px-3 py-2 rounded transition-all duration-150 ${
               activeFilter === "material"
@@ -638,7 +623,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               setActiveFilter("quest");
               setSelectedSlot(null);
               setShowEquipmentMenu(false);
-              setTooltipVisible(false);
             }}
             className={`flex items-center justify-center space-x-2 px-3 py-2 rounded transition-all duration-150 ${
               activeFilter === "quest"
@@ -686,10 +670,26 @@ const InventoryPanel = ({ isOpen, onClose }) => {
                     setHoveredSlot(index);
                     if (item) {
                       const rect = e.currentTarget.getBoundingClientRect();
-                      setTooltipPosition({
-                        x: rect.left + rect.width + 10,
-                        y: rect.top
-                      });
+                      const screenWidth = window.innerWidth;
+                      
+                      // 计算tooltip的预估宽度（可以根据实际情况调整）
+                      const tooltipWidth = 280; 
+                      
+                      // 如果右侧空间不足，则显示在左侧
+                      const x = rect.left + rect.width + tooltipWidth > screenWidth 
+                        ? rect.left - tooltipWidth - 10 
+                        : rect.left + rect.width + 10;
+                      
+                      // 确保tooltip不会超出屏幕顶部或底部
+                      const screenHeight = window.innerHeight;
+                      const tooltipHeight = 200; // 预估的tooltip高度
+                      let y = rect.top;
+                      
+                      if (rect.top + tooltipHeight > screenHeight) {
+                        y = screenHeight - tooltipHeight - 10;
+                      }
+                      
+                      setTooltipPosition({ x, y });
                       setTooltipItem(item);
                       tooltipTimeoutRef.current = setTimeout(() => {
                         setTooltipVisible(true);
@@ -817,8 +817,11 @@ const InventoryPanel = ({ isOpen, onClose }) => {
         </div>
 
         {/* Tooltip Display */}
-        {tooltipVisible && (
-          <ItemTooltip item={tooltipItem} position={tooltipPosition} />
+        {tooltipVisible && tooltipItem && (
+          <ItemTooltip 
+            item={tooltipItem} 
+            position={tooltipPosition}
+          />
         )}
 
         {showSplitModal &&

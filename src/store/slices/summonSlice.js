@@ -13,10 +13,13 @@ import {
   // skillTypeConfig // Not directly used in reducers here, but could be for UI selectors
 } from '@/config/config'; // Assuming a merged config
 // import { equipmentConfig } from '@/config/equipmentConfig'; // Not directly used in this slice's reducers after items are pure data
+import { getRaceBonus } from '@/config/raceConfig'; // 引入种族加成函数
+import { SKILL_MODES } from "@/config/enumConfig";
+import { setItemStatus } from './itemSlice';
 
 // --- Helper Functions ---
 
-const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel) => {
+const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel, race) => {
   const derived = {};
   const equipmentContributions = {}; // All contributions from equipment
   const equipmentBonusesToBasic = {}; // Contributions specifically to basic attributes
@@ -38,6 +41,14 @@ const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsData
           equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + value;
         }
       }
+    }
+  }
+  
+  // 应用种族加成
+  if (race) {
+    for (const attrKey in finalBasicAttributes) {
+      const raceBonus = getRaceBonus(race, attrKey);
+      finalBasicAttributes[attrKey] = Math.floor(finalBasicAttributes[attrKey] * raceBonus);
     }
   }
 
@@ -208,7 +219,8 @@ const summonSlice = createSlice({
       const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
           initialBasicWithAllocated,
           {}, // Pass empty map for items initially
-          newSummon.level
+          newSummon.level,
+          summonData.race
       );
       state.allSummons[newSummon.id].derivedAttributes = derivedAttributes;
       state.allSummons[newSummon.id].equipmentContributions = equipmentContributions;
@@ -230,7 +242,8 @@ const summonSlice = createSlice({
         const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
             currentBasicAttributesWithPoints,
             allCurrentlyEquippedItemsData,
-            summon.level
+            summon.level,
+            summon.race
         );
         summon.derivedAttributes = derivedAttributes;
         summon.equipmentContributions = equipmentContributions || {};
@@ -353,7 +366,7 @@ const summonSlice = createSlice({
       if (!Array.isArray(summon.skillSet)) summon.skillSet = [];
       while(summon.skillSet.length < MAX_SKILLS) summon.skillSet.push(null); 
       const skillDetails = skillConfig.find(s => s.name === skillName);
-      if (summon.skillSet.filter(s => s !== null).length >= ACTIVE_SKILL_LIMIT && skillDetails?.mode === 'active' && !summon.skillSet[slotIndex]) {
+      if (summon.skillSet.filter(s => s !== null).length >= ACTIVE_SKILL_LIMIT && skillDetails?.mode === SKILL_MODES.ACTIVE && !summon.skillSet[slotIndex]) {
         console.warn("Cannot learn more active skills.");
         return; 
       }
@@ -383,13 +396,24 @@ const summonSlice = createSlice({
       }
     },
     
-    resetSummonState: () => initialState, // For testing or full reset
+    resetSummonState: () => initialState,
     addRefinementHistoryItem: (state, action) => {
       const historyItem = action.payload;
       if (historyItem) {
         state.refinementHistory.unshift(historyItem);
         if (state.refinementHistory.length > 50) {
           state.refinementHistory.pop();
+        }
+      }
+    },
+
+    updateSummonNickname: (state, action) => {
+      const { id, nickname } = action.payload;
+      if (state.allSummons[id]) {
+        state.allSummons[id].nickname = nickname;
+        // 如果是当前选中的召唤兽，也更新currentSummonFullData
+        if (state.currentSummonId === id && state.currentSummonFullData) {
+          state.currentSummonFullData.nickname = nickname;
         }
       }
     },
@@ -422,7 +446,7 @@ const summonSlice = createSlice({
 });
 
 export const {
-  setCurrentSummonAction, // Export the plain action
+  setCurrentSummonAction,
   addSummon,
   _internalUpdateSummonCalculatedFields,
   addExperienceToSummon,
@@ -432,8 +456,9 @@ export const {
   unequipItemFromSummon,
   learnSkill,
   replaceSkill,
-  addRefinementHistoryItem, 
+  addRefinementHistoryItem,
   resetSummonState,
+  updateSummonNickname
 } = summonSlice.actions;
 
 // Selectors
