@@ -184,13 +184,13 @@ const summonSlice = createSlice({
     },
     addSummon: (state, action) => {
       const summonData = action.payload;
-      if (!summonData || !summonData.id || !petConfig[summonData.name]) {
-        console.error('addSummon: Invalid summonData, missing ID, or missing petConfig entry for:', summonData.name, summonData);
+      if (!summonData || !summonData.id || !petConfig[summonData.petId]) {
+        console.error('addSummon: Invalid summonData, missing ID, or missing petConfig entry for:', summonData.petId, summonData);
         state.error = 'Failed to add summon: Invalid data.';
         return;
       }
 
-      const petBaseConf = petConfig[summonData.name];
+      const petBaseConf = petConfig[summonData.petId];
       const newSummon = {
         ...summonData, 
         experience: summonData.experience || 0,

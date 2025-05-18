@@ -8,9 +8,9 @@ import {
   petConfig,
 } from "@/config/config";
 import {
-  equipmentConfig,
+  petEquipmentConfig,
   equipmentQualityConfig,
-} from "@/config/equipmentConfig";
+} from "@/config/petEquipmentConfig";
 import { 
   uiText, 
   getAttributeDisplayName, 
@@ -101,7 +101,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   // Destructure all necessary properties directly from the Summon instance
   const {
     id: summonId,
-    name,
+    petId,
     quality,
     level,
     experience,
@@ -132,7 +132,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   const qualityColorName = quality ? `text-${qualityConfig.colors[quality]}` : "text-gray-400";
 
   const imageUrl =
-    (name && images[`/src/assets/summons/${name}.png`]?.default) ||
+    (petId && images[`/src/assets/summons/${petId}.png`]?.default) ||
     images["/src/assets/summons/default.png"].default;
 
   // 计算经验百分比
@@ -173,7 +173,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
     };
   });
 
-  const displayName = name ? (petConfig[name]?.name || name) : uiText.general.unknown;
+  const displayName = petConfig[petId]?.name || petId || uiText.general.unknown;
 
   // 添加tooltip状态
   const [tooltipItem, setTooltipItem] = useState(null);

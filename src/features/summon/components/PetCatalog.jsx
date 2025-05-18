@@ -6,7 +6,7 @@
  */
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { petConfig } from "../../../config/config";
+import { petConfig } from "../../../config/petConfig";
 import CommonModal from "../../ui/components/CommonModal";
 import { selectAllSummons, setCurrentSummon } from "../../../store/slices/summonSlice";
 import { getAllRaces } from '@/config/raceConfig';
@@ -73,22 +73,25 @@ const PetCatalog = ({ isOpen, onClose }) => {
         </div>
 
         <div className="overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {filteredPets.map(([petId, pet]) => (
-            <div key={petId} className="bg-slate-700 rounded-lg p-2 shadow">
-              <h3 className="text-lg font-semibold text-white mb-2">{pet.name}</h3>
-              <div className="text-sm text-slate-300">
-                <div className="mb-1">
-                  <span className="font-medium text-slate-200">类型: </span>
-                  <span className={`text-${pet.color}`}>{getPetTypeDisplayName(pet.type)}</span>
+          {filteredPets.map(([petId, pet]) => {
+            const petInfo = petConfig[petId];
+            return (
+              <div key={petId} className="bg-slate-700 rounded-lg p-2 shadow">
+                <h3 className="text-lg font-semibold text-white mb-2">{petInfo.name}</h3>
+                <div className="text-sm text-slate-300">
+                  <div className="mb-1">
+                    <span className="font-medium text-slate-200">类型: </span>
+                    <span className={`text-${petInfo.color}`}>{getPetTypeDisplayName(petInfo.type)}</span>
+                  </div>
+                  <div className="mb-1">
+                    <span className="font-medium text-slate-200">种族: </span>
+                    <span>{getRaceTypeDisplayName(petInfo.race)}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400 line-clamp-3">{petInfo.background}</p>
                 </div>
-                <div className="mb-1">
-                  <span className="font-medium text-slate-200">种族: </span>
-                  <span>{getRaceTypeDisplayName(pet.race)}</span>
-                </div>
-                <p className="mt-2 text-xs text-slate-400 line-clamp-3">{pet.background}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

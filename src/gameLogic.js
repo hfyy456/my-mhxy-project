@@ -7,13 +7,14 @@ import {
   STANDARD_EQUIPMENT_SLOTS,
   // levelExperienceRequirements // Not directly used here, summonSlice will handle
 } from "@/config/config";
-import { equipmentConfig } from "@/config/equipmentConfig";
+import { petEquipmentConfig } from "@/config/petEquipmentConfig";
 import { SKILL_MODES } from './config/enumConfig';
 import { 
   uiText, 
   getRaceTypeDisplayName,
   getQualityDisplayName
 } from "@/config/uiTextConfig";
+import { generateNewSummon } from '@/utils/summonUtils';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -42,11 +43,11 @@ export const getRandomSkill = () => {
 // 获取随机装备
 export const getRandomEquipment = () => {
   // 随机选择一个装备类型 (category/slotType)
-  const equipmentCategories = Object.keys(equipmentConfig);
+  const equipmentCategories = Object.keys(petEquipmentConfig);
   const randomCategory = equipmentCategories[Math.floor(Math.random() * equipmentCategories.length)];
   
   // 从选中的类型中随机选择一件装备配置
-  const equipmentList = equipmentConfig[randomCategory];
+  const equipmentList = petEquipmentConfig[randomCategory];
   const randomEquipmentConfig = equipmentList[Math.floor(Math.random() * equipmentList.length)];
   
   // 随机选择一个品质
@@ -57,7 +58,7 @@ export const getRandomEquipment = () => {
   // finalEffects 将由 itemSlice.addItem reducer 计算。
   const newEquipmentData = {
     id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7), // 生成唯一ID
-    name: randomEquipmentConfig.name, // 必须与 equipmentConfig.js 中的 name 匹配
+    name: randomEquipmentConfig.name, // 必须与 petEquipmentConfig.js 中的 name 匹配
     quality: randomQuality,
     level: 1, // 初始等级为1
     itemType: 'equipment',
@@ -82,87 +83,41 @@ export const generateInitialEquipment = (count = 5) => {
 
 // 修改refineMonster函数
 export const refineMonster = () => {
-  const petDetails = getRandomPet(); // petDetails is the config object for the pet
-  const petName = Object.keys(petConfig).find(key => petConfig[key] === petDetails);
-  if (!petName) {
-    throw new Error("Failed to find pet name from pet details.");
-  }
-  const basePetConfig = petConfig[petName]; // Get the base config using the found name
+  // 随机选择一个宠物ID和其配置
+  const petEntries = Object.entries(petConfig);
+  const [selectedPetId, petDetails] = petEntries[Math.floor(Math.random() * petEntries.length)];
 
   const quality = getRandomQuality();
-  const level = 1;
 
-  // 生成初始装备 (纯数据对象数组) - 这些物品将被添加到背包
-  const initialEquipmentData = generateInitialEquipment(3); // 生成3件到背包，可以调整数量
+  // 生成初始装备 (纯数据对象数组)
+  const initialEquipmentData = generateInitialEquipment(3);
 
-  // Prepare initial skills
-  const initialSkillCount = getRandomAttribute(
-    probabilityConfig.initialSkillCount.min,
-    probabilityConfig.initialSkillCount.max
-  );
-  const shuffledSkills = [...basePetConfig.initialSkills].sort(() => 0.5 - Math.random());
-  const initialSkills = shuffledSkills.slice(0, initialSkillCount);
-
-  // --- Construct newSummonPayload for Redux ---
-  const summonId = `${petName}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-  // Calculate initial basicAttributes (logic from Summon constructor)
-  const qualityIndex = qualityConfig.names.indexOf(quality);
-  const qualityMultiplier = qualityConfig.attributeMultipliers[qualityIndex] || 1;
-  
-  const initialBasicAttributes = {
-    constitution: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.constitution) * qualityMultiplier),
-    strength: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.strength) * qualityMultiplier),
-    agility: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.agility) * qualityMultiplier),
-    intelligence: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.intelligence) * qualityMultiplier),
-    luck: Math.floor(getRandomAttribute(...basePetConfig.basicAttributeRanges.luck) * qualityMultiplier),
-  };
-
-  // 初始化 equippedItemIds 为全 null, 新召唤兽初始不装备任何物品
-  const equippedItemIds = {};
-  STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
-    equippedItemIds[slot] = null;
-  });
-
-  const newSummonPayload = {
-    id: summonId,
-    name: petName,
-    nickname: basePetConfig.name, // 将昵称默认设置为召唤兽的中文名称
-    level: level,
+  // 使用公共函数生成新的召唤兽
+  const newSummon = generateNewSummon({
+    petId: selectedPetId,
     quality: quality,
-    experience: 0,
-    potentialPoints: 0,
-    allocatedPoints: { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
-    basicAttributes: initialBasicAttributes,
-    skillSet: initialSkills,
-    equippedItemIds: equippedItemIds,
-    race: basePetConfig.race,
-  };
-
-  // 为历史记录准备可序列化的装备信息 (将显示无装备)
-  const serializableEquippedItemsForHistory = {};
-  STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
-    serializableEquippedItemsForHistory[slot] = null;
+    source: 'refinement'
   });
-  
+
+  // 准备历史记录
   const historyItem = {
-    id: newSummonPayload.id,
-    name: newSummonPayload.name,
-    quality: newSummonPayload.quality,
-    level: newSummonPayload.level,
-    basicAttributes: { ...newSummonPayload.basicAttributes },
-    derivedAttributes: {}, // Will be populated from Redux state by UI
-    skills: [...newSummonPayload.skillSet],
-    equipment: serializableEquippedItemsForHistory, // 历史记录显示无装备
-    race: newSummonPayload.race, // 在历史记录中添加种族信息
+    id: newSummon.id,
+    petId: selectedPetId,
+    quality: newSummon.quality,
+    level: newSummon.level,
+    basicAttributes: { ...newSummon.basicAttributes },
+    derivedAttributes: {},
+    skills: [...newSummon.skillSet],
+    equipment: newSummon.equippedItemIds,
+    race: petDetails.race,
   };
 
   return {
-    newSummonPayload: newSummonPayload,
+    newSummonPayload: newSummon,
     newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
-    requireNickname: false, // 不再需要设置昵称
-    message: `炼妖成功！召唤兽 ${basePetConfig.name} (${getQualityDisplayName(newSummonPayload.quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(newSummonPayload.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
+    requireNickname: false,
+    message: `炼妖成功！召唤兽 ${petDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(petDetails.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
   };
 };
 

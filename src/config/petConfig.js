@@ -337,7 +337,7 @@ export const petConfig = {
       intelligence: [210, 310],
       luck: [90, 190],
     },
-    initialSkills: ["magic_critical", "magic_heart", "mountain_press"],
+    initialSkills: ["magic_critical", "magic_heart"],
     background:
       "栖息在高山之上的灵禽，拥有超凡的智慧和强大的法术能力。它们能够施展出各种元素法术，攻击敌人的同时还能够为队友提供支援，是团队中不可或缺的重要成员。",
   },

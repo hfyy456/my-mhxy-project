@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 01:51:40
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-19 04:24:14
+ * @LastEditTime: 2025-05-19 05:06:26
  */
 import { QUALITY_TYPES } from './enumConfig';
 
@@ -45,7 +45,7 @@ export const eggConfig = {
     name: "神兵之蛋",
     description: "闪耀着金光的神圣蛋，孵化后可能获得持国巡守",
     color: QUALITY_TYPES.LEGENDARY,
-    baseHatchTime: 3000,
+    baseHatchTime: 3,
     possiblePets: ["heavenGuard"],
     rarity: QUALITY_TYPES.EPIC,
     icon: "fa-shield-halved",

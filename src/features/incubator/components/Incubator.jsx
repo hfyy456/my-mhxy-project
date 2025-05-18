@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { eggConfig } from '@/config/eggConfig';
-import { getQualityDisplayName } from '@/config/uiTextConfig';
-import { QUALITY_TYPES } from '@/config/enumConfig';
-import { 
-  startIncubation, 
-  updateIncubationProgress, 
-  completeIncubation, 
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { eggConfig } from "@/config/eggConfig";
+import { getQualityDisplayName } from "@/config/uiTextConfig";
+import { QUALITY_TYPES } from "@/config/enumConfig";
+import {
+  startIncubation,
+  updateIncubationProgress,
+  completeIncubation,
   cancelIncubation,
-  selectIncubatingEggs 
-} from '@/store/slices/incubatorSlice';
-import { addSummon } from '@/store/slices/summonSlice';
+  selectIncubatingEggs,
+} from "@/store/slices/incubatorSlice";
+import { addSummon } from "@/store/slices/summonSlice";
+import { generateNewSummon } from "@/utils/summonUtils";
+import { petConfig } from "../../../config/petConfig";
 
 export const Incubator = () => {
   const dispatch = useDispatch();
@@ -29,18 +31,18 @@ export const Incubator = () => {
   }, [dispatch]);
 
   const handleCancelIncubation = (eggId) => {
-    console.log('Cancelling egg:', eggId);
+    console.log("Cancelling egg:", eggId);
     setEggToCancel(eggId);
     setShowConfirm(true);
   };
 
   const confirmCancel = () => {
-    console.log('Confirming cancel for egg:', eggToCancel);
+    console.log("Confirming cancel for egg:", eggToCancel);
     if (eggToCancel) {
       try {
         dispatch(cancelIncubation({ eggId: eggToCancel }));
       } catch (error) {
-        console.error('Error cancelling incubation:', error);
+        console.error("Error cancelling incubation:", error);
       }
     }
     setShowConfirm(false);
@@ -50,12 +52,12 @@ export const Incubator = () => {
   const handleStartIncubation = (eggType) => {
     const eggId = Date.now().toString();
     dispatch(startIncubation({ eggId, eggType }));
-    const egg = incubatingEggs.find(egg => egg.eggId === eggId);
+    const egg = incubatingEggs.find((egg) => egg.eggId === eggId);
     if (egg) {
       setSelectedEgg({
         type: eggType,
         quality: egg.quality,
-        name: eggConfig[eggType].name
+        name: eggConfig[eggType].name,
       });
       setTimeout(() => setSelectedEgg(null), 3000);
     }
@@ -64,23 +66,23 @@ export const Incubator = () => {
   const handleCompleteIncubation = (eggId) => {
     const result = { eggId };
     dispatch(completeIncubation(result));
-    
+
     if (result.result) {
-      // 添加新的召唤兽到Redux
-      dispatch(addSummon({
-        id: Date.now().toString(),
-        name: result.result.petType,
-        level: 1,
+      // 使用公共函数生成新的召唤兽
+      const newSummon = generateNewSummon({
+        petId: result.result.petType,
         quality: result.result.petQuality,
-        basicAttributes: result.result.petData.baseAttributes,
-        race: result.result.petData.race,
-      }));
+        source: "incubation",
+      });
+
+      // 添加新的召唤兽到Redux
+      dispatch(addSummon(newSummon));
 
       setSelectedEgg({
         type: result.result.eggType,
         quality: result.result.petQuality,
-        name: result.result.petType,
-        isComplete: true
+        name: petConfig[result.result.petType].name,
+        isComplete: true,
       });
       setTimeout(() => setSelectedEgg(null), 3000);
     }
@@ -90,7 +92,9 @@ export const Incubator = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   return (
@@ -115,8 +119,12 @@ export const Incubator = () => {
               </h4>
               <p className="text-sm text-slate-400">
                 {selectedEgg.isComplete
-                  ? `你的蛋孵化出了一只${getQualityDisplayName(selectedEgg.quality)}品质的${selectedEgg.name}！`
-                  : `获得了一枚${getQualityDisplayName(selectedEgg.quality)}品质的${selectedEgg.name}！`}
+                  ? `你的蛋孵化出了一只${getQualityDisplayName(
+                      selectedEgg.quality
+                    )}品质的${selectedEgg.name}！`
+                  : `获得了一枚${getQualityDisplayName(
+                      selectedEgg.quality
+                    )}品质的${selectedEgg.name}！`}
               </p>
             </div>
           </div>
@@ -138,12 +146,18 @@ export const Incubator = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-quality-${egg.color} to-transparent opacity-[0.03] rounded-lg transition-opacity group-hover:opacity-[0.05]"></div>
               <div className="flex items-center mb-3">
-                <i className={`fas ${egg.icon} text-2xl text-quality-${egg.color} opacity-90`}></i>
+                <i
+                  className={`fas ${egg.icon} text-2xl text-quality-${egg.color} opacity-90`}
+                ></i>
                 <h4 className="ml-2 font-bold text-slate-100">{egg.name}</h4>
               </div>
-              <p className="text-sm text-slate-400 mb-3 line-clamp-2">{egg.description}</p>
+              <p className="text-sm text-slate-400 mb-3 line-clamp-2">
+                {egg.description}
+              </p>
               <div className="flex flex-wrap gap-2">
-                <span className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.color} bg-opacity-10 text-quality-${egg.color} font-medium`}>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.color} bg-opacity-10 text-quality-${egg.color} font-medium`}
+                >
                   {getQualityDisplayName(egg.rarity)}
                 </span>
                 <span className="text-xs px-2 py-1 rounded-full bg-slate-700/60 text-slate-300">
@@ -168,14 +182,22 @@ export const Incubator = () => {
               key={egg.eggId}
               className={`relative overflow-hidden bg-slate-800/60 rounded-lg border border-slate-700/60 p-4 transform transition-all duration-300 hover:shadow-lg`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br from-quality-${egg.quality.toLowerCase()} to-transparent opacity-[0.03]`}></div>
-              
+              <div
+                className={`absolute inset-0 bg-gradient-to-br from-quality-${egg.quality.toLowerCase()} to-transparent opacity-[0.03]`}
+              ></div>
+
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <i className={`fas ${egg.eggData.icon} text-xl text-quality-${egg.eggData.color} opacity-90 mr-2`}></i>
-                  <h4 className="font-bold text-slate-100">{egg.eggData.name}</h4>
+                  <i
+                    className={`fas ${egg.eggData.icon} text-xl text-quality-${egg.eggData.color} opacity-90 mr-2`}
+                  ></i>
+                  <h4 className="font-bold text-slate-100">
+                    {egg.eggData.name}
+                  </h4>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.quality.toLowerCase()} bg-opacity-10 text-quality-${egg.quality.toLowerCase()}`}>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.quality.toLowerCase()} bg-opacity-10 text-quality-${egg.quality.toLowerCase()}`}
+                >
                   {getQualityDisplayName(egg.quality)}品质
                 </span>
               </div>
@@ -200,7 +222,7 @@ export const Incubator = () => {
                   type="button"
                   className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
                   onClick={() => {
-                    console.log('Cancel button clicked for egg:', egg.eggId);
+                    console.log("Cancel button clicked for egg:", egg.eggId);
                     handleCancelIncubation(egg.eggId);
                   }}
                 >
@@ -229,21 +251,23 @@ export const Incubator = () => {
 
       {/* 取消确认对话框 */}
       {showConfirm && (
-        <div 
-          className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50"
-        >
-          <div 
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div
             className="bg-slate-800/95 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h4 className="text-lg font-bold mb-4 text-slate-100">确认取消孵化？</h4>
-            <p className="text-slate-400 mb-6">取消孵化后，该蛋将会消失，确定要继续吗？</p>
+            <h4 className="text-lg font-bold mb-4 text-slate-100">
+              确认取消孵化？
+            </h4>
+            <p className="text-slate-400 mb-6">
+              取消孵化后，该蛋将会消失，确定要继续吗？
+            </p>
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
                 className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
                 onClick={() => {
-                  console.log('Cancel dialog closed');
+                  console.log("Cancel dialog closed");
                   setShowConfirm(false);
                   setEggToCancel(null);
                 }}
@@ -254,7 +278,7 @@ export const Incubator = () => {
                 type="button"
                 className="px-4 py-2 rounded-lg bg-slate-600 text-white hover:bg-slate-500 transition-colors duration-200 cursor-pointer"
                 onClick={() => {
-                  console.log('Confirm cancel clicked');
+                  console.log("Confirm cancel clicked");
                   confirmCancel();
                 }}
               >
@@ -266,4 +290,4 @@ export const Incubator = () => {
       )}
     </div>
   );
-}; 
+};

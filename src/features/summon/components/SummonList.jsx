@@ -49,8 +49,8 @@ const SummonList = ({ isOpen, onClose }) => {
     <CommonModal isOpen={isOpen} onClose={onClose} title={uiText.titles.petList}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 max-h-[70vh] overflow-y-auto">
         {summonsList.map((summon) => {
-          const petInfo = petConfig[summon.name] || {};
-          const displayName = petInfo.name || summon.name;
+          const petInfo = petConfig[summon.petId];
+          const displayName = petInfo.name;
           const typeGradient = getTypeColor(petInfo.type);
           const qualityClassName = getQualityClass(summon.quality);
 

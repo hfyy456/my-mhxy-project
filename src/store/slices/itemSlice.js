@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 // 导入相关的配置，用于计算装备效果
-import { equipmentConfig as allEquipmentBaseConfig, equipmentQualityConfig } from '@/config/equipmentConfig'; 
+import { petEquipmentConfig as allEquipmentBaseConfig, equipmentQualityConfig } from '@/config/petEquipmentConfig'; 
 import { qualityConfig as generalQualityConfig } from '@/config/config'; 
 
 // 排序常量

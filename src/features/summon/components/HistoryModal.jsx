@@ -1,6 +1,7 @@
 import React from "react";
 import { qualityConfig, skillConfig, skillTypeConfig } from "../../../config/config";
 import CommonModal from "../../../components/CommonModal";
+import { petConfig } from '../../../config/petConfig';
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (
@@ -9,26 +10,28 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
         {historyList.length === 0 ? (
           <p className="text-gray-400 italic text-center py-8">暂无历史记录。</p>
         ) : (
-          historyList.map((pet, index) => {
-            const qualityColorName = `text-quality-${qualityConfig.colors[pet.quality]?.split('-')[1] || 'normal'}`;
+          historyList.map((record) => {
+            const petInfo = petConfig[record.petId];
+            const qualityColorName = `text-quality-${qualityConfig.colors[record.quality]?.split('-')[1] || 'normal'}`;
+
             return (
               <div
-                key={index}
-                className="bg-slate-700/40 border border-slate-600 rounded-lg p-4 mb-3 hover:border-purple-500/70 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-200"
+                key={record.id}
+                className="bg-slate-800 rounded-lg p-4 mb-4 last:mb-0"
               >
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-semibold text-gray-100">
-                    {pet.name}
+                    {petInfo.name}
                   </h3>
                   <span className={`text-sm font-medium ${qualityColorName}`}>
-                    {pet.quality}
+                    {record.quality}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-sm font-medium text-gray-300 mb-2">基础属性</h4>
                     <div className="space-y-1">
-                      {Object.entries(pet.basicAttributes).map(([key, value]) => (
+                      {Object.entries(record.basicAttributes).map(([key, value]) => (
                         <div key={key} className="flex justify-between text-sm">
                           <span className="text-gray-400">
                             {key === 'constitution' && '体质'}
@@ -45,7 +48,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                   <div>
                     <h4 className="text-sm font-medium text-gray-300 mb-2">技能</h4>
                     <div className="flex flex-wrap gap-1">
-                      {pet.skills.map((skillName, skillIndex) => {
+                      {record.skills.map((skillName, skillIndex) => {
                         const skillInfo = skillConfig.find(s => s.name === skillName);
                         const typeConfig = skillInfo?.type ? skillTypeConfig[skillInfo.type] : null;
                         return (
@@ -67,7 +70,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                 <div className="mt-3 pt-3 border-t border-slate-600">
                   <h4 className="text-sm font-medium text-gray-300 mb-2">装备</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(pet.equipment).map(([slot, item]) => (
+                    {Object.entries(record.equipment).map(([slot, item]) => (
                       <div
                         key={slot}
                         className={`text-xs px-2 py-1 rounded ${

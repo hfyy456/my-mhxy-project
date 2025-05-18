@@ -2,12 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 19:04:44
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-19 02:57:42
+ * @LastEditTime: 2025-05-19 05:46:34
  */
 import { BASE_CONFIG } from './baseConfig';
 import { EQUIPMENT_SLOT_TYPES, EQUIPMENT_EFFECT_TYPES, QUALITY_TYPES } from './enumConfig';
 
-export const equipmentConfig = {
+export const petEquipmentConfig = {
   [EQUIPMENT_SLOT_TYPES.ACCESSORY]: [
     {
       id: "apprenticeAmulet",
