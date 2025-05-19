@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-16 03:01:24
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-20 01:10:04
+ */
 // gameLogic.js
 import {
   petConfig,
@@ -15,6 +21,7 @@ import {
   getQualityDisplayName
 } from "@/config/uiTextConfig";
 import { generateNewSummon } from '@/utils/summonUtils';
+import { experienceConfig, playerBaseConfig } from '@/config/playerConfig';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -82,12 +89,16 @@ export const generateInitialEquipment = (count = 5) => {
 };
 
 // 修改refineMonster函数
-export const refineMonster = () => {
+export const refineMonster = (playerLevel) => {
+  // 获取当前等级可炼妖的品质列表
+  const availableQualities = playerBaseConfig.getAvailableRefinementQualities(playerLevel);
+  
   // 随机选择一个宠物ID和其配置
   const petEntries = Object.entries(petConfig);
   const [selectedPetId, petDetails] = petEntries[Math.floor(Math.random() * petEntries.length)];
 
-  const quality = getRandomQuality();
+  // 从可用品质中随机选择一个
+  const quality = availableQualities[Math.floor(Math.random() * availableQualities.length)];
 
   // 生成初始装备 (纯数据对象数组)
   const initialEquipmentData = generateInitialEquipment(3);
@@ -112,24 +123,49 @@ export const refineMonster = () => {
     race: petDetails.race,
   };
 
+  // 从配置中获取经验值
+  const qualityMap = {
+    '普通': 'normal',
+    '稀有': 'rare',
+    '史诗': 'epic',
+    '传说': 'legendary',
+    '神话': 'mythic'
+  };
+  const experienceGained = experienceConfig.refinement[qualityMap[quality]] || experienceConfig.refinement.normal;
+
   return {
     newSummonPayload: newSummon,
     newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
     requireNickname: false,
     message: `炼妖成功！召唤兽 ${petDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(petDetails.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
+    experienceGained: experienceGained
   };
 };
 
-export const bookSkill = (summonId, currentSkillSet) => {
-  const skillId = getRandomSkill();
+export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
+  // 获取当前等级可打书的最高等级
+  const maxSkillBookLevel = playerBaseConfig.getMaxSkillBookLevel(playerLevel);
+  
+  // 获取符合等级限制的技能
+  const availableSkills = skillConfig.filter(skill => skill.level <= maxSkillBookLevel);
+  if (availableSkills.length === 0) {
+    return {
+      outcome: 'FAILURE_LEVEL_RESTRICTION',
+      message: `当前等级(${playerLevel})无法使用任何技能书，需要提升等级。`,
+      experienceGained: 0
+    };
+  }
+
+  const skillId = availableSkills[Math.floor(Math.random() * availableSkills.length)].id;
   const successProbability = Math.random();
 
   if (successProbability >= probabilityConfig.bookSuccessRate) {
     return {
       outcome: 'FAILURE_NO_SKILL_CHANGE',
       message: "打书失败，技能未添加",
-      skillAttempted: skillId
+      skillAttempted: skillId,
+      experienceGained: experienceConfig.skillBook.failure
     };
   }
 
@@ -138,7 +174,8 @@ export const bookSkill = (summonId, currentSkillSet) => {
     return { 
       outcome: 'FAILURE_CONFIG_NOT_FOUND', 
       message: `打书失败：技能 ${skillId} 配置未找到。`, 
-      skillAttempted: skillId 
+      skillAttempted: skillId,
+      experienceGained: experienceConfig.skillBook.failure
     };
   }
 
@@ -152,7 +189,8 @@ export const bookSkill = (summonId, currentSkillSet) => {
       outcome: 'FAILURE_ACTIVE_SKILL_LIMIT',
       message: "打书失败：最多只能拥有2个主动技能。",
       skillAttempted: skillId,
-      currentActiveSkills: activeSkillsCount
+      currentActiveSkills: activeSkillsCount,
+      experienceGained: experienceConfig.skillBook.failure
     };
   }
 
@@ -161,12 +199,14 @@ export const bookSkill = (summonId, currentSkillSet) => {
       outcome: 'SUCCESS_SKILL_ALREADY_PRESENT',
       skill: skillId,
       message: `打书成功！但是技能 "${skillInfo.name}" 已存在，无需添加。`,
+      experienceGained: experienceConfig.skillBook.success
     };
   } else if (currentSkillSet.length >= 12) {
     return {
       outcome: 'SUCCESS_REPLACEMENT_NEEDED',
       pendingSkill: skillId,
       message: "打书成功！但技能列表已满 (12/12)，需要替换一个旧技能。",
+      experienceGained: experienceConfig.skillBook.success
     };
   } else {
     return {
@@ -174,6 +214,7 @@ export const bookSkill = (summonId, currentSkillSet) => {
       skillToAdd: skillId,
       skillInfo: skillInfo,
       message: `打书成功！获得技能：${skillInfo.name} (${skillInfo.description})`,
+      experienceGained: experienceConfig.skillBook.success
     };
   }
 };

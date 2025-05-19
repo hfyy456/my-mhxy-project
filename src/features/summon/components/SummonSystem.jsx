@@ -27,6 +27,7 @@ import {
 import { addItems, selectAllItemsArray, setItemStatus } from "../../../store/slices/itemSlice";
 import { uiText } from "@/config/uiTextConfig";
 import { petConfig } from "@/config/config";
+import { playerBaseConfig } from "@/config/playerConfig";
 import NicknameModal from "./NicknameModal";
 
 const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
@@ -34,8 +35,10 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const currentSummon = useSelector(selectCurrentSummonFullData);
   const summonsListObject = useSelector(selectAllSummons);
   const allItems = useSelector(selectAllItemsArray);
+  const playerLevel = useSelector(state => state.player?.level || 1);
   
   const summonsList = useMemo(() => Object.values(summonsListObject || {}), [summonsListObject]);
+  const maxSummons = playerBaseConfig.getMaxSummonsByLevel(playerLevel);
   
   const {
     historyList,
@@ -114,7 +117,17 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
     const { refineMonster } = await import('../../../gameLogic');
     
     try {
-      const result = refineMonster();
+      // 检查召唤兽数量限制
+      if (summonsList.length >= maxSummons) {
+        setToasts(prev => [...prev, {
+          id: Date.now(),
+          message: `当前等级(${playerLevel})最多可拥有${maxSummons}个召唤兽，请提升等级或释放一些召唤兽`,
+          type: 'error'
+        }]);
+        return;
+      }
+
+      const result = refineMonster(playerLevel);
       
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
         dispatch(addItems(result.newlyCreatedItems));
@@ -152,7 +165,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
         type: 'error'
       }]);
     }
-  }, [dispatch, setToasts]);
+  }, [dispatch, setToasts, summonsList.length, maxSummons, playerLevel]);
 
   useEffect(() => {
     console.log("[SummonSystem] Component mounted/updated");
@@ -270,7 +283,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
                   className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg text-sm transition-all duration-300 flex items-center shadow-lg hover:shadow-blue-500/30 border border-blue-400/30"
                 >
                   <i className="fa-solid fa-list mr-2 text-blue-200"></i>
-                  <span>选择召唤兽</span>
+                  <span>选择召唤兽 ({summonsList.length}/{maxSummons})</span>
                 </button>
                 <button 
                   onClick={() => setIsPetCatalogModalOpen(true)} 
@@ -299,9 +312,15 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
                 <button 
                   onClick={handleRefineMonster}
                   className="mt-4 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors"
+                  disabled={summonsList.length >= maxSummons}
                 >
                   <i className="fa-solid fa-flask mr-2"></i> {uiText.buttons.refineToGetSummon}
                 </button>
+                {summonsList.length >= maxSummons && (
+                  <p className="mt-2 text-amber-400">
+                    当前等级({playerLevel})最多可拥有{maxSummons}个召唤兽，请提升等级或释放一些召唤兽
+                  </p>
+                )}
               </div>
             ) : (
             <SummonInfo

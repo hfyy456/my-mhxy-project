@@ -27,6 +27,7 @@ import {
   resetAllocatedPointsForSummon,
   learnSkill,
   replaceSkill,
+  releaseSummon,
 } from "@/store/slices/summonSlice";
 
 // 修改ItemTooltip组件
@@ -92,6 +93,7 @@ const BASIC_ATTRIBUTE_KEYS = [
 const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, onOpenNicknameModal }) => {
   const dispatch = useDispatch();
   const summon = useSelector(selectCurrentSummonFullData);
+  const [isReleaseConfirmOpen, setIsReleaseConfirmOpen] = useState(false);
   
   // 获取装备槽数据
   const equippedItems = useSelector(state => 
@@ -215,6 +217,11 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
       return;
     }
     dispatch(resetAllocatedPointsForSummon({ summonId }));
+  };
+
+  const handleReleaseConfirm = () => {
+    dispatch(releaseSummon(summon.id));
+    setIsReleaseConfirmOpen(false);
   };
 
   // 修改装备槽渲染部分
@@ -601,6 +608,32 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
           item={tooltipItem} 
           position={tooltipPosition}
         />
+      )}
+
+      {/* 释放确认对话框 */}
+      {isReleaseConfirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-4">确认释放</h3>
+            <p className="text-gray-300 mb-6">
+              确定要释放召唤兽 {summon.nickname || summon.name} 吗？此操作不可撤销。
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsReleaseConfirmOpen(false)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReleaseConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded"
+              >
+                确认释放
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

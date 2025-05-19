@@ -9,17 +9,25 @@ import {
   completeIncubation,
   cancelIncubation,
   selectIncubatingEggs,
+  selectCompletedEggs,
 } from "@/store/slices/incubatorSlice";
-import { addSummon } from "@/store/slices/summonSlice";
+import { addSummon, selectAllSummons } from "@/store/slices/summonSlice";
 import { generateNewSummon } from "@/utils/summonUtils";
 import { petConfig } from "../../../config/petConfig";
+import { playerBaseConfig } from "@/config/playerConfig";
+import { useToast } from "@/hooks/useToast";
+import { unlockPet } from '@/store/slices/petCatalogSlice';
 
-export const Incubator = () => {
+export const Incubator = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
   const incubatingEggs = useSelector(selectIncubatingEggs);
+  const completedEggs = useSelector(selectCompletedEggs);
+  const allSummons = useSelector(selectAllSummons);
   const [selectedEgg, setSelectedEgg] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [eggToCancel, setEggToCancel] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const { showResult } = useToast(toasts, setToasts);
 
   useEffect(() => {
     // 每秒更新孵化进度
@@ -27,22 +35,25 @@ export const Incubator = () => {
       dispatch(updateIncubationProgress());
     }, 1000);
 
+    // 立即执行一次更新，避免等待第一秒
+    dispatch(updateIncubationProgress());
+
     return () => clearInterval(timer);
   }, [dispatch]);
 
   const handleCancelIncubation = (eggId) => {
-    console.log("Cancelling egg:", eggId);
     setEggToCancel(eggId);
     setShowConfirm(true);
   };
 
   const confirmCancel = () => {
-    console.log("Confirming cancel for egg:", eggToCancel);
     if (eggToCancel) {
       try {
         dispatch(cancelIncubation({ eggId: eggToCancel }));
+        showResult("已取消孵化", "success");
       } catch (error) {
         console.error("Error cancelling incubation:", error);
+        showResult("取消孵化失败", "error");
       }
     }
     setShowConfirm(false);
@@ -50,41 +61,49 @@ export const Incubator = () => {
   };
 
   const handleStartIncubation = (eggType) => {
-    const eggId = Date.now().toString();
-    dispatch(startIncubation({ eggId, eggType }));
-    const egg = incubatingEggs.find((egg) => egg.eggId === eggId);
-    if (egg) {
-      setSelectedEgg({
-        type: eggType,
-        quality: egg.quality,
-        name: eggConfig[eggType].name,
-      });
-      setTimeout(() => setSelectedEgg(null), 3000);
+    const eggId = `egg_${Date.now()}`;
+    try {
+      dispatch(startIncubation({ eggId, eggType }));
+      const eggData = eggConfig[eggType];
+      showResult(`开始孵化${eggData.name}`, "success");
+    } catch (error) {
+      console.error("Error starting incubation:", error);
+      showResult("开始孵化失败", "error");
     }
   };
 
   const handleCompleteIncubation = (eggId) => {
-    const result = { eggId };
-    dispatch(completeIncubation(result));
+    const playerLevel = 1; // 这里需要从玩家状态中获取实际等级
+    const currentSummonCount = Object.keys(allSummons).length;
+    
+    const action = dispatch(completeIncubation({ 
+      eggId, 
+      playerLevel,
+      currentSummonCount
+    }));
 
-    if (result.result) {
-      // 使用公共函数生成新的召唤兽
+    if (action.payload.error) {
+      setErrorMessage(action.payload.error);
+      showResult(action.payload.error, "error");
+      return;
+    }
+
+    if (action.payload.result) {
+      const { petType, petQuality } = action.payload.result;
       const newSummon = generateNewSummon({
-        petId: result.result.petType,
-        quality: result.result.petQuality,
-        source: "incubation",
+        petId: petType,
+        quality: petQuality,
+        source: 'incubation',
+        dispatch
       });
-
-      // 添加新的召唤兽到Redux
       dispatch(addSummon(newSummon));
-
-      setSelectedEgg({
-        type: result.result.eggType,
-        quality: result.result.petQuality,
-        name: petConfig[result.result.petType].name,
-        isComplete: true,
-      });
-      setTimeout(() => setSelectedEgg(null), 3000);
+      setErrorMessage(null);
+      
+      // 获取召唤兽名称和品质显示名
+      const petData = petConfig[petType];
+      const qualityDisplayName = getQualityDisplayName(petQuality);
+      
+      showResult(`恭喜！获得了一只${qualityDisplayName}品质的${petData.name}！`, "success");
     }
   };
 
@@ -108,26 +127,9 @@ export const Incubator = () => {
         <p className="text-slate-400">孵化珍稀召唤兽，提升战斗力</p>
       </div>
 
-      {/* 新获得的蛋或孵化结果提示 */}
-      {selectedEgg && (
-        <div className="fixed top-4 right-4 bg-slate-800/95 backdrop-blur-sm rounded-lg shadow-lg p-4 animate-slide-in-right z-50 border-l-4 border-amber-400/50">
-          <div className="flex items-center">
-            <i className="fas fa-egg text-amber-400/90 text-xl mr-3"></i>
-            <div>
-              <h4 className="font-bold text-slate-100">
-                {selectedEgg.isComplete ? "孵化成功！" : "获得新的蛋！"}
-              </h4>
-              <p className="text-sm text-slate-400">
-                {selectedEgg.isComplete
-                  ? `你的蛋孵化出了一只${getQualityDisplayName(
-                      selectedEgg.quality
-                    )}品质的${selectedEgg.name}！`
-                  : `获得了一枚${getQualityDisplayName(
-                      selectedEgg.quality
-                    )}品质的${selectedEgg.name}！`}
-              </p>
-            </div>
-          </div>
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
+          {errorMessage}
         </div>
       )}
 
@@ -174,73 +176,121 @@ export const Incubator = () => {
       <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-slate-700/60">
         <h3 className="text-xl font-semibold mb-4 flex items-center text-slate-100">
           <i className="fas fa-vial text-amber-400/90 mr-2"></i>
-          孵化中的蛋 ({incubatingEggs.length})
+          孵化中的蛋 ({Object.keys(incubatingEggs).length + Object.keys(completedEggs).length})
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {incubatingEggs.map((egg) => (
-            <div
-              key={egg.eggId}
-              className={`relative overflow-hidden bg-slate-800/60 rounded-lg border border-slate-700/60 p-4 transform transition-all duration-300 hover:shadow-lg`}
-            >
+          {/* 正在孵化的蛋 */}
+          {Object.entries(incubatingEggs).map(([eggId, egg]) => {
+            const eggData = eggConfig[egg.eggType];
+            return (
               <div
-                className={`absolute inset-0 bg-gradient-to-br from-quality-${egg.quality.toLowerCase()} to-transparent opacity-[0.03]`}
-              ></div>
+                key={eggId}
+                className={`relative overflow-hidden bg-slate-800/60 rounded-lg border border-slate-700/60 p-4 transform transition-all duration-300 hover:shadow-lg`}
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br from-quality-${egg.quality.toLowerCase()} to-transparent opacity-[0.03]`}
+                ></div>
 
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <i
-                    className={`fas ${egg.eggData.icon} text-xl text-quality-${egg.eggData.color} opacity-90 mr-2`}
-                  ></i>
-                  <h4 className="font-bold text-slate-100">
-                    {egg.eggData.name}
-                  </h4>
-                </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.quality.toLowerCase()} bg-opacity-10 text-quality-${egg.quality.toLowerCase()}`}
-                >
-                  {getQualityDisplayName(egg.quality)}品质
-                </span>
-              </div>
-
-              <div className="mb-3">
-                <div className="relative w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
-                  <div
-                    className={`absolute left-0 top-0 h-full bg-quality-${egg.quality.toLowerCase()} opacity-90 transition-all duration-1000 rounded-full`}
-                    style={{ width: `${egg.progress.toFixed(2)}%` }}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <i
+                      className={`fas ${eggData?.icon || 'fa-egg'} text-xl text-quality-${eggData?.color || 'normal'} opacity-90 mr-2`}
+                    ></i>
+                    <h4 className="font-bold text-slate-100">
+                      {eggData?.name || egg.eggType}
+                    </h4>
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.quality.toLowerCase()} bg-opacity-10 text-quality-${egg.quality.toLowerCase()}`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-shimmer"></div>
+                    {getQualityDisplayName(egg.quality)}品质
+                  </span>
+                </div>
+
+                <div className="mb-3">
+                  <div className="relative w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                      className={`absolute left-0 top-0 h-full bg-quality-${egg.quality.toLowerCase()} opacity-90 transition-all duration-1000 rounded-full`}
+                      style={{ width: `${egg.progress}%` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-shimmer"></div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-between text-xs text-slate-400">
+                    <span>{Math.floor(egg.progress)}%</span>
+                    <span>{formatTime(egg.remainingTime)}</span>
                   </div>
                 </div>
-                <div className="mt-2 flex justify-between text-xs text-slate-400">
-                  <span>{egg.progress.toFixed(2)}%</span>
-                  <span>{formatTime(egg.remainingTime)}</span>
-                </div>
-              </div>
 
-              <div className="flex justify-end space-x-2 relative z-10">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
-                  onClick={() => {
-                    console.log("Cancel button clicked for egg:", egg.eggId);
-                    handleCancelIncubation(egg.eggId);
-                  }}
-                >
-                  取消孵化
-                </button>
-                {egg.isComplete && (
+                <div className="flex justify-end space-x-2 relative z-10">
                   <button
                     type="button"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-quality-${egg.quality.toLowerCase()} bg-opacity-90 hover:bg-opacity-100 transition-colors duration-200 cursor-pointer`}
-                    onClick={() => handleCompleteIncubation(egg.eggId)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleCancelIncubation(eggId)}
                   >
-                    完成孵化
+                    取消孵化
                   </button>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
-          {incubatingEggs.length === 0 && (
+            );
+          })}
+
+          {/* 已完成的蛋 */}
+          {Object.entries(completedEggs).map(([eggId, egg]) => {
+            const eggData = eggConfig[egg.eggType];
+            return (
+              <div
+                key={eggId}
+                className="relative overflow-hidden bg-slate-800/60 rounded-lg border border-slate-700/60 p-4 transform transition-all duration-300 hover:shadow-lg"
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br from-quality-${egg.quality.toLowerCase()} to-transparent opacity-[0.03]`}
+                ></div>
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <i
+                      className={`fas ${eggData?.icon || 'fa-egg'} text-xl text-quality-${eggData?.color || 'normal'} opacity-90 mr-2`}
+                    ></i>
+                    <h4 className="font-bold text-slate-100">
+                      {eggData?.name || egg.eggType}
+                    </h4>
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full bg-quality-${egg.quality.toLowerCase()} bg-opacity-10 text-quality-${egg.quality.toLowerCase()}`}
+                  >
+                    {getQualityDisplayName(egg.quality)}品质
+                  </span>
+                </div>
+
+                <div className="mb-3">
+                  <div className="relative w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                      className={`absolute left-0 top-0 h-full bg-quality-${egg.quality.toLowerCase()} opacity-90 rounded-full`}
+                      style={{ width: '100%' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-shimmer"></div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-400 text-center">
+                    孵化完成
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 relative z-10">
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleCompleteIncubation(eggId)}
+                  >
+                    取出召唤兽
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {Object.keys(incubatingEggs).length === 0 && Object.keys(completedEggs).length === 0 && (
             <div className="col-span-full text-center py-8 text-slate-500">
               <i className="fas fa-egg text-4xl mb-3 opacity-30"></i>
               <p>暂无正在孵化的蛋</p>
@@ -267,7 +317,6 @@ export const Incubator = () => {
                 type="button"
                 className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
                 onClick={() => {
-                  console.log("Cancel dialog closed");
                   setShowConfirm(false);
                   setEggToCancel(null);
                 }}
@@ -276,11 +325,8 @@ export const Incubator = () => {
               </button>
               <button
                 type="button"
-                className="px-4 py-2 rounded-lg bg-slate-600 text-white hover:bg-slate-500 transition-colors duration-200 cursor-pointer"
-                onClick={() => {
-                  console.log("Confirm cancel clicked");
-                  confirmCancel();
-                }}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors duration-200 cursor-pointer"
+                onClick={confirmCancel}
               >
                 确认
               </button>

@@ -183,5 +183,131 @@ export const skillConfig = [
     icon: "fa-crown",
     mode: SKILL_MODES.PASSIVE,
     allDamageBonus: 0.1
+  },
+  {
+    id: "tiger_roar",
+    name: "虎啸",
+    description: "发出震慑心魄的虎啸，降低敌人的攻击力和防御力",
+    type: SKILL_TYPES.PHYSICAL,
+    icon: "fa-lion",
+    mode: SKILL_MODES.ACTIVE,
+    damage: 1.2,
+    debuff: {
+      attackReduction: 0.2,
+      defenseReduction: 0.2,
+      duration: 3
+    },
+    cooldown: 15
+  },
+  {
+    id: "turtle_shell",
+    name: "龟甲",
+    description: "激活龟甲护盾，大幅提升防御力",
+    type: SKILL_TYPES.DEFENSIVE,
+    icon: "fa-shield-virus",
+    mode: SKILL_MODES.ACTIVE,
+    defenseBoost: 0.5,
+    duration: 5,
+    cooldown: 20
+  },
+  {
+    id: "water_escape",
+    name: "水遁",
+    description: "遁入水中，暂时隐身并恢复生命值",
+    type: SKILL_TYPES.SURVIVAL,
+    icon: "fa-water",
+    mode: SKILL_MODES.ACTIVE,
+    stealthDuration: 3,
+    healing: 0.3,
+    cooldown: 25
+  },
+  {
+    id: "life_death_book",
+    name: "生死簿",
+    description: "翻开生死簿，对敌人造成持续伤害",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-book-dead",
+    mode: SKILL_MODES.ACTIVE,
+    damage: 1.5,
+    dotDamage: 0.2,
+    dotDuration: 5,
+    cooldown: 20
+  },
+  {
+    id: "ghost_fire",
+    name: "鬼火",
+    description: "释放幽冥鬼火，造成范围伤害",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-fire",
+    mode: SKILL_MODES.ACTIVE,
+    damage: 1.3,
+    area: 3,
+    cooldown: 12
+  },
+  {
+    id: "yin_yang_switch",
+    name: "阴阳转换",
+    description: "切换阴阳状态，改变技能效果",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-yin-yang",
+    mode: SKILL_MODES.ACTIVE,
+    duration: 10,
+    cooldown: 30
+  },
+  {
+    id: "nether_portal",
+    name: "冥界之门",
+    description: "打开通往冥界的大门，将敌人短暂传送至冥界",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-door-open",
+    mode: SKILL_MODES.ACTIVE,
+    duration: 3,
+    cooldown: 40
+  },
+  {
+    id: "moonlight_power",
+    name: "月光之力",
+    description: "吸收月光之力，提升自身属性",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-moon",
+    mode: SKILL_MODES.ACTIVE,
+    buffs: {
+      agility: 0.3,
+      intelligence: 0.2,
+      luck: 0.2
+    },
+    duration: 8,
+    cooldown: 25
+  },
+  {
+    id: "jump_attack",
+    name: "跳跃攻击",
+    description: "高高跃起后发动强力攻击",
+    type: SKILL_TYPES.PHYSICAL,
+    icon: "fa-person-running",
+    mode: SKILL_MODES.ACTIVE,
+    damage: 1.6,
+    cooldown: 15
+  },
+  {
+    id: "healing",
+    name: "治疗",
+    description: "恢复目标生命值",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-heart",
+    mode: SKILL_MODES.ACTIVE,
+    healing: 0.4,
+    cooldown: 10
+  },
+  {
+    id: "thunder_spell",
+    name: "雷击",
+    description: "召唤雷电攻击敌人",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-bolt",
+    mode: SKILL_MODES.ACTIVE,
+    damage: 1.8,
+    stunDuration: 1,
+    cooldown: 15
   }
 ];

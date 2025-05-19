@@ -16,79 +16,10 @@ import {
 import { getRaceBonus } from '@/config/raceConfig'; // 引入种族加成函数
 import { SKILL_MODES } from "@/config/enumConfig";
 import { setItemStatus } from './itemSlice';
+import { playerBaseConfig } from '@/config/playerConfig';
+import { calculateDerivedAttributes, getExperienceForLevel } from '@/utils/summonUtils';
 
 // --- Helper Functions ---
-
-const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel, race) => {
-  const derived = {};
-  const equipmentContributions = {}; // All contributions from equipment
-  const equipmentBonusesToBasic = {}; // Contributions specifically to basic attributes
-
-  const finalBasicAttributes = { ...basicAttributesWithPoints };
-
-  // 1. Accumulate direct bonuses to basic attributes from equipment
-  if (equippedItemsDataMap) {
-    for (const slot in equippedItemsDataMap) {
-      const item = equippedItemsDataMap[slot];
-      if (item && item.finalEffects) { // Expect item objects to have a finalEffects property
-        for (const effectKey in item.finalEffects) {
-          const value = item.finalEffects[effectKey];
-          if (finalBasicAttributes.hasOwnProperty(effectKey)) {
-            finalBasicAttributes[effectKey] = (finalBasicAttributes[effectKey] || 0) + value;
-            equipmentBonusesToBasic[effectKey] = (equipmentBonusesToBasic[effectKey] || 0) + value;
-          }
-          // Always record in equipmentContributions, even if not a basic attribute (e.g. direct critRate)
-          equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + value;
-        }
-      }
-    }
-  }
-  
-  // 应用种族加成
-  if (race) {
-    for (const attrKey in finalBasicAttributes) {
-      const raceBonus = getRaceBonus(race, attrKey);
-      finalBasicAttributes[attrKey] = Math.floor(finalBasicAttributes[attrKey] * raceBonus);
-    }
-  }
-
-  // 2. Calculate derived attributes based on finalBasicAttributes (which now include equipment bonuses to basic)
-  for (const [attrKey, config] of Object.entries(derivedAttributeConfig)) {
-    let value = 0;
-    for (const baseAttr of config.attributes) {
-      value += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
-    }
-
-    // Check if equipment directly adds to this derived attribute
-    // This was complex in original Summon.js, let's simplify:
-    // equipmentContributions already holds ALL effects. If an effect key matches a derived attr key, AND it's NOT a basic attr key,
-    // it means it's a direct bonus to a derived attribute not already accounted for by boosting a basic one.
-    if (equipmentContributions.hasOwnProperty(attrKey) && !basicAttributesWithPoints.hasOwnProperty(attrKey)) {
-        value += equipmentContributions[attrKey];
-    }
-    
-    if (["critRate", "critDamage", "dodgeRate"].includes(attrKey)) {
-      derived[attrKey] = parseFloat(value.toFixed(5));
-    } else {
-      derived[attrKey] = Math.floor(value);
-    }
-  }
-
-  return {
-    derivedAttributes: derived,
-    equipmentContributions,
-    equipmentBonusesToBasic,
-  };
-};
-
-const getExperienceForLevel = (level) => {
-  if (level >= 0 && level < levelExperienceRequirements.length && levelExperienceRequirements[level] !== null) {
-    return levelExperienceRequirements[level];
-  }
-  // For levels beyond configured, assume max level or error
-  // console.warn(`[getExperienceForLevel] Experience requirement for level ${level} not configured.`);
-  return Infinity;
-};
 
 // Helper function (can be co-located or imported if it becomes complex)
 // This function helps in constructing the currentSummonFullData by attaching item objects.
@@ -190,18 +121,25 @@ const summonSlice = createSlice({
         return;
       }
 
+      // 检查玩家等级限制
+      const currentSummonCount = Object.keys(state.allSummons).length;
+      const maxSummons = playerBaseConfig.getMaxSummonsByLevel(state.playerLevel);
+      
+      if (currentSummonCount >= maxSummons) {
+        state.error = `无法添加更多召唤兽，当前等级(${state.playerLevel})最多可拥有${maxSummons}个召唤兽`;
+        return;
+      }
+
       const petBaseConf = petConfig[summonData.petId];
       const newSummon = {
         ...summonData, 
         experience: summonData.experience || 0,
         potentialPoints: summonData.potentialPoints !== undefined ? summonData.potentialPoints : (summonData.level -1) * (petBaseConf?.potentialPointsPerLevel || 5),
         allocatedPoints: summonData.allocatedPoints || { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
-        // Initialize derived fields, will be properly set by _internalUpdate...
         derivedAttributes: {}, 
         equipmentContributions: {},
         equipmentBonusesToBasic: {},
         experienceToNextLevel: getExperienceForLevel(summonData.level),
-        // Ensure equippedItemIds is initialized properly for all standard slots
         equippedItemIds: STANDARD_EQUIPMENT_SLOTS.reduce((acc, slot) => {
             acc[slot] = summonData.equippedItemIds?.[slot] || null;
             return acc;
@@ -211,7 +149,6 @@ const summonSlice = createSlice({
       state.error = null;
 
       // Calculate initial stats without equipment effects for now.
-      // A subsequent 'recalculateSummonStats' action with full item data is expected.
       const initialBasicWithAllocated = { ...newSummon.basicAttributes };
       for(const attr in newSummon.allocatedPoints) {
             initialBasicWithAllocated[attr] = (initialBasicWithAllocated[attr] || 0) + newSummon.allocatedPoints[attr];
@@ -417,6 +354,26 @@ const summonSlice = createSlice({
         }
       }
     },
+
+    releaseSummon: (state, action) => {
+      const summonId = action.payload;
+      const summon = state.allSummons[summonId];
+      
+      if (!summon) {
+        state.error = '找不到要释放的召唤兽';
+        return;
+      }
+
+      // 如果当前选中的召唤兽是要释放的召唤兽，清除当前选中
+      if (state.currentSummonId === summonId) {
+        state.currentSummonId = null;
+        state.currentSummonFullData = null;
+      }
+
+      // 删除召唤兽
+      delete state.allSummons[summonId];
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -441,6 +398,12 @@ const summonSlice = createSlice({
       .addCase(recalculateSummonStats.rejected, (state, action) => {
         console.error("recalculateSummonStats failed:", action.error.message);
         state.error = action.error.message;
+      })
+      .addCase('player/addExperience', (state, action) => {
+        // 当玩家升级时，更新召唤兽数量限制
+        const newLevel = action.payload.level;
+        const maxSummons = playerBaseConfig.getMaxSummonsByLevel(newLevel);
+        state.maxSummons = maxSummons;
       });
   },
 });
@@ -458,7 +421,8 @@ export const {
   replaceSkill,
   addRefinementHistoryItem,
   resetSummonState,
-  updateSummonNickname
+  updateSummonNickname,
+  releaseSummon
 } = summonSlice.actions;
 
 // Selectors

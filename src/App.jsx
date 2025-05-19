@@ -7,6 +7,7 @@ import { useModalState } from "@/hooks/useModalState";
 import ToastContainer from "@/features/ui/components/ToastContainer";
 import InventoryPanel from "@/features/inventory/components/InventoryPanel";
 import { Incubator } from "@/features/incubator/components/Incubator";
+import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 // import Inventory from "@/entities/Inventory"; // Removed
 import { generateInitialEquipment } from "@/gameLogic";
 // 引入Redux集成和选择器
@@ -22,6 +23,7 @@ const App = () => {
   const { showResult } = useToast(toasts, setToasts);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
+  const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
   // const [inventory] = useState(new Inventory()); // Removed
   
   // 从Redux获取召唤兽数据
@@ -140,6 +142,19 @@ const App = () => {
         <ToastContainer toasts={toasts} setToasts={setToasts} />
       </div>
 
+      {/* 添加玩家信息按钮 */}
+      <div className="fixed top-6 right-6 flex flex-col gap-4">
+        <button
+          onClick={() => setIsPlayerInfoOpen(true)}
+          className="bg-slate-800/90 hover:bg-slate-700/90 
+            text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
+            transition-all duration-200 border border-slate-600/30 group"
+        >
+          <i className="fas fa-user text-lg text-blue-400"></i>
+          <span className="font-medium">玩家信息</span>
+        </button>
+      </div>
+
       {/* 添加背包按钮 */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-4">
         <button
@@ -151,6 +166,23 @@ const App = () => {
           <i className="fas fa-backpack text-lg text-purple-400"></i>
           <span className="font-medium">背包</span>
         </button>
+      </div>
+
+      {/* 玩家信息面板 */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
+          isPlayerInfoOpen ? "" : "hidden"
+        }`}
+      >
+        <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
+          <button
+            onClick={() => setIsPlayerInfoOpen(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
+          >
+            <i className="fas fa-times text-xl"></i>
+          </button>
+          <PlayerInfo />
+        </div>
       </div>
 
       {/* 背包面板 */}
@@ -179,7 +211,7 @@ const App = () => {
           >
             <i className="fas fa-times text-xl"></i>
           </button>
-          <Incubator />
+          <Incubator toasts={toasts} setToasts={setToasts} />
         </div>
       </div>
     </div>
