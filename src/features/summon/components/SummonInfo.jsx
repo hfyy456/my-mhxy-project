@@ -17,8 +17,10 @@ import {
   getSkillTypeDisplayName,
   getRaceTypeDisplayName,
   getQualityDisplayName,
-  getSkillModeDisplayName
+  getSkillModeDisplayName,
+  getFiveElementDisplayName
 } from "@/config/uiTextConfig";
+import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 import {
   selectCurrentSummonFullData,
   selectEquippedItemsForSummon,
@@ -325,11 +327,12 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
               }}
             />
           </div>
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm text-center">
-            <h2 className="text-xl font-bold text-purple-400 mb-1">{displayName}</h2>
-            <div className="flex justify-center items-center gap-2 mb-2">
-              <span className="text-sm text-gray-300">
-                {nickname ? `昵称：${nickname}` : "未设置昵称"}
+          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
+            {/* <h2 className="text-2xl font-bold text-purple-300 mb-1 text-center">{displayName}</h2> */}
+
+            <div className="flex justify-center items-center gap-2 mb-3">
+              <span className="text-m text-primary">
+                {nickname ? `${nickname}` : "未设置昵称"}
               </span>
               <button
                 onClick={() => onOpenNicknameModal(summon)}
@@ -339,25 +342,32 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                 {nickname ? "修改昵称" : "设置昵称"}
               </button>
             </div>
-            <div className="flex flex-wrap justify-center items-center gap-2">
-              <p className="text-sm text-gray-300">
-                {uiText.labels.level}{" "}
-                <span className="font-semibold text-gray-100">{level || 1}</span>
-              </p>
-              <p className="text-sm text-gray-300">
-                {uiText.labels.quality}{" "}
-                <span className={`font-semibold ${qualityColorName}`}>
+
+            <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 mb-2">
+              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
+                <span className="text-xs text-gray-300 mr-1">{uiText.labels.level}</span>
+                <span className="text-xs font-semibold text-gray-100">{level || 1}</span>
+              </div>
+              
+              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
+                <span className={`text-xs font-semibold ${qualityColorName}`}>
                   {getQualityDisplayName(quality)}
                 </span>
-              </p>
+              </div>
               
-              {/* 种族信息标签 */}
-              <p className="text-sm text-gray-300">
-                {uiText.labels.race}{" "}
-                <span className="font-semibold text-gray-100">
+              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-gray-100">
                   {getRaceTypeDisplayName(summon.race)}
                 </span>
-              </p>
+              </div>
+              
+              {(summon.fiveElement || petConfig[summon.petId]?.fiveElement) && (
+                 <div className={`flex items-center px-2.5 py-1 rounded-full ${FIVE_ELEMENT_COLORS[summon.fiveElement || petConfig[summon.petId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
+                  <span className="text-xs font-semibold">
+                    {getFiveElementDisplayName(summon.fiveElement || petConfig[summon.petId]?.fiveElement)}
+                  </span>
+                </div>
+              )}
             </div>
             
             <div className="mt-2 px-2">

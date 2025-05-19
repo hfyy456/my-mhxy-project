@@ -17,9 +17,10 @@ import {
   getPetTypeDisplayName,
   getRaceTypeDisplayName,
   getAttributeDisplayName,
+  getFiveElementDisplayName
 } from "@/config/uiTextConfig";
 import { skillConfig } from "../../../config/skillConfig";
-import { ATTRIBUTE_TYPES } from "../../../config/enumConfig";
+import { ATTRIBUTE_TYPES, FIVE_ELEMENT_COLORS } from "../../../config/enumConfig";
 
 // 加载召唤兽图片
 const images = import.meta.glob("@/assets/summons/*.png", {
@@ -145,8 +146,11 @@ const PetCatalog = ({ isOpen, onClose }) => {
                       <div className="mb-1.5"> 
                         <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${petInfo.color?.split('-')[0]}-600 text-${petInfo.color?.split('-')[0]}-100`}>{getPetTypeDisplayName(petInfo.type)}</span>
                       </div>
-                      <div>
+                      <div className="mb-1.5">
                         <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-600 text-slate-100">{getRaceTypeDisplayName(petInfo.race)}</span>
+                      </div>
+                      <div>
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${FIVE_ELEMENT_COLORS[petInfo.fiveElement] || 'bg-gray-500 text-white'}`}>{getFiveElementDisplayName(petInfo.fiveElement)}</span>
                       </div>
                     </div>
                   </div>

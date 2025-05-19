@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-18 04:59:50
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-18 05:38:55
+ * @LastEditTime: 2025-05-20 05:58:04
  */
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -19,9 +19,10 @@ export default {
           epic: '#a855f7',      // 史诗 - 紫色
           legendary: '#ff8000',  // 传说 - 橙色
           mythic: '#ff1493'     // 神话 - 粉色
-        }
-      }
-    }
+        },
+        primary: '#BA68C8',
+      },
+    },
   },
   plugins: [],
   safelist: [

@@ -1,13 +1,14 @@
 import { BASE_CONFIG } from './baseConfig';
 import { raceConfig } from './raceConfig';
 import { skillConfig } from './skillConfig';
-import { PET_TYPES, RACE_TYPES, GROWTH_RATE_TIERS, COLOR_TYPES, ATTRIBUTE_TYPES } from './enumConfig';
+import { PET_TYPES, RACE_TYPES, GROWTH_RATE_TIERS, COLOR_TYPES, ATTRIBUTE_TYPES, FIVE_ELEMENTS } from './enumConfig';
 
 // 宠物配置
 export const petConfig = {
   ghost: {
     id: "ghost",
     name: "幽灵",
+    fiveElement: FIVE_ELEMENTS.METAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -37,6 +38,7 @@ export const petConfig = {
   heavenGuard: {
     id: "heavenGuard",
     name: "持国巡守",
+    fiveElement: FIVE_ELEMENTS.EARTH,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -64,6 +66,7 @@ export const petConfig = {
   thunderBird: {
     id: "thunderBird",
     name: "雷鸟人",
+    fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.03,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -92,6 +95,7 @@ export const petConfig = {
   vampire: {
     id: "vampire",
     name: "吸血鬼",
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.045,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -121,6 +125,7 @@ export const petConfig = {
   mechanicalBird: {
     id: "mechanicalBird",
     name: "机关鸟",
+    fiveElement: FIVE_ELEMENTS.FIRE,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -145,6 +150,7 @@ export const petConfig = {
   catSpirit: {
     id: "catSpirit",
     name: "猫灵",
+    fiveElement: FIVE_ELEMENTS.METAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -169,6 +175,7 @@ export const petConfig = {
   wildLeopard: {
     id: "wildLeopard",
     name: "狂豹",
+    fiveElement: FIVE_ELEMENTS.EARTH,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.043,
@@ -193,6 +200,7 @@ export const petConfig = {
   chaosBeast: {
     id: "chaosBeast",
     name: "混沌兽",
+    fiveElement: FIVE_ELEMENTS.FIRE,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -217,6 +225,7 @@ export const petConfig = {
   yaksha: {
     id: "yaksha",
     name: "夜叉",
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -241,6 +250,7 @@ export const petConfig = {
   dragonSnake: {
     id: "dragonSnake",
     name: "蛟龙",
+    fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -265,6 +275,7 @@ export const petConfig = {
   phoenix: {
     id: "phoenix",
     name: "凤凰",
+    fiveElement: FIVE_ELEMENTS.FIRE,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -289,6 +300,7 @@ export const petConfig = {
   mistFairy: {
     id: "mistFairy",
     name: "雾中仙",
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -313,6 +325,7 @@ export const petConfig = {
   spiritCrane: {
     id: "spiritCrane",
     name: "灵鹤",
+    fiveElement: FIVE_ELEMENTS.METAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -337,6 +350,7 @@ export const petConfig = {
   starFairy: {
     id: "starFairy",
     name: "星灵仙子",
+    fiveElement: FIVE_ELEMENTS.WOOD,
     type: PET_TYPES.MAGICAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
@@ -361,6 +375,7 @@ export const petConfig = {
   mountainKing: {
     id: "mountainKing",
     name: "山君",
+    fiveElement: FIVE_ELEMENTS.EARTH,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.047,
@@ -385,6 +400,7 @@ export const petConfig = {
   blackTortoise: {
     id: "blackTortoise",
     name: "玄武",
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.05,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
@@ -409,6 +425,7 @@ export const petConfig = {
   judge: {
     id: "judge",
     name: "判官",
+    fiveElement: FIVE_ELEMENTS.METAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.036,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
@@ -433,6 +450,7 @@ export const petConfig = {
   jadeRabbit: {
     id: "jadeRabbit",
     name: "玉兔",
+    fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.032,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.02,
@@ -457,6 +475,7 @@ export const petConfig = {
   goldenArmor: {
     id: "goldenArmor",
     name: "金甲天兵",
+    fiveElement: FIVE_ELEMENTS.METAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.042,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -481,6 +500,7 @@ export const petConfig = {
   heavenGeneral: {
     id: "heavenGeneral",
     name: "天罡战将",
+    fiveElement: FIVE_ELEMENTS.EARTH,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.04,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.043,
@@ -505,6 +525,7 @@ export const petConfig = {
   qilin: {
     id: "qilin",
     name: "麒麟",
+    fiveElement: FIVE_ELEMENTS.EARTH,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.045,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.042,
@@ -532,6 +553,7 @@ export const petConfig = {
   hundun: {
     id: "hundun",
     name: "混沌",
+    fiveElement: FIVE_ELEMENTS.FIRE,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.050,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.030,
@@ -555,6 +577,7 @@ export const petConfig = {
   yinglong: {
     id: "yinglong",
     name: "应龙",
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.042,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.040, 
@@ -578,6 +601,7 @@ export const petConfig = {
   bai_ze: {
     id: "bai_ze",
     name: "白泽",
+    fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.020,

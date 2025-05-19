@@ -4,7 +4,7 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-19 03:14:40
  */
-import { EQUIPMENT_SLOT_TYPES, SKILL_TYPES, ELEMENT_TYPES, RACE_TYPES, PET_TYPES, QUALITY_TYPES, SKILL_MODES } from './enumConfig';
+import { EQUIPMENT_SLOT_TYPES, SKILL_TYPES, ELEMENT_TYPES, RACE_TYPES, PET_TYPES, QUALITY_TYPES, SKILL_MODES, FIVE_ELEMENTS } from './enumConfig';
 
 export const uiText = {
   // 通用文本
@@ -26,6 +26,7 @@ export const uiText = {
     experience: "经验:",
     race: "种族:",
     type: "类型:",
+    fiveElement: "五行:",
     currentValue: "当前值:",
     maxValue: "最大值:",
     remainingPoints: "剩余点数:",
@@ -138,6 +139,15 @@ export const uiText = {
     [SKILL_MODES.ACTIVE]: "主动技能"
   },
 
+  // 五行类型
+  fiveElements: {
+    [FIVE_ELEMENTS.METAL]: "金",
+    [FIVE_ELEMENTS.WOOD]: "木",
+    [FIVE_ELEMENTS.WATER]: "水",
+    [FIVE_ELEMENTS.FIRE]: "火",
+    [FIVE_ELEMENTS.EARTH]: "土"
+  },
+
   // 按钮文本
   buttons: {
     petCatalog: "召唤兽图鉴",
@@ -223,4 +233,9 @@ export const getPetTypeDisplayName = (type) => {
 // 获取技能模式显示名称
 export const getSkillModeDisplayName = (mode) => {
   return uiText.skillModes[mode] || uiText.general.unknown;
+};
+
+// 获取五行显示名称
+export const getFiveElementDisplayName = (element) => {
+  return uiText.fiveElements[element] || uiText.general.unknown;
 };

@@ -32,6 +32,15 @@ export const ELEMENT_TYPES = {
   NATURE: "nature"
 };
 
+// 五行类型
+export const FIVE_ELEMENTS = {
+  METAL: "metal",  // 金
+  WOOD: "wood",    // 木
+  WATER: "water",  // 水
+  FIRE: "fire",    // 火
+  EARTH: "earth"   // 土
+};
+
 // 技能类型
 export const SKILL_TYPES = {
   PHYSICAL: "physical",
@@ -141,6 +150,15 @@ export const COLOR_TYPES = {
   PINK: "pink-500",
   BROWN: "brown-500",
   INDIGO: "indigo-500"
+};
+
+// 五行颜色
+export const FIVE_ELEMENT_COLORS = {
+  [FIVE_ELEMENTS.METAL]: "bg-yellow-400 text-yellow-900",   // 金 (金色)
+  [FIVE_ELEMENTS.WOOD]: "bg-green-500 text-green-100",  // 木 (绿色)
+  [FIVE_ELEMENTS.WATER]: "bg-blue-500 text-blue-100",   // 水 (蓝色)
+  [FIVE_ELEMENTS.FIRE]: "bg-red-500 text-red-100",     // 火 (红色)
+  [FIVE_ELEMENTS.EARTH]: "bg-yellow-700 text-yellow-100" // 土 (褐色) - 使用深黄色代表土褐色
 };
 
 // 技能效果类型
