@@ -55,6 +55,7 @@ const initialState = {
   isLoading: false,
   error: null,
   refinementHistory: [],
+  maxSummons: playerBaseConfig.getMaxSummonsByLevel(playerBaseConfig.initialLevel),
 };
 
 // Async thunk for setting current summon and ensuring full data is populated
@@ -122,12 +123,11 @@ const summonSlice = createSlice({
         return;
       }
 
-      // 检查玩家等级限制
       const currentSummonCount = Object.keys(state.allSummons).length;
-      const maxSummons = playerBaseConfig.getMaxSummonsByLevel(state.playerLevel);
-      
+      const maxSummons = state.maxSummons;
+
       if (currentSummonCount >= maxSummons) {
-        state.error = `无法添加更多召唤兽，当前等级(${state.playerLevel})最多可拥有${maxSummons}个召唤兽`;
+        state.error = `无法添加更多召唤兽，已达到上限 (${maxSummons}个)。请先释放一些召唤兽或提升玩家等级。`;
         return;
       }
 
@@ -406,10 +406,13 @@ const summonSlice = createSlice({
         state.error = action.error.message;
       })
       .addCase('player/addExperience', (state, action) => {
-        // 当玩家升级时，更新召唤兽数量限制
         const newLevel = action.payload.level;
-        const maxSummons = playerBaseConfig.getMaxSummonsByLevel(newLevel);
-        state.maxSummons = maxSummons;
+        if (typeof newLevel === 'number') {
+            const newMaxSummons = playerBaseConfig.getMaxSummonsByLevel(newLevel);
+            state.maxSummons = newMaxSummons;
+        } else {
+            console.warn("player/addExperience: action.payload.level is missing or not a number, cannot update maxSummons for summonSlice.");
+        }
       });
   },
 });

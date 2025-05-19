@@ -1,13 +1,25 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { selectAllSummons } from '@/store/slices/summonSlice';
-import { selectUnlockProgress, selectQualityCounts } from '@/store/slices/petCatalogSlice';
-import { playerBaseConfig } from '@/config/playerConfig';
-import { getQualityDisplayName } from '@/config/uiTextConfig';
+import React from "react";
+import { useSelector } from "react-redux";
+import { selectAllSummons } from "@/store/slices/summonSlice";
+import {
+  selectUnlockProgress,
+  selectQualityCounts,
+} from "@/store/slices/petCatalogSlice";
+import { playerBaseConfig } from "@/config/playerConfig";
+import { getQualityDisplayName } from "@/config/uiTextConfig";
+import { qualityConfig } from "@/config/config";
 
 export const PlayerInfo = () => {
   const allSummons = useSelector(selectAllSummons);
-  const playerLevel = 1; // 这里需要从玩家状态中获取实际等级
+
+  const playerLevel = 1; // TODO: playerLevel should come from playerSlice
+  const playerExperience = 450; // TODO: playerExperience should come from playerSlice
+  const experienceToNextLevel = 1000; // TODO: Get this from playerLevelConfig based on playerLevel
+  const experiencePercentage =
+    experienceToNextLevel > 0
+      ? (playerExperience / experienceToNextLevel) * 100
+      : 0;
+
   const maxSummons = playerBaseConfig.getMaxSummonsByLevel(playerLevel);
   const currentSummonCount = Object.keys(allSummons).length;
   const unlockProgress = useSelector(selectUnlockProgress);
@@ -33,19 +45,23 @@ export const PlayerInfo = () => {
               <i className="fas fa-star text-yellow-400/90 mr-2"></i>
               等级
             </h3>
-            <span className="text-2xl font-bold text-yellow-400">{playerLevel}</span>
+            <span className="text-2xl font-bold text-yellow-400">
+              {playerLevel}
+            </span>
           </div>
           <div className="relative w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
             <div
               className="absolute left-0 top-0 h-full bg-gradient-to-r from-yellow-400 to-yellow-500 opacity-90 rounded-full"
-              style={{ width: '45%' }}
+              style={{ width: `${experiencePercentage}%` }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-shimmer"></div>
             </div>
           </div>
           <div className="mt-2 flex justify-between text-xs text-slate-400">
-            <span>经验值: 450/1000</span>
-            <span>45%</span>
+            <span>
+              经验值: {playerExperience}/{experienceToNextLevel}
+            </span>
+            <span>{experiencePercentage.toFixed(0)}%</span>
           </div>
         </div>
 
@@ -138,18 +154,29 @@ export const PlayerInfo = () => {
           <i className="fas fa-chart-pie text-indigo-400/90 mr-2"></i>
           品质统计
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          {Object.entries(qualityCounts).map(([quality, count]) => (
-            <div key={quality} className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg border border-slate-700/60">
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full bg-quality-${quality.toLowerCase()} mr-2`}></div>
-                <span className="text-slate-300">{getQualityDisplayName(quality)}</span>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {qualityConfig.names.map((qualityKey) => {
+            const count = qualityCounts[qualityKey] || 0;
+            const qualityDisplayName = getQualityDisplayName(qualityKey);
+            const colorClass = `bg-quality-${qualityKey}`;
+
+            return (
+              <div
+                key={qualityKey}
+                className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg border border-slate-700/60"
+              >
+                <div className="flex items-center">
+                  <div
+                    className={`w-3 h-3 rounded-full ${colorClass} mr-2`}
+                  ></div>
+                  <span className="text-slate-300">{qualityDisplayName}</span>
+                </div>
+                <span className="text-slate-400">{count}只</span>
               </div>
-              <span className="text-slate-400">{count}只</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
   );
-}; 
+};

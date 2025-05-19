@@ -5,7 +5,8 @@ export const RACE_TYPES = {
   BEAST: "beast",        // 瑞兽：祥瑞神兽
   SPIRIT: "spirit",       // 精怪：天地精灵
   MACHINE: "machine",      // 机关：人造生物
-  WARRIOR: "warrior"       // 神兵：天庭战士
+  WARRIOR: "warrior",       // 神兵：天庭战士
+  ANCIENT_BEAST: "ancient_beast" // 上古神兽
 };
 
 // 宠物类型

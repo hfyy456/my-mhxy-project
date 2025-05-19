@@ -185,6 +185,43 @@ export const raceConfig = {
       [ELEMENT_TYPES.DARK]: 0.1
     }
   },
+  [RACE_TYPES.ANCIENT_BEAST]: {
+    description: "来自远古洪荒的神秘神兽，拥有毁天灭地的力量",
+    color: "yellow-600",
+    traits: [
+      {
+        name: "洪荒之力",
+        type: RACE_TRAIT_TYPES.COMBAT,
+        effect: "所有伤害提升20%"
+      },
+      {
+        name: "不朽之躯",
+        type: RACE_TRAIT_TYPES.DEFENSE,
+        effect: "受到所有伤害减免10%"
+      },
+      {
+        name: "远古血脉",
+        type: RACE_TRAIT_TYPES.PASSIVE,
+        effect: "每回合恢复5%最大生命值和法力值"
+      }
+    ],
+    bonus: {
+      constitution: 0.15,
+      strength: 0.15,
+      intelligence: 0.1,
+      agility: 0.05,
+      luck: 0.1
+    },
+    preferredSkills: ["神威", "必杀", "法术暴击"],
+    elementalResistance: {
+      [ELEMENT_TYPES.PHYSICAL]: 0.2,
+      [ELEMENT_TYPES.FIRE]: 0.15,
+      [ELEMENT_TYPES.WATER]: 0.15,
+      [ELEMENT_TYPES.THUNDER]: 0.15,
+      [ELEMENT_TYPES.LIGHT]: 0.1,
+      [ELEMENT_TYPES.DARK]: 0.1
+    }
+  }
 };
 
 // 获取种族加成

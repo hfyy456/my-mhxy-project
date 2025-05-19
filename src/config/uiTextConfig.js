@@ -128,7 +128,8 @@ export const uiText = {
     [RACE_TYPES.BEAST]: "瑞兽",
     [RACE_TYPES.SPIRIT]: "精怪",
     [RACE_TYPES.MACHINE]: "机关",
-    [RACE_TYPES.WARRIOR]: "神兵"
+    [RACE_TYPES.WARRIOR]: "神兵",
+    [RACE_TYPES.ANCIENT_BEAST]: "上古神兽"
   },
 
   // 技能模式

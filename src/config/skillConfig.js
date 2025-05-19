@@ -309,5 +309,68 @@ export const skillConfig = [
     damage: 1.8,
     stunDuration: 1,
     cooldown: 15
+  },
+  {
+    id: "divine_power",
+    name: "神力",
+    description: "被动提升大量攻击力。",
+    type: SKILL_TYPES.PHYSICAL,
+    icon: "fa-fist-raised",
+    mode: SKILL_MODES.PASSIVE,
+    attackBonus: 0.25
+  },
+  {
+    id: "chaos_devour",
+    name: "混沌吞噬",
+    description: "释放混沌之力吞噬目标，造成毁灭性伤害，并将部分伤害转化为自身生命值。",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-skull-crossbones",
+    mode: SKILL_MODES.ACTIVE,
+    damageMultiplier: 3.0,
+    lifestealPercentage: 0.5,
+    cooldown: 25,
+    manaCost: 100
+  },
+  {
+    id: "storm_judgment",
+    name: "风雷天威",
+    description: "召唤风暴与雷霆之力，对敌方全体造成伤害，并有几率附加麻痹或禁锢效果。",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-cloud-bolt",
+    mode: SKILL_MODES.ACTIVE,
+    damageMultiplier: 1.8,
+    targets: "all",
+    statusEffects: [
+      { type: "paralysis", chance: 0.2, duration: 2 },
+      { type: "immobilize", chance: 0.15, duration: 1 }
+    ],
+    cooldown: 20,
+    manaCost: 120
+  },
+  {
+    id: "omniscience",
+    name: "通晓万物",
+    description: "白泽天生通晓一切，大幅提升自身暴击率、命中率和闪避率。战斗开始时，有一定几率看破敌方一名单位的弱点，使其受到的所有伤害增加，持续数回合。",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-book-open",
+    mode: SKILL_MODES.PASSIVE,
+    critRateBonus: 0.20,
+    accuracyBonus: 0.20,
+    dodgeRateBonus: 0.15,
+    revealWeaknessChance: 0.30,
+    weaknessTargetCount: 1,
+    weaknessDamageIncrease: 0.25,
+    weaknessDuration: 3
+  },
+  {
+    id: "magic_defense",
+    name: "法术防御",
+    description: "被动提升法术防御力。",
+    type: SKILL_TYPES.DEFENSIVE,
+    icon: "fa-shield-alt",
+    mode: SKILL_MODES.PASSIVE,
+    effects: {
+      magicalDefenseBonusPercentage: 0.2
+    }
   }
 ];
