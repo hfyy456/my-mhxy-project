@@ -122,6 +122,17 @@ const inventorySlice = createSlice({
         }
       });
     },
+
+    setState: (state, action) => {
+      // 确保所有必要的字段都被正确恢复
+      return {
+        slots: action.payload.slots || {},
+        capacity: action.payload.capacity || state.capacity,
+        gold: action.payload.gold || 0,
+        loading: false,
+        error: null
+      };
+    },
   }
 });
 

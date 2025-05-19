@@ -2,19 +2,30 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 02:54:01
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-19 02:08:10
+ * @LastEditTime: 2025-05-20 03:49:14
  */
-import React from 'react';
+import React from "react";
+import { useModalState } from "@/hooks/useModalState";
 
-const MainMenu = ({ onOpenSummonSystem, onOpenIncubator }) => {
+const MainMenu = ({ onOpenSummonSystem, onOpenIncubator, onOpenSettings }) => {
+  const {} = useModalState();
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center overflow-hidden">
       <div className="bg-slate-800/80 p-8 rounded-xl shadow-2xl shadow-purple-500/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h1 className="text-4xl font-bold text-center text-gray-100 mb-8">
-          <i className="fa-solid fa-dragon text-amber-400 mr-3"></i>
-          梦幻西游模拟器
-        </h1>
-        
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-100">
+            <i className="fa-solid fa-dragon text-amber-400 mr-3"></i>
+            梦幻西游模拟器
+          </h1>
+          <button
+            onClick={onOpenSettings}
+            className="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg transition-colors"
+          >
+            <i className="fas fa-cog text-xl text-blue-400"></i>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <button
             onClick={onOpenSummonSystem}
@@ -22,7 +33,9 @@ const MainMenu = ({ onOpenSummonSystem, onOpenIncubator }) => {
           >
             <i className="fa-solid fa-dragon text-4xl mb-3 text-amber-400 group-hover:text-amber-300 transition-colors duration-300"></i>
             <span className="text-xl font-semibold">召唤兽系统</span>
-            <p className="text-sm text-gray-300 mt-2 text-center">炼妖、打书、升级，打造你的专属召唤兽</p>
+            <p className="text-sm text-gray-300 mt-2 text-center">
+              炼妖、打书、升级，打造你的专属召唤兽
+            </p>
           </button>
 
           <button
@@ -31,7 +44,9 @@ const MainMenu = ({ onOpenSummonSystem, onOpenIncubator }) => {
           >
             <i className="fa-solid fa-egg text-4xl mb-3 text-blue-300 group-hover:text-blue-200 transition-colors duration-300"></i>
             <span className="text-xl font-semibold">培养皿系统</span>
-            <p className="text-sm text-gray-300 mt-2 text-center">孵化各种稀有蛋，获得独特的召唤兽</p>
+            <p className="text-sm text-gray-300 mt-2 text-center">
+              孵化各种稀有蛋，获得独特的召唤兽
+            </p>
           </button>
 
           <button
@@ -61,4 +76,4 @@ const MainMenu = ({ onOpenSummonSystem, onOpenIncubator }) => {
   );
 };
 
-export default MainMenu; 
+export default MainMenu;

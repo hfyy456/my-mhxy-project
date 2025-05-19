@@ -5,6 +5,7 @@
  * @LastEditTime: 2025-05-19 04:53:06
  */
 import { useCallback } from 'react';
+import { generateUniqueId } from '@/utils/idUtils';
 
 export const useToast = (toasts, setToasts) => {
   const showResult = useCallback((message, type) => {
@@ -26,11 +27,12 @@ export const useToast = (toasts, setToasts) => {
     }
 
     const newToast = {
-      id: Date.now() + Math.random().toString(36).substring(2, 9),
+      id: generateUniqueId('toast'),
       message,
       iconClass,
       timeString,
       type,
+      isExiting: false
     };
 
     // console.log('[useToast] Adding new toast:', newToast);
@@ -43,25 +45,7 @@ export const useToast = (toasts, setToasts) => {
       return newToasts;
     });
     
-    // 根据消息类型设置不同的显示时间
-    const duration = type === 'error' ? 5000 : 3000;
-    
-    setTimeout(() => {
-      setToasts(prevToasts => {
-        // 添加淡出动画类
-        const updatedToasts = prevToasts.map(toast => 
-          toast.id === newToast.id 
-            ? { ...toast, isExiting: true }
-            : toast
-        );
-        return updatedToasts;
-      });
-
-      // 等待动画完成后再移除
-      setTimeout(() => {
-        setToasts(prevToasts => prevToasts.filter(toast => toast.id !== newToast.id));
-      }, 300); // 动画持续时间
-    }, duration);
+    // Removed setTimeout logic for auto-dismissal from here
   }, [setToasts]);
 
   return {

@@ -8,6 +8,7 @@ import { petConfig } from '@/config/petConfig';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '@/config/config';
 import { getRaceBonus } from '@/config/raceConfig';
 import { unlockPet } from '@/store/slices/petCatalogSlice';
+import { generateUniqueId } from '@/utils/idUtils';
 
 /**
  * 计算召唤兽的派生属性
@@ -112,7 +113,7 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
   }
 
   // 生成唯一ID
-  const summonId = `${petId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const summonId = generateUniqueId('summon');
 
   // 基础数据结构
   const newSummon = {

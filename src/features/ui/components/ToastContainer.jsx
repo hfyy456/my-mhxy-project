@@ -75,29 +75,41 @@ const ToastContainer = ({ toasts, setToasts }) => {
         pointerEvents: "none"
       }}
     >
-      {toasts.map((toast) => {
-        // console.log("[ToastContainer] Rendering toast:", toast);
-        return (
-          <div
-            key={toast.id}
-            onClick={() => handleToastClick(toast.id)}
-            className={`bg-slate-800/85 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 
-              border border-slate-600/50 pointer-events-auto cursor-pointer w-[360px] relative z-[99999]
-              hover:bg-slate-700/95 hover:scale-102 transition-all duration-300
-              ${toast.isExiting ? 'animate-toastExit' : 'animate-toastEnter'}`}
-          >
-            <i className={`${toast.iconClass} text-lg opacity-80`}></i>
-            <div className="flex-1">
-              <p className="m-0 text-sm font-medium opacity-90">
-                {toast.message}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-400 opacity-70">
-                {toast.timeString}
-              </p>
+      {(() => {
+        // Check for duplicate keys before mapping
+        const ids = toasts.map(t => t.id);
+        const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+        if (duplicateIds.length > 0) {
+          console.error('[ToastContainer] Duplicate toast IDs found:', duplicateIds, toasts);
+        }
+
+        return toasts.map((toast) => {
+          if (toast.id === null || toast.id === undefined) {
+            console.error('[ToastContainer] Toast with null or undefined ID found:', toast, toasts);
+          }
+          // console.log("[ToastContainer] Rendering toast:", toast);
+          return (
+            <div
+              key={toast.id}
+              onClick={() => handleToastClick(toast.id)}
+              className={`bg-slate-800/85 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 
+                border border-slate-600/50 pointer-events-auto cursor-pointer w-[360px] relative z-[99999]
+                hover:bg-slate-700/95 hover:scale-102 transition-all duration-300
+                ${toast.isExiting ? 'animate-toastExit' : 'animate-toastEnter'}`}
+            >
+              <i className={`${toast.iconClass} text-lg opacity-80`}></i>
+              <div className="flex-1">
+                <p className="m-0 text-sm font-medium opacity-90">
+                  {toast.message}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400 opacity-70">
+                  {toast.timeString}
+                </p>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        });
+      })()}
     </div>
   );
 };

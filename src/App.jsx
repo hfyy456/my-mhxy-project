@@ -1,95 +1,73 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import HomePage from "@/features/home/components/HomePage";
 import MainMenu from "@/features/main-menu/components/MainMenu";
 import SummonSystem from "@/features/summon/components/SummonSystem";
 import { useToast } from "@/hooks/useToast";
 import { useModalState } from "@/hooks/useModalState";
+import { useAutoSave } from "@/features/save/hooks/useAutoSave";
 import ToastContainer from "@/features/ui/components/ToastContainer";
 import InventoryPanel from "@/features/inventory/components/InventoryPanel";
 import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
-// import Inventory from "@/entities/Inventory"; // Removed
+import SettingsPanel from "@/features/settings/components/SettingsPanel";
 import { generateInitialEquipment } from "@/gameLogic";
-// 引入Redux集成和选择器
-import { initializeReduxIntegration, useCurrentSummon, useSummons } from "@/store/reduxSetup";
+import {
+  initializeReduxIntegration,
+  useCurrentSummon,
+  useSummons,
+} from "@/store/reduxSetup";
 import { setCurrentSummon } from "@/store/slices/summonSlice";
 import { addItem } from "@/store/slices/itemSlice";
 import { addToInventory } from "@/store/slices/inventorySlice";
 
 const App = () => {
   const dispatch = useDispatch();
-  const [currentSystem, setCurrentSystem] = useState("main");
+  const [currentSystem, setCurrentSystem] = useState("home");
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
   const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
-  // const [inventory] = useState(new Inventory()); // Removed
-  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   // 从Redux获取召唤兽数据
   const summons = useSummons();
   const summon = useCurrentSummon();
 
-  // 初始化背包及设置物品
-  useEffect(() => {
-    // 生成5件随机装备并添加到Redux
-    const initialEquipment = generateInitialEquipment(5);
-    initialEquipment.forEach((equipment) => {
-      // 添加物品到Redux
-      dispatch(addItem({
-        ...equipment,
-        id: equipment.id,
-        type: "equipment",
-      }));
-      
-      // 添加物品到背包 - 使用自动分配的空槽位
-      dispatch(addToInventory({
-        itemId: equipment.id
-      }));
-    });
-    
-    showResult("初始装备已添加到背包");
-    // 只在组件第一次渲染时执行一次
-  }, []);
+  // 使用自动存档 hook
+  useAutoSave();
 
   // 初始化Redux集成
   useEffect(() => {
-    // 将现有系统与Redux集成
-    const cleanup = initializeReduxIntegration(); // Removed inventory instance argument
+    const cleanup = initializeReduxIntegration();
     console.log("[App.jsx] Redux集成已初始化");
-    
-    // 组件卸载时清理
-    return cleanup;
-  }, []); // Removed inventory from dependency array
 
-  const {
-    isHistoryModalOpen,
-    setIsHistoryModalOpen,
-    isResultRecordModalOpen,
-    setIsResultRecordModalOpen,
-    isSkillCatalogModalOpen,
-    setIsSkillCatalogModalOpen,
-    isPetCatalogModalOpen,
-    setIsPetCatalogModalOpen,
-    isConfirmDialogOpen,
-    setIsConfirmDialogOpen,
-    isMoreFeaturesOpen,
-    setIsMoreFeaturesOpen,
-  } = useModalState();
+    // 移除加载动画
+    const loader = document.getElementById('loader-wrapper');
+    if (loader) {
+      loader.style.display = 'none';
+    }
+
+    return cleanup;
+  }, []);
 
   const handleSystemChange = (system) => {
     if (system === "summon") {
       if (summons.length > 0) {
-        // 如果当前没有选中召唤兽，则选择第一个
         if (!summon) {
           dispatch(setCurrentSummon(summons[0].id));
-          console.log("[App.jsx] Switched to Summon System, selected first summon:", summons[0]);
+          console.log(
+            "[App.jsx] Switched to Summon System, selected first summon:",
+            summons[0]
+          );
         }
       } else {
-        // 如果没有召唤兽，确保当前选中为null
         if (summon) {
           dispatch(setCurrentSummon(null));
-          console.log("[App.jsx] Switched to Summon System, no summons available");
+          console.log(
+            "[App.jsx] Switched to Summon System, no summons available"
+          );
         }
       }
     }
@@ -108,6 +86,10 @@ const App = () => {
     };
   }, []);
 
+  const handleStartGame = () => {
+    setCurrentSystem("main");
+  };
+
   return (
     <div
       style={{
@@ -116,10 +98,19 @@ const App = () => {
         backgroundColor: "#0f172a",
       }}
     >
-      {currentSystem === "main" ? (
-        <MainMenu 
-          onOpenSummonSystem={() => handleSystemChange("summon")} 
+      {currentSystem === "home" ? (
+        <HomePage
+          onStartGame={handleStartGame}
+          toasts={toasts}
+          setToasts={setToasts}
+        />
+      ) : currentSystem === "main" ? (
+        <MainMenu
+          onOpenSummonSystem={() => handleSystemChange("summon")}
           onOpenIncubator={() => setIsIncubatorOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          toasts={toasts}
+          setToasts={setToasts}
         />
       ) : (
         <SummonSystem
@@ -128,6 +119,7 @@ const App = () => {
           setToasts={setToasts}
         />
       )}
+
       <div
         style={{
           position: "fixed",
@@ -142,78 +134,103 @@ const App = () => {
         <ToastContainer toasts={toasts} setToasts={setToasts} />
       </div>
 
-      {/* 添加玩家信息按钮 */}
-      <div className="fixed top-6 right-6 flex flex-col gap-4">
-        <button
-          onClick={() => setIsPlayerInfoOpen(true)}
-          className="bg-slate-800/90 hover:bg-slate-700/90 
-            text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
-            transition-all duration-200 border border-slate-600/30 group"
-        >
-          <i className="fas fa-user text-lg text-blue-400"></i>
-          <span className="font-medium">玩家信息</span>
-        </button>
-      </div>
-
-      {/* 添加背包按钮 */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-4">
-        <button
-          onClick={() => setIsInventoryOpen(true)}
-          className="bg-slate-800/90 hover:bg-slate-700/90 
-            text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2.5 
-            transition-all duration-200 border border-slate-600/30 group"
-        >
-          <i className="fas fa-backpack text-lg text-purple-400"></i>
-          <span className="font-medium">背包</span>
-        </button>
-      </div>
-
-      {/* 玩家信息面板 */}
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
-          isPlayerInfoOpen ? "" : "hidden"
-        }`}
-      >
-        <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
+      {currentSystem !== "home" && (
+        <div className="fixed bottom-4 left-4 flex gap-2 z-40">
+          {/* 玩家信息按钮 */}
           <button
-            onClick={() => setIsPlayerInfoOpen(false)}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
+            onClick={() => setIsPlayerInfoOpen(true)}
+            className="bg-slate-900/70 hover:bg-slate-800/90 
+              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
+              transition-all duration-200 border border-slate-700/50 group"
           >
-            <i className="fas fa-times text-xl"></i>
+            <i className="fas fa-user text-base text-blue-400"></i>
+            <span className="text-xs font-normal">玩家信息</span>
           </button>
-          <PlayerInfo />
+
+          {/* 背包按钮 */}
+          <button
+            onClick={() => setIsInventoryOpen(true)}
+            className="bg-slate-900/70 hover:bg-slate-800/90 
+              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
+              transition-all duration-200 border border-slate-700/50 group"
+          >
+            <i className="fas fa-briefcase text-base text-amber-400"></i>
+            <span className="text-xs font-normal">背包</span>
+          </button>
+
+          {/* 设置按钮 */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="bg-slate-900/70 hover:bg-slate-800/90 
+              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
+              transition-all duration-200 border border-slate-700/50 group"
+          >
+            <i className="fas fa-cog text-base text-purple-400"></i>
+            <span className="text-xs font-normal">设置</span>
+          </button>
         </div>
-      </div>
+      )}
 
       {/* 背包面板 */}
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
-          isInventoryOpen ? "" : "hidden"
-        }`}
-      >
-        <InventoryPanel
-          isOpen={isInventoryOpen}
-          onClose={() => setIsInventoryOpen(false)}
-        />
-      </div>
+      {currentSystem !== "home" && (
+        <>
+          <InventoryPanel
+            isOpen={isInventoryOpen}
+            onClose={() => setIsInventoryOpen(false)}
+            toasts={toasts}
+            setToasts={setToasts}
+          />
 
-      {/* 培养皿面板 */}
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${
-          isIncubatorOpen ? "" : "hidden"
-        }`}
-        style={{ zIndex: 1000 }}
-      >
-        <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
-          <button
-            onClick={() => setIsIncubatorOpen(false)}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          {/* 玩家信息面板 */}
+          <div
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
+              isPlayerInfoOpen
+                ? "opacity-100 z-50"
+                : "opacity-0 pointer-events-none"
+            }`}
           >
-            <i className="fas fa-times text-xl"></i>
-          </button>
-          <Incubator toasts={toasts} setToasts={setToasts} />
-        </div>
-      </div>
+            <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-4xl max-h-[90vh] overflow-auto relative">
+              <button
+                onClick={() => setIsPlayerInfoOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+              <PlayerInfo
+                isOpen={isPlayerInfoOpen}
+                onClose={() => setIsPlayerInfoOpen(false)}
+              />
+            </div>
+          </div>
+
+          {/* 孵化器面板 */}
+          <div
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
+              isIncubatorOpen
+                ? "opacity-100 z-50"
+                : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
+              <button
+                onClick={() => setIsIncubatorOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+              <Incubator toasts={toasts} setToasts={setToasts} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 设置面板 */}
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        toasts={toasts}
+        setToasts={setToasts}
+      />
     </div>
   );
 };

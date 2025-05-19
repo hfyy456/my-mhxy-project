@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-20 00:18:08
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 00:37:13
+ * @LastEditTime: 2025-05-20 04:47:04
  */
 // 玩家等级经验值配置
 export const playerLevelConfig = {
@@ -45,11 +45,11 @@ export const playerBaseConfig = {
   levelRestrictions: {
     // 召唤兽数量限制
     summonCount: {
-      1: 1,  // 1级可以拥有1个召唤兽
-      5: 2,  // 5级可以拥有2个召唤兽
-      10: 3, // 10级可以拥有3个召唤兽
-      15: 4, // 15级可以拥有4个召唤兽
-      20: 5  // 20级可以拥有5个召唤兽
+      1: 10,  // 1级可以拥有1个召唤兽
+      5: 20,  // 5级可以拥有2个召唤兽
+      10: 30, // 10级可以拥有3个召唤兽
+      15: 40, // 15级可以拥有4个召唤兽
+      20: 50  // 20级可以拥有5个召唤兽
     },
     // 背包容量限制
     inventorySlots: {

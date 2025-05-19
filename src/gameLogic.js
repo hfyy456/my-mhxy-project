@@ -22,6 +22,7 @@ import {
 } from "@/config/uiTextConfig";
 import { generateNewSummon } from '@/utils/summonUtils';
 import { experienceConfig, playerBaseConfig } from '@/config/playerConfig';
+import { generateUniqueId } from '@/utils/idUtils';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -64,7 +65,7 @@ export const getRandomEquipment = () => {
   // 注意：这个对象现在是纯数据，用于后续 dispatch(addItem(newEquipmentData))。
   // finalEffects 将由 itemSlice.addItem reducer 计算。
   const newEquipmentData = {
-    id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7), // 生成唯一ID
+    id: generateUniqueId('item'),
     name: randomEquipmentConfig.name, // 必须与 petEquipmentConfig.js 中的 name 匹配
     quality: randomQuality,
     level: 1, // 初始等级为1

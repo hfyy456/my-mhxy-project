@@ -62,21 +62,29 @@ const ItemTooltip = ({ item, position }) => {
         <span className={`text-sm ${qualityColorName}`}>({getQualityDisplayName(item.quality)})</span>
       </div>
       <p className="text-xs text-slate-400 mb-2 capitalize">
-        {getQualityDisplayName(item.quality)} {item.type === "equipment" ? uiText.equipmentSlots[item.slotType] : getItemTypeDisplay(item.type)}
+        {getQualityDisplayName(item.quality)} {item.itemType === "equipment" ? uiText.equipmentSlots[item.slotType] : getItemTypeDisplay(item.itemType)}
       </p>
 
       {item.description && (
         <p className="text-slate-300 mb-2 text-xs italic">{item.description}</p>
       )}
 
-      {item.type === "equipment" && item.finalEffects && (
+      {item.itemType === "equipment" && item.finalEffects && (
         <div className="my-2 border-t border-slate-700 pt-2">
           <p className="text-slate-200 font-semibold mb-1 text-xs">属性:</p>
-          {Object.entries(item.finalEffects).map(([stat, value]) => (
-            <p key={stat} className="text-slate-400 text-xs ml-2">
-              {getAttributeDisplayName(stat)}: <span className="text-green-400">+{formatAttributeValue(stat, value)}</span>
-            </p>
-          ))}
+          {Object.entries(item.finalEffects).map(([stat, value]) => {
+            // 处理百分比属性
+            const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
+            const displayValue = percentageStats.includes(stat)
+              ? `${(value * 100).toFixed(1)}%`
+              : Math.floor(value);
+
+            return (
+              <p key={stat} className="text-slate-400 text-xs ml-2">
+                {getAttributeDisplayName(stat)}: <span className="text-green-400">+{displayValue}</span>
+              </p>
+            );
+          })}
         </div>
       )}
       {/* 如果物品有等级，显示等级 */}
@@ -136,7 +144,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
       return inventoryItems;
     }
     return inventoryItems.map((item) =>
-      item && item.type === activeFilter ? item : null
+      item && item.itemType === activeFilter ? item : null
     );
   }, [inventoryItems, activeFilter]);
 
@@ -145,13 +153,13 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     const stats = {
       all: inventoryItems.filter((item) => item !== null && item !== undefined)
         .length,
-      equipment: inventoryItems.filter((item) => item?.type === "equipment")
+      equipment: inventoryItems.filter((item) => item?.itemType === "equipment")
         .length,
-      consumable: inventoryItems.filter((item) => item?.type === "consumable")
+      consumable: inventoryItems.filter((item) => item?.itemType === "consumable")
         .length,
-      material: inventoryItems.filter((item) => item?.type === "material")
+      material: inventoryItems.filter((item) => item?.itemType === "material")
         .length,
-      quest: inventoryItems.filter((item) => item?.type === "quest").length,
+      quest: inventoryItems.filter((item) => item?.itemType === "quest").length,
     };
     return stats;
   }, [inventoryItems]);
@@ -188,9 +196,9 @@ const InventoryPanel = ({ isOpen, onClose }) => {
 
     setSelectedSlot(slotIndex);
 
-    if (item.type === "equipment") {
+    if (item.itemType === "equipment") {
       setShowEquipmentMenu(true);
-    } else if (item.type === "consumable") {
+    } else if (item.itemType === "consumable") {
       handleUseItem(slotIndex);
     }
   };
@@ -230,10 +238,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     }
 
     const itemToEquip = inventoryItems[slotIndexToEquip];
-    if (
-      !itemToEquip ||
-      (itemToEquip.type !== "equipment" && itemToEquip.itemType !== "equipment")
-    ) {
+    if (!itemToEquip || itemToEquip.itemType !== "equipment") {
       alert("选择的物品不是装备或无效。");
       console.warn("Invalid item:", itemToEquip);
       return;
@@ -360,9 +365,9 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     const item = inventoryItems[slotIndex];
     if (!item) return;
 
-    if (item.type === "equipment") {
+    if (item.itemType === "equipment") {
       handleEquipItem(slotIndex);
-    } else if (item.type === "consumable") {
+    } else if (item.itemType === "consumable") {
       // 这里应该添加消耗品使用的逻辑
       // 为简单起见，这里只移除物品
       dispatch(removeFromInventory(slotIndex));
@@ -448,8 +453,8 @@ const InventoryPanel = ({ isOpen, onClose }) => {
             material: 3,
             quest: 4,
           };
-          const orderA = typeOrder[a.type] || 999;
-          const orderB = typeOrder[b.type] || 999;
+          const orderA = typeOrder[a.itemType] || 999;
+          const orderB = typeOrder[b.itemType] || 999;
           return newOrder === "asc" ? orderA - orderB : orderB - orderA;
         });
         break;
@@ -487,11 +492,18 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg p-6 w-[800px] h-[600px] flex flex-col overflow-hidden">
+    <div
+      className={`fixed inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
+        isOpen ? "opacity-100 z-50" : "opacity-0 pointer-events-none"
+      }`}
+      onClick={(e) => { // 点击背景关闭
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-slate-800 rounded-lg p-6 w-[800px] h-[600px] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-xl text-white font-bold">背包</h2>
           <div className="flex items-center space-x-4">
@@ -552,7 +564,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors"
             >
-              关闭
+              <i className="fas fa-times text-xl"></i>
             </button>
           </div>
         </div>
@@ -636,7 +648,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
         </div>
 
         <div className="flex-grow overflow-y-auto pr-2">
-          <div className="grid grid-cols-10 gap-1.5 p-2">
+          <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-1 sm:gap-1.5 p-1 sm:p-2">
             {Array.from({ length: capacity }).map((_, index) => {
               const item = filteredSlots[index];
               const itemQuality = item?.quality || 'normal';
@@ -652,7 +664,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
               return (
                 <div
                   key={index}
-                  className={`relative w-14 h-14 rounded transition-all duration-200 cursor-pointer
+                  className={`relative aspect-square rounded transition-all duration-200 cursor-pointer
                     ${item ? 'bg-slate-700/80' : 'bg-slate-800/50'} 
                     ${selectedSlot === index
                       ? 'ring-2 ring-yellow-400/70 shadow-lg shadow-yellow-400/20 scale-105 z-10'
@@ -754,45 +766,54 @@ const InventoryPanel = ({ isOpen, onClose }) => {
                 {inventoryItems[selectedSlot].description}
               </p>
 
-              {inventoryItems[selectedSlot].type === "equipment" && (
+              {inventoryItems[selectedSlot].itemType === "equipment" && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  {Object.entries(inventoryItems[selectedSlot].stats || {}).map(
-                    ([stat, value]) => (
-                      <div key={stat} className="text-sm">
-                        <span className="text-gray-400">{stat}: </span>
-                        <span className="text-green-400">+{value}</span>
-                      </div>
-                    )
+                  {Object.entries(inventoryItems[selectedSlot].finalEffects || {}).map(
+                    ([stat, value]) => {
+                      // 处理百分比属性
+                      const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
+                      const displayValue = percentageStats.includes(stat)
+                        ? `${(value * 100).toFixed(1)}%`
+                        : Math.floor(value);
+                      
+                      return (
+                        <div key={stat} className="text-sm">
+                          <span className="text-gray-400">{getAttributeDisplayName(stat)}: </span>
+                          <span className="text-green-400">+{displayValue}</span>
+                        </div>
+                      );
+                    }
                   )}
                 </div>
               )}
 
               <div className="flex space-x-2 mt-4">
-                {inventoryItems[selectedSlot].type === "equipment" && (
+                {inventoryItems[selectedSlot].itemType === "equipment" && (
                   <>
-                    {!inventoryItems[selectedSlot].isEquipped && (
+                    {!inventoryItems[selectedSlot].isEquipped ? (
                       <button
                         onClick={() => handleEquipItem(selectedSlot)}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded"
+                        className={`px-4 py-2 ${!currentSummon ? 'bg-gray-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'} text-white rounded transition-colors duration-200 flex items-center space-x-2`}
                         disabled={!currentSummon}
+                        title={!currentSummon ? "请先选择召唤兽" : "装备到当前召唤兽"}
                       >
-                        装备
+                        <i className="fas fa-shield-alt"></i>
+                        <span>装备{!currentSummon && "（请先选择召唤兽）"}</span>
                       </button>
-                    )}
-                    {inventoryItems[selectedSlot].isEquipped && (
+                    ) : (
                       <button
-                        onClick={() =>
-                          handleUnequipItem(inventoryItems[selectedSlot])
-                        }
-                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded"
+                        onClick={() => handleUnequipItem(inventoryItems[selectedSlot])}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors duration-200 flex items-center space-x-2"
+                        title="从召唤兽身上卸下装备"
                       >
-                        卸下
+                        <i className="fas fa-times"></i>
+                        <span>卸下</span>
                       </button>
                     )}
                   </>
                 )}
 
-                {inventoryItems[selectedSlot].type === "consumable" && (
+                {inventoryItems[selectedSlot].itemType === "consumable" && (
                   <button
                     onClick={() => handleUseItem(selectedSlot)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded"

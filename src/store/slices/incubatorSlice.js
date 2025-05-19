@@ -126,6 +126,11 @@ const incubatorSlice = createSlice({
         delete state.incubatingEggs[eggId];
       }
     },
+
+    setState: (state, action) => {
+      // 完全替换状态
+      return action.payload;
+    },
   },
 });
 
@@ -133,7 +138,8 @@ export const {
   startIncubation, 
   updateIncubationProgress, 
   completeIncubation, 
-  cancelIncubation 
+  cancelIncubation,
+  setState
 } = incubatorSlice.actions;
 
 export const selectIncubatingEggs = (state) => state.incubator.incubatingEggs;

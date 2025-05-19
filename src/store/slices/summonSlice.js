@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import {
   petConfig,
   qualityConfig,
@@ -18,6 +18,7 @@ import { SKILL_MODES } from "@/config/enumConfig";
 import { setItemStatus } from './itemSlice';
 import { playerBaseConfig } from '@/config/playerConfig';
 import { calculateDerivedAttributes, getExperienceForLevel } from '@/utils/summonUtils';
+import { selectAllItemsMap } from './itemSlice'; // Make sure to import this selector from itemSlice
 
 // --- Helper Functions ---
 
@@ -374,6 +375,11 @@ const summonSlice = createSlice({
       delete state.allSummons[summonId];
       state.error = null;
     },
+
+    setState: (state, action) => {
+      // 完全替换状态
+      return action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -422,73 +428,84 @@ export const {
   addRefinementHistoryItem,
   resetSummonState,
   updateSummonNickname,
-  releaseSummon
+  releaseSummon,
+  setState
 } = summonSlice.actions;
 
 // Selectors
 export const selectAllSummons = state => state.summons.allSummons;
 export const selectCurrentSummonId = state => state.summons.currentSummonId;
-export const selectSummonById = (state, summonId) => state.summons.allSummons[summonId]; // Basic selector
+export const selectSummonById = (state, summonId) => state.summons.allSummons[summonId];
 
-// Selector that hydrates with equipped item data
-export const selectSummonByIdWithEquippedItems = (state, summonId) => {
-  const summon = state.summons.allSummons[summonId];
-  if (!summon) return null;
-
-  const equippedItemsData = {};
-  if (summon.equippedItemIds && state.items && state.items.allItems) {
-    for (const slotType in summon.equippedItemIds) {
-      const itemId = summon.equippedItemIds[slotType];
-      if (itemId && state.items.allItems[itemId]) {
-        equippedItemsData[slotType] = state.items.allItems[itemId];
-      } else {
-        equippedItemsData[slotType] = null;
-      }
-    }
-  }
-  return { ...summon, equippedItemsData }; // Return a new object with the hydrated data
-};
-
-export const selectCurrentSummonFullData = state => {
-  const currentSummonId = state.summons.currentSummonId;
-  if (!currentSummonId) return null;
-
-  const summon = state.summons.allSummons[currentSummonId];
-  if (!summon) return null;
-
-  // 获取装备数据
-  const equippedItems = selectEquippedItemsForSummon(state, currentSummonId);
-
-  return {
-    ...summon,
-    equippedItems,
-  };
-};
-
-export const selectEquippedItemsForSummon = (state, summonId) => {
-    const summon = state.summons.allSummons[summonId];
-    if (!summon || !summon.equippedItemIds || !state.items || !state.items.allItems) return {};
+export const selectEquippedItemsForSummon = createSelector(
+  [
+    // Input selector for the specific summon object based on summonId
+    (state, summonId) => state.summons.allSummons[summonId],
+    // Input selector for all items map
+    selectAllItemsMap 
+  ],
+  (summon, allItems) => {
+    if (!summon || !summon.equippedItemIds || !allItems) return {};
     
     const equippedItemsData = {};
     for (const slotType in summon.equippedItemIds) {
         const itemId = summon.equippedItemIds[slotType];
-        if (itemId && state.items.allItems[itemId]) {
-            equippedItemsData[slotType] = state.items.allItems[itemId];
+        if (itemId && allItems[itemId]) {
+            equippedItemsData[slotType] = allItems[itemId];
         } else {
-            // It's important to represent the slot, even if empty
             if (STANDARD_EQUIPMENT_SLOTS.includes(slotType)) {
                  equippedItemsData[slotType] = null;
             }
         }
     }
-    // Ensure all standard slots are present in the returned object
     STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
         if (!equippedItemsData.hasOwnProperty(slot)) {
             equippedItemsData[slot] = null;
         }
     });
     return equippedItemsData;
-};
+  }
+);
+
+export const selectCurrentSummonFullData = createSelector(
+  [
+    selectCurrentSummonId,
+    selectAllSummons,
+    selectAllItemsMap // Depends on the items map directly now
+  ],
+  (currentSummonId, allSummons, allItems) => {
+    if (!currentSummonId) return null;
+    const summon = allSummons[currentSummonId];
+    if (!summon) return null;
+
+    // Re-implement the logic of selectEquippedItemsForSummon here for the current summon
+    // or call a memoized version if selectEquippedItemsForSummon can be made to work with createSelector easily
+    // For directness and to ensure memoization path is clear for *this* selector:
+    const equippedItems = {};
+    if (summon.equippedItemIds && allItems) {
+      for (const slotType in summon.equippedItemIds) {
+        const itemId = summon.equippedItemIds[slotType];
+        if (itemId && allItems[itemId]) {
+          equippedItems[slotType] = allItems[itemId];
+        } else {
+          if (STANDARD_EQUIPMENT_SLOTS.includes(slotType)) {
+            equippedItems[slotType] = null;
+          }
+        }
+      }
+      STANDARD_EQUIPMENT_SLOTS.forEach(slot => {
+        if (!equippedItems.hasOwnProperty(slot)) {
+          equippedItems[slot] = null;
+        }
+      });
+    }
+
+    return {
+      ...summon,
+      equippedItems,
+    };
+  }
+);
 
 export const selectSummonError = state => state.summons.error;
 

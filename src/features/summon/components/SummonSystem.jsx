@@ -25,10 +25,12 @@ import {
   updateSummonNickname
 } from "../../../store/slices/summonSlice";
 import { addItems, selectAllItemsArray, setItemStatus } from "../../../store/slices/itemSlice";
+import { addToInventory } from "../../../store/slices/inventorySlice";
 import { uiText } from "@/config/uiTextConfig";
 import { petConfig } from "@/config/config";
 import { playerBaseConfig } from "@/config/playerConfig";
 import NicknameModal from "./NicknameModal";
+import { generateUniqueId } from "@/utils/idUtils";
 
 const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const dispatch = useDispatch();
@@ -105,6 +107,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       }
       
       setToasts(prev => [...prev, {
+        id: generateUniqueId('toast'),
         type: "success",
         message: `成功为${selectedPetForNickname.name}设置昵称：${nickname}`,
       }]);
@@ -120,7 +123,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       // 检查召唤兽数量限制
       if (summonsList.length >= maxSummons) {
         setToasts(prev => [...prev, {
-          id: Date.now(),
+          id: generateUniqueId('toast'),
           message: `当前等级(${playerLevel})最多可拥有${maxSummons}个召唤兽，请提升等级或释放一些召唤兽`,
           type: 'error'
         }]);
@@ -130,7 +133,13 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       const result = refineMonster(playerLevel);
       
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
+        // 先添加装备到 itemSlice
         dispatch(addItems(result.newlyCreatedItems));
+        
+        // 将装备添加到背包中
+        result.newlyCreatedItems.forEach(item => {
+          dispatch(addToInventory({ itemId: item.id }));
+        });
         
         if (result.requireNickname) {
           setSelectedPetForNickname({
@@ -150,7 +159,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
         }
 
         setToasts(prev => [...prev, {
-          id: Date.now(),
+          id: generateUniqueId('toast'),
           message: result.message || "炼妖成功！获得了新的召唤兽和初始装备！",
           type: 'success'
         }]);
@@ -160,7 +169,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
     } catch (error) {
       console.error("[SummonSystem] 炼妖失败:", error);
       setToasts(prev => [...prev, {
-        id: Date.now(),
+        id: generateUniqueId('toast'),
         message: `炼妖失败: ${error.message}`,
         type: 'error'
       }]);
@@ -207,7 +216,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
       
       setToasts(prev => [...prev, { 
-        id: Date.now(), 
+        id: generateUniqueId('toast'),
         message: `物品已装备到 ${selectedSlotForEquipping}`, 
         type: 'success' 
       }]);
@@ -240,7 +249,7 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       }
       
       setToasts(prev => [...prev, { 
-        id: Date.now(), 
+        id: generateUniqueId('toast'),
         message: `${selectedSlotForEquipping} 上的物品已卸下`, 
         type: 'success' 
       }]);
@@ -253,10 +262,18 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
     if (currentSummon && selectedSkillSlotIndex !== null) {
       if (currentSkillForSlot) {
         dispatch(replaceSkill({ summonId: currentSummon.id, newSkillName: skillNameToLearnOrReplace, slotIndexToReplace: selectedSkillSlotIndex }));
-        setToasts(prev => [...prev, { id: Date.now(), message: `技能 ${currentSkillForSlot}已被替换为 ${skillNameToLearnOrReplace}`, type: 'success' }]);
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'),
+          message: `技能 ${currentSkillForSlot}已被替换为 ${skillNameToLearnOrReplace}`, 
+          type: 'success' 
+        }]);
       } else {
         dispatch(learnSkill({ summonId: currentSummon.id, skillName: skillNameToLearnOrReplace, slotIndex: selectedSkillSlotIndex }));
-        setToasts(prev => [...prev, { id: Date.now(), message: `已学习技能 ${skillNameToLearnOrReplace}`, type: 'success' }]);
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'),
+          message: `已学习技能 ${skillNameToLearnOrReplace}`, 
+          type: 'success' 
+        }]);
       }
     }
     setIsSkillEditorOpen(false);

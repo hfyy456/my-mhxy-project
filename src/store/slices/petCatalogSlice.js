@@ -4,7 +4,7 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-20 01:03:45
  */
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createSelector } from '@reduxjs/toolkit';
 import { petConfig } from '@/config/petConfig';
 
 const initialState = {
@@ -19,7 +19,8 @@ const initialState = {
     epic: 0,
     legendary: 0,
     mythic: 0
-  }
+  },
+  favoritePets: []
 };
 
 const petCatalogSlice = createSlice({
@@ -53,26 +54,51 @@ const petCatalogSlice = createSlice({
     // 重置图鉴（用于测试）
     resetCatalog: (state) => {
       return initialState;
+    },
+
+    setFavorite: (state, action) => {
+      const { petId, isFavorite } = action.payload;
+      if (isFavorite) {
+        if (!state.favoritePets.includes(petId)) {
+          state.favoritePets.push(petId);
+        }
+      } else {
+        state.favoritePets = state.favoritePets.filter(id => id !== petId);
+      }
+    },
+
+    setState: (state, action) => {
+      // 完全替换状态
+      return action.payload;
     }
   }
 });
 
-export const { unlockPet, resetCatalog } = petCatalogSlice.actions;
+export const { 
+  unlockPet, 
+  resetCatalog,
+  setFavorite,
+  setState
+} = petCatalogSlice.actions;
 
 // 选择器
 export const selectUnlockedPets = (state) => state.petCatalog.unlockedPets;
 export const selectPetCounts = (state) => state.petCatalog.petCounts;
 export const selectQualityCounts = (state) => state.petCatalog.qualityCounts;
 
-// 计算解锁进度
-export const selectUnlockProgress = (state) => {
-  const totalPets = Object.keys(petConfig).length;
-  const unlockedCount = Object.keys(state.petCatalog.unlockedPets).length;
-  return {
-    unlocked: unlockedCount,
-    total: totalPets,
-    percentage: (unlockedCount / totalPets) * 100
-  };
-};
+// 计算解锁进度 - Memoized
+export const selectUnlockProgress = createSelector(
+  [selectUnlockedPets], // Depends on the unlockedPets part of the state
+  (unlockedPetsMap) => {
+    const totalPets = Object.keys(petConfig).length;
+    const unlockedCount = Object.keys(unlockedPetsMap).length;
+    const percentage = totalPets > 0 ? (unlockedCount / totalPets) * 100 : 0;
+    return {
+      unlocked: unlockedCount,
+      total: totalPets,
+      percentage: percentage
+    };
+  }
+);
 
 export default petCatalogSlice.reducer; 

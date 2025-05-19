@@ -10,6 +10,7 @@ import itemReducer from '@/store/slices/itemSlice';
 import inventoryReducer from '@/store/slices/inventorySlice';
 import incubatorReducer from '@/store/slices/incubatorSlice';
 import petCatalogReducer from '@/store/slices/petCatalogSlice';
+import saveReducer from '@/store/slices/saveSlice';
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     inventory: inventoryReducer,
     incubator: incubatorReducer,
     petCatalog: petCatalogReducer,
+    saves: saveReducer,
   },
 });
 
