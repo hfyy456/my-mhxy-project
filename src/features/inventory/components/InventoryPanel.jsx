@@ -1,33 +1,24 @@
 import React, { useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { INVENTORY_CONFIG } from "@/config/inventoryConfig";
-import { useInventory, useItems } from "@/store/reduxSetup";
+import { useInventory /* useItems is no longer directly needed here as items are derived with full info */ } from "@/store/reduxSetup";
 import {
   moveInInventory,
   addToInventory,
   removeFromInventory,
   sortInventory,
 } from "@/store/slices/inventorySlice";
-import { setItemStatus, selectAllItemsArray, selectItemWithSummonInfo, selectEquippedItemsWithSummonInfo } from "@/store/slices/itemSlice";
-import {
-  equipItemToSummon,
-  recalculateSummonStats,
-  unequipItemFromSummon,
-} from "@/store/slices/summonSlice";
+import { selectAllItemsArray, selectItemWithSummonInfo, selectEquippedItemsWithSummonInfo } from "@/store/slices/itemSlice";
+import { manageEquipItemThunk, manageUnequipItemThunk } from "@/store/thunks/equipmentThunks";
 import { STANDARD_EQUIPMENT_SLOTS } from "@/config/config";
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from "@/config/uiTextConfig";
 
 // 新的 Tooltip 组件
 const ItemTooltip = ({ item, position }) => {
-  // 获取包含召唤兽信息的完整物品数据
-  const itemWithSummonInfo = useSelector(state => selectItemWithSummonInfo(state, item.id));
-
-  const rarityColor =
-    INVENTORY_CONFIG.QUALITY_COLORS[item.quality] || "text-gray-300";
+  if (!item) return null; // Guard if item is somehow null
 
   const qualityColorName = `text-quality-${INVENTORY_CONFIG.QUALITY_COLORS[item.quality]?.split('-')[1] || 'normal'}`;
 
-  // 获取物品类型的中文显示
   const getItemTypeDisplay = (type) => {
     const typeMap = {
       equipment: "装备",
@@ -36,17 +27,6 @@ const ItemTooltip = ({ item, position }) => {
       quest: "任务物品"
     };
     return typeMap[type] || type;
-  };
-
-  // 获取属性的中文显示和格式化值
-  const formatAttributeValue = (stat, value) => {
-    // 处理百分比属性
-    const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
-    if (percentageStats.includes(stat)) {
-      return `${(value * 100).toFixed(1)}%`;
-    }
-    // 处理整数属性
-    return Math.floor(value);
   };
 
   return (
@@ -73,12 +53,10 @@ const ItemTooltip = ({ item, position }) => {
         <div className="my-2 border-t border-slate-700 pt-2">
           <p className="text-slate-200 font-semibold mb-1 text-xs">属性:</p>
           {Object.entries(item.finalEffects).map(([stat, value]) => {
-            // 处理百分比属性
             const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
             const displayValue = percentageStats.includes(stat)
               ? `${(value * 100).toFixed(1)}%`
               : Math.floor(value);
-
             return (
               <p key={stat} className="text-slate-400 text-xs ml-2">
                 {getAttributeDisplayName(stat)}: <span className="text-green-400">+{displayValue}</span>
@@ -87,15 +65,14 @@ const ItemTooltip = ({ item, position }) => {
           })}
         </div>
       )}
-      {/* 如果物品有等级，显示等级 */}
       {item.level && (
         <p className="text-xs text-slate-400 mt-1">等级: {item.level}</p>
       )}
 
-      {/* 如果物品已装备，显示装备者 */}
-      {itemWithSummonInfo.isEquipped && itemWithSummonInfo.equippedBy && (
+      {/* Use item properties directly assuming it has full summon info */}
+      {item.isEquipped && item.equippedBy && (
         <p className="text-xs text-blue-400 mt-2 pt-2 border-t border-slate-700">
-          装备于: {itemWithSummonInfo.equippedBySummonName}
+          装备于: {item.equippedBySummonName || '信息缺失'} {/* Added fallback for safety */}
         </p>
       )}
     </div>
@@ -191,8 +168,8 @@ const ReplaceConfirmModal = ({ isOpen, onConfirm, onCancel, details }) => {
 const InventoryPanel = ({ isOpen, onClose, showToast }) => {
   const dispatch = useDispatch();
   const { slots, capacity } = useInventory();
-  const items = useItems();
   const allSummonsMap = useSelector((state) => state.summons.allSummons);
+  const currentState = useSelector(state => state); // Get the whole state for useMemo
 
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [dragItem, setDragItem] = useState(null);
@@ -217,49 +194,49 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
   const [showReplaceConfirmModal, setShowReplaceConfirmModal] = useState(false);
   const [replaceDetails, setReplaceDetails] = useState(null); // { summonToUpdate, oldItem, newItem }
 
-  // 获取背包物品数据
-  const inventoryItems = useMemo(() => {
+  // 获取背包物品数据 - NOW WITH SUMMON INFO
+  const inventoryItemsWithSummonInfo = useMemo(() => {
     const result = [];
     Object.entries(slots).forEach(([slotId, itemId]) => {
       if (itemId) {
-        const item = items.find((item) => item.id === itemId);
-        if (item) {
-          result[parseInt(slotId)] = item;
+        const itemData = selectItemWithSummonInfo(currentState, itemId);
+        if (itemData) {
+          result[parseInt(slotId)] = itemData; // Store the fully processed item
         }
       }
     });
     return result;
-  }, [slots, items]);
+  }, [slots, currentState]); // Rerun when slots or relevant parts of currentState change
 
-  // 过滤物品
+  // 过滤物品 - USES inventoryItemsWithSummonInfo
   const filteredSlots = useMemo(() => {
     if (activeFilter === "all") {
-      return inventoryItems;
+      return inventoryItemsWithSummonInfo;
     }
-    return inventoryItems.map((item) =>
+    return inventoryItemsWithSummonInfo.map((item) =>
       item && item.itemType === activeFilter ? item : null
     );
-  }, [inventoryItems, activeFilter]);
+  }, [inventoryItemsWithSummonInfo, activeFilter]);
 
-  // 获取物品类型统计
+  // 获取物品类型统计 - USES inventoryItemsWithSummonInfo
   const itemTypeStats = useMemo(() => {
     const stats = {
-      all: inventoryItems.filter((item) => item !== null && item !== undefined)
+      all: inventoryItemsWithSummonInfo.filter((item) => item !== null && item !== undefined)
         .length,
-      equipment: inventoryItems.filter((item) => item?.itemType === "equipment")
+      equipment: inventoryItemsWithSummonInfo.filter((item) => item?.itemType === "equipment")
         .length,
-      consumable: inventoryItems.filter((item) => item?.itemType === "consumable")
+      consumable: inventoryItemsWithSummonInfo.filter((item) => item?.itemType === "consumable")
         .length,
-      material: inventoryItems.filter((item) => item?.itemType === "material")
+      material: inventoryItemsWithSummonInfo.filter((item) => item?.itemType === "material")
         .length,
-      quest: inventoryItems.filter((item) => item?.itemType === "quest").length,
+      quest: inventoryItemsWithSummonInfo.filter((item) => item?.itemType === "quest").length,
     };
     return stats;
-  }, [inventoryItems]);
+  }, [inventoryItemsWithSummonInfo]);
 
   // 处理物品点击
   const handleItemClick = (slotIndex) => {
-    const clickedItem = inventoryItems[slotIndex]; // Item in the slot that was just clicked
+    const clickedItem = filteredSlots[slotIndex]; // Item in the slot that was just clicked
     clearTimeout(tooltipTimeoutRef.current); // Clear any pending tooltip on click
     setTooltipVisible(false);
 
@@ -281,7 +258,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
 
   // 处理物品拖拽开始
   const handleDragStart = (e, slotIndex) => {
-    const item = inventoryItems[slotIndex];
+    const item = filteredSlots[slotIndex];
     if (!item) return;
 
     setDragItem({ slotIndex, item });
@@ -308,7 +285,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
 
   // 处理物品使用
   const handleUseItem = (slotIndex) => {
-    const item = inventoryItems[slotIndex];
+    const item = filteredSlots[slotIndex];
     if (!item) return;
 
     if (item.itemType === "equipment") {
@@ -328,7 +305,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
   const handleSplitItem = () => {
     if (selectedSlot === null) return;
 
-    const item = inventoryItems[selectedSlot];
+    const item = filteredSlots[selectedSlot];
     if (!item || !item.stackable || !item.amount || item.amount <= 1) {
       showToast("该物品不可分割或数量不足", "warning");
       return;
@@ -342,7 +319,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
     // 找一个空格子
     let emptySlot = null;
     for (let i = 0; i < capacity; i++) {
-      if (!inventoryItems[i]) {
+      if (!filteredSlots[i]) {
         emptySlot = i;
         break;
       }
@@ -391,7 +368,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
         : "asc";
     setSortConfig({ type: sortType, order: newOrder });
 
-    const sortedItems = [...inventoryItems.filter(Boolean)];
+    const sortedItems = [...filteredSlots.filter(Boolean)];
 
     switch (sortType) {
       case "type":
@@ -456,22 +433,19 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
     setShowSummonSelectModal(true);
   };
 
-  const handleConfirmEquipToSummon = (targetSummonId) => {
+  const handleConfirmEquipToSummon = async (targetSummonId) => {
     console.log("Attempting to equip. Target Summon ID:", targetSummonId);
     console.log("Item Details:", itemToEquipDetails);
-    // To inspect allSummonsMap at the moment of this function call, 
-    // you might need to pass it or access it via a useSelector hook if it's not stale.
-    // For now, logging targetSummonId and itemToEquipDetails is the first step.
 
     if (!itemToEquipDetails || !itemToEquipDetails.itemId || !targetSummonId) {
       console.error("Missing item details or target summon ID for equip sequence.");
-      setShowSummonSelectModal(false); // Close modal even on error
+      setShowSummonSelectModal(false); 
       setItemToEquipDetails(null);
       showToast("装备失败：缺少物品或目标信息", "error");
       return;
     }
 
-    const itemToEquip = inventoryItems.find(i => i?.id === itemToEquipDetails.itemId);
+    const itemToEquip = inventoryItemsWithSummonInfo.find(i => i?.id === itemToEquipDetails.itemId);
     const summonToUpdate = allSummonsMap ? allSummonsMap[targetSummonId] : null;
 
     if (!itemToEquip || !summonToUpdate) {
@@ -491,94 +465,68 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
         return;
     }
 
-    // 检查目标槽位是否已有装备
     const existingItemIdInSlot = summonToUpdate.equippedItemIds ? summonToUpdate.equippedItemIds[slotTypeToEquip] : null;
 
     if (existingItemIdInSlot && existingItemIdInSlot !== itemToEquip.id) {
-      const oldItem = items.find(i => i.id === existingItemIdInSlot); // `items` from useItems()
+      const oldItem = selectItemWithSummonInfo(currentState, existingItemIdInSlot);
       if (oldItem) {
         setReplaceDetails({
-          summonToUpdate: summonToUpdate, // pass the full summon object
+          summonToUpdate: summonToUpdate,
           oldItem: oldItem,
-          newItem: itemToEquip, // itemToEquip is the new item from inventory
+          newItem: itemToEquip,
         });
         setShowReplaceConfirmModal(true);
-        // setShowSummonSelectModal(false); // Keep summon select modal open or close? Closing for now.
-        return; // Stop here, wait for user confirmation
+        return; 
       } else {
-        // Fallback if old item details can't be found, proceed with equip (overwrite)
-        // This case should ideally not happen if data is consistent
         showToast(`警告：无法找到原装备信息，将直接装备 ${itemToEquip.name}`, "warning");
       }
     }
 
-    // ---- Original Equip Logic (if slot is empty or old item not found for confirmation) ----
-    console.log(`Equipping item ${itemToEquip.name} (ID: ${itemToEquip.id}) to summon ${targetSummonId}, slot: ${slotTypeToEquip}`);
-
-    dispatch(
-      equipItemToSummon({
+    try {
+      await dispatch(manageEquipItemThunk({
         summonId: targetSummonId,
-        itemId: itemToEquip.id,
+        itemIdToEquip: itemToEquip.id,
         slotType: slotTypeToEquip,
-      })
-    );
-    dispatch(recalculateSummonStats({ summonId: targetSummonId }));
-
-    // Update item status in itemSlice
-    dispatch(
-      setItemStatus({
-        id: itemToEquip.id,
-        isEquipped: true,
-        equippedBy: targetSummonId,
-        equippedBySummonName: summonToUpdate ? summonToUpdate.name : '未知召唤兽' // Provide a fallback name
-      })
-    );
-
-    showToast(`${itemToEquip.name} 已装备到 ${summonToUpdate ? summonToUpdate.name : '召唤兽'}`, "success");
+      })).unwrap(); // Use unwrap to catch potential errors from the thunk
+      showToast(`${itemToEquip.name} 已装备到 ${summonToUpdate ? summonToUpdate.name : '召唤兽'}`, "success");
+    } catch (error) {
+      console.error("Equip item thunk failed:", error);
+      showToast(`装备失败: ${error.message || '未知错误'}`, "error");
+    }
 
     setShowSummonSelectModal(false);
-    setItemToEquipDetails(null); // Clear details after attempting equip
+    setItemToEquipDetails(null); 
   };
 
-  const handleConfirmReplacement = () => {
+  const handleConfirmReplacement = async () => {
     if (!replaceDetails) return;
     const { summonToUpdate, oldItem, newItem } = replaceDetails;
 
-    // 1. Unequip old item
-    dispatch(setItemStatus({ 
-      id: oldItem.id, 
-      isEquipped: false, 
-      equippedBy: null, 
-      equippedBySummonName: null 
-    }));
-    dispatch(unequipItemFromSummon({ 
-      summonId: summonToUpdate.id, 
-      itemId: oldItem.id, 
-      slotType: oldItem.slotType || oldItem.category // ensure correct slotType for old item
-    }));
+    try {
+      // 1. Unequip old item
+      await dispatch(manageUnequipItemThunk({
+        summonId: summonToUpdate.id,
+        itemIdToUnequip: oldItem.id, // Pass itemIdToUnequip
+        slotType: oldItem.slotType || oldItem.category 
+      })).unwrap();
 
-    // 2. Equip new item
-    dispatch(equipItemToSummon({
-      summonId: summonToUpdate.id,
-      itemId: newItem.id,
-      slotType: newItem.slotType || newItem.category // ensure correct slotType for new item
-    }));
-    dispatch(setItemStatus({
-      id: newItem.id,
-      isEquipped: true,
-      equippedBy: summonToUpdate.id,
-      equippedBySummonName: summonToUpdate.name || summonToUpdate.nickname
-    }));
+      // 2. Equip new item
+      await dispatch(manageEquipItemThunk({
+        summonId: summonToUpdate.id,
+        itemIdToEquip: newItem.id,
+        slotType: newItem.slotType || newItem.category 
+      })).unwrap();
 
-    // 3. Recalculate stats
-    dispatch(recalculateSummonStats({ summonId: summonToUpdate.id }));
-
-    showToast(`${newItem.name} 已替换 ${oldItem.name} 并装备到 ${summonToUpdate.name || summonToUpdate.nickname}`, "success");
+      showToast(`${newItem.name} 已替换 ${oldItem.name} 并装备到 ${summonToUpdate.name || summonToUpdate.nickname}`, "success");
+    } catch (error) {
+      console.error("Replacement thunk failed:", error);
+      showToast(`替换装备失败: ${error.message || '未知错误'}`, "error");
+    }
 
     setShowReplaceConfirmModal(false);
     setReplaceDetails(null);
-    setShowSummonSelectModal(false); // Close summon select as well
-    setItemToEquipDetails(null); // Clear original equip intent
+    setShowSummonSelectModal(false); 
+    setItemToEquipDetails(null); 
   };
 
   return (
@@ -772,17 +720,14 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const screenWidth = window.innerWidth;
                       
-                      // 计算tooltip的预估宽度（可以根据实际情况调整）
                       const tooltipWidth = 280; 
                       
-                      // 如果右侧空间不足，则显示在左侧
                       const x = rect.left + rect.width + tooltipWidth > screenWidth 
                         ? rect.left - tooltipWidth - 10 
                         : rect.left + rect.width + 10;
                       
-                      // 确保tooltip不会超出屏幕顶部或底部
                       const screenHeight = window.innerHeight;
-                      const tooltipHeight = 200; // 预估的tooltip高度
+                      const tooltipHeight = 200; 
                       let y = rect.top;
                       
                       if (rect.top + tooltipHeight > screenHeight) {
@@ -845,18 +790,18 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
             })}
           </div>
 
-          {selectedSlot !== null && inventoryItems[selectedSlot] && (
+          {selectedSlot !== null && filteredSlots[selectedSlot] && (
             <div className="bg-slate-700 p-4 rounded mb-4">
               <h3 className="text-lg font-bold text-white mb-2">
-                {inventoryItems[selectedSlot].name}
+                {filteredSlots[selectedSlot].name}
               </h3>
               <p className="text-gray-300 mb-2">
-                {inventoryItems[selectedSlot].description}
+                {filteredSlots[selectedSlot].description}
               </p>
 
-              {inventoryItems[selectedSlot].itemType === "equipment" && (
+              {filteredSlots[selectedSlot].itemType === "equipment" && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  {Object.entries(inventoryItems[selectedSlot].finalEffects || {}).map(
+                  {Object.entries(filteredSlots[selectedSlot].finalEffects || {}).map(
                     ([stat, value]) => {
                       // 处理百分比属性
                       const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
@@ -876,12 +821,12 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
               )}
 
               <div className="flex space-x-2 mt-4">
-                {inventoryItems[selectedSlot].itemType === "equipment" && (
+                {filteredSlots[selectedSlot].itemType === "equipment" && (
                   <>
-                    {!inventoryItems[selectedSlot].isEquipped ? (
+                    {!filteredSlots[selectedSlot].isEquipped ? (
                       <button
                         onClick={() => {
-                          const itemToEquip = inventoryItems[selectedSlot];
+                          const itemToEquip = filteredSlots[selectedSlot];
                           const currentItemDetails = {
                             itemId: itemToEquip.id,
                             slotType: itemToEquip.slotType || itemToEquip.category,
@@ -899,21 +844,24 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => {
-                          const itemToUnequip = inventoryItems[selectedSlot];
-                          dispatch(setItemStatus({
-                            id: itemToUnequip.id,
-                            isEquipped: false,
-                            equippedBy: null
-                          }));
-                          dispatch(unequipItemFromSummon({
-                            summonId: itemToUnequip.equippedBy,
-                            itemId: itemToUnequip.id,
-                            slotType: itemToUnequip.slotType,
-                          }));
-                          dispatch(recalculateSummonStats(itemToUnequip.equippedBy));
-                          showToast(`\"${itemToUnequip.name}\" 已成功卸下。`, "info");
-                          setSelectedSlot(null);
+                        onClick={async () => {
+                          const itemToUnequip = filteredSlots[selectedSlot];
+                          if (!itemToUnequip || !itemToUnequip.equippedBy) {
+                            showToast("物品信息错误，无法卸下。", "error");
+                            return;
+                          }
+                          try {
+                            await dispatch(manageUnequipItemThunk({
+                              summonId: itemToUnequip.equippedBy,
+                              itemIdToUnequip: itemToUnequip.id, // Pass itemIdToUnequip
+                              slotType: itemToUnequip.slotType,
+                            })).unwrap();
+                            showToast(`\"${itemToUnequip.name}\" 已成功卸下。`, "info");
+                            setSelectedSlot(null);
+                          } catch (error) {
+                            console.error("Unequip item thunk failed:", error);
+                            showToast(`卸下失败: ${error.message || '未知错误'}`, "error");
+                          }
                         }}
                         className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors duration-200 flex items-center space-x-2"
                         title="从召唤兽身上卸下装备"
@@ -925,7 +873,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                   </>
                 )}
 
-                {inventoryItems[selectedSlot].itemType === "consumable" && (
+                {filteredSlots[selectedSlot].itemType === "consumable" && (
                   <button
                     onClick={() => handleUseItem(selectedSlot)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded"
@@ -934,8 +882,8 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                   </button>
                 )}
 
-                {inventoryItems[selectedSlot].stackable &&
-                  inventoryItems[selectedSlot].amount > 1 && (
+                {filteredSlots[selectedSlot].stackable &&
+                  filteredSlots[selectedSlot].amount > 1 && (
                     <button
                       onClick={() => setShowSplitModal(true)}
                       className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
@@ -960,7 +908,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
         {showSummonSelectModal && itemToEquipDetails && (
           <SummonSelectModal
             summons={Object.values(allSummonsMap || {})}
-            itemToEquipName={inventoryItems.find(i => i?.id === itemToEquipDetails.itemId)?.name || '物品'}
+            itemToEquipName={inventoryItemsWithSummonInfo.find(i => i?.id === itemToEquipDetails.itemId)?.name || '物品'}
             onItemEquip={(summonId) => {
               handleConfirmEquipToSummon(summonId);
             }}

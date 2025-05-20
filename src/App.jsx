@@ -12,6 +12,9 @@ import InventoryPanel from "@/features/inventory/components/InventoryPanel";
 import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
+import QuestLogPanel from "@/features/quests/components/QuestLogPanel"; // 导入任务日志面板
+import MinimapPanel from '@/features/minimap/components/MinimapPanel'; // Import MinimapPanel
+import TileInfoPanel from '@/features/tile-info/components/TileInfoPanel'; // Import TileInfoPanel
 import Modal from "@/components/Modal"; // Import the generic Modal component
 import { generateInitialEquipment } from "@/gameLogic";
 import {
@@ -20,6 +23,7 @@ import {
   useSummons,
 } from "@/store/reduxSetup";
 import { setCurrentSummon } from "@/store/slices/summonSlice";
+import { initializePlayerQuests } from "@/store/slices/questSlice"; // 初始化任务
 // import { addItem } from "@/store/slices/itemSlice"; // Not used directly in App.jsx
 // import { addToInventory } from "@/store/slices/inventorySlice"; // Not used directly in App.jsx
 
@@ -35,6 +39,8 @@ const App = () => {
   const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
   const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isQuestLogModalOpen, setQuestLogModalOpen] = useState(false);
+  const [isMinimapModalOpen, setMinimapModalOpen] = useState(false); // State for Minimap Modal
 
   const summons = useSummons();
   const summon = useCurrentSummon();
@@ -43,13 +49,14 @@ const App = () => {
 
   useEffect(() => {
     const cleanup = initializeReduxIntegration();
-    console.log("[App.jsx] Redux集成已初始化");
+    dispatch(initializePlayerQuests()); // 初始化玩家任务数据
+    console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
     const loader = document.getElementById('loader-wrapper');
     if (loader) {
       loader.style.display = 'none';
     }
     return cleanup;
-  }, []);
+  }, [dispatch]); // Added dispatch to dependency array
 
   // No more handleSystemChange
 
@@ -81,6 +88,12 @@ const App = () => {
     setIsSummonModalOpen(true);
   };
 
+  const handleOpenQuestLog = () => setQuestLogModalOpen(true);
+  const handleCloseQuestLog = () => setQuestLogModalOpen(false);
+
+  const handleOpenMinimap = () => setMinimapModalOpen(true); // Handler to open Minimap
+  const handleCloseMinimap = () => setMinimapModalOpen(false); // Handler to close Minimap
+
   return (
     <div
       style={{
@@ -97,14 +110,19 @@ const App = () => {
           // but if it uses them, they can be added back.
         />
       ) : (
-        <GameMap 
-          showToast={showResult}
-          onOpenSummonSystem={openSummonModal} // Use specific handler
-          onOpenIncubator={() => setIsIncubatorOpen(true)}
-          onOpenPlayerInfo={() => setIsPlayerInfoOpen(true)}
-          onOpenInventory={() => setIsInventoryOpen(true)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
+        <>
+          <GameMap 
+            showToast={showResult}
+            onOpenSummonSystem={openSummonModal} // Use specific handler
+            onOpenIncubator={() => setIsIncubatorOpen(true)}
+            onOpenPlayerInfo={() => setIsPlayerInfoOpen(true)}
+            onOpenInventory={() => setIsInventoryOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenQuestLog={handleOpenQuestLog} // 将打开任务日志的函数传递给 GameMap
+            onOpenMinimap={handleOpenMinimap} // Pass handler for Minimap
+          />
+          <TileInfoPanel />
+        </>
       )}
 
       <Modal isOpen={isSummonModalOpen} onClose={() => setIsSummonModalOpen(false)} title="召唤兽" maxWidthClass="max-w-5xl">
@@ -143,6 +161,22 @@ const App = () => {
            setToasts={setToasts} // Pass if SettingsPanel uses toasts directly
         />
       </Modal>
+
+      {/* 任务日志面板 */}
+      {isQuestLogModalOpen && (
+        <QuestLogPanel 
+          isOpen={isQuestLogModalOpen} 
+          onClose={handleCloseQuestLog} 
+        />
+      )}
+
+      {/* Render MinimapPanel */}
+      {isMinimapModalOpen && (
+        <MinimapPanel 
+          isOpen={isMinimapModalOpen} 
+          onClose={handleCloseMinimap} 
+        />
+      )}
 
       <ToastContainer toasts={toasts} setToasts={setToasts} />
     </div>

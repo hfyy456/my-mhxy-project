@@ -115,9 +115,6 @@ const itemSlice = createSlice({
         if (baseConfig && !processedItemData.description) processedItemData.description = baseConfig.description;
       }
       
-      processedItemData.isEquipped = processedItemData.isEquipped || false;
-      processedItemData.equippedBy = processedItemData.equippedBy || null;
-      processedItemData.equippedBySummonName = processedItemData.equippedBySummonName || null;
       processedItemData.addedTimestamp = Date.now();
 
       state.allItems[processedItemData.id] = processedItemData;
@@ -127,7 +124,28 @@ const itemSlice = createSlice({
       const itemsArray = action.payload;
       if (Array.isArray(itemsArray)) {
         itemsArray.forEach(item => {
-          itemSlice.caseReducers.addItem(state, { payload: item });
+          const itemData = item; // Assuming 'item' is the payload structure expected by addItem's core logic
+          if (!itemData || !itemData.id) {
+            console.error("addItems (forEach): Invalid item data or missing ID", itemData);
+            return; // continue to next item
+          }
+          let processedItemData = { ...itemData };
+          if (processedItemData.type === 'equipment' && !processedItemData.itemType) {
+            processedItemData.itemType = 'equipment';
+          }
+          if (processedItemData.itemType === 'equipment' && (!processedItemData.finalEffects || Object.keys(processedItemData.finalEffects).length === 0)) {
+            const { effects, slotType, baseConfig } = calculateEquipmentFinalEffects(
+              processedItemData.name,
+              processedItemData.quality,
+              processedItemData.level || 1
+            );
+            processedItemData.finalEffects = effects;
+            if (slotType && !processedItemData.slotType) processedItemData.slotType = slotType;
+            if (baseConfig && !processedItemData.icon) processedItemData.icon = baseConfig.icon;
+            if (baseConfig && !processedItemData.description) processedItemData.description = baseConfig.description;
+          }
+          processedItemData.addedTimestamp = Date.now();
+          state.allItems[processedItemData.id] = processedItemData;
         });
       } else {
         console.error("addItems: payload is not an array", itemsArray);
@@ -138,9 +156,11 @@ const itemSlice = createSlice({
       const { id, ...updates } = action.payload;
       if (state.allItems[id]) {
         const existingItem = state.allItems[id];
-        const updatedItem = { ...existingItem, ...updates };
+        // Ensure not to spread 'isEquipped' or 'equippedBy' from updates if they are being phased out
+        const { isEquipped, equippedBy, equippedBySummonName, ...restOfUpdates } = updates;
+        const updatedItem = { ...existingItem, ...restOfUpdates };
 
-        if (updatedItem.itemType === 'equipment' && (updates.quality || updates.level)) {
+        if (updatedItem.itemType === 'equipment' && (restOfUpdates.quality || restOfUpdates.level)) {
           const { effects } = calculateEquipmentFinalEffects(
             updatedItem.name, 
             updatedItem.quality,
@@ -151,14 +171,6 @@ const itemSlice = createSlice({
         state.allItems[id] = updatedItem;
       } else {
         console.error("updateItem: Item ID not found", id);
-      }
-    },
-
-    setItemStatus: (state, action) => {
-      const { id, isEquipped, equippedBy } = action.payload;
-      if (state.allItems[id]) {
-        state.allItems[id].isEquipped = isEquipped;
-        state.allItems[id].equippedBy = equippedBy || null;
       }
     },
 
@@ -190,6 +202,10 @@ const itemSlice = createSlice({
           if (itemData.type === 'equipment' && !itemData.itemType) {
             itemData.itemType = 'equipment';
           }
+          // REMOVE isEquipped, equippedBy from loaded item data if they exist from old save
+          delete itemData.isEquipped;
+          delete itemData.equippedBy;
+          delete itemData.equippedBySummonName;
 
           // 对装备进行特殊处理，确保 finalEffects 等属性是最新的
           if (itemData.itemType === 'equipment') {
@@ -233,11 +249,11 @@ const itemSlice = createSlice({
   }
 });
 
+// Action Creators (already exported like this is fine)
 export const {
   addItem,
   addItems,
   updateItem,
-  setItemStatus,
   removeItem,
   removeAllItems,
   resetItemsState,
@@ -245,39 +261,31 @@ export const {
   setState,
 } = itemSlice.actions;
 
-// Selectors
-export const selectAllItemsMap = state => state.items.allItems; 
+// Selectors (defined without export initially)
+const selectAllItemsMap = state => state.items.allItems;
 
-// Memoized selector for selectAllItemsArray
-export const selectAllItemsArray = createSelector(
-  [selectAllItemsMap], // Input selectors
-  (allItems) => Object.values(allItems) // Result function: only recomputes if allItems map changes reference
+const selectAllItemsArray = createSelector(
+  [selectAllItemsMap],
+  (allItems) => Object.values(allItems)
 );
 
-export const selectItemById = (state, itemId) => state.items.allItems[itemId];
+const selectItemById = (state, itemId) => state.items.allItems[itemId];
 
-export const selectEquippedItems = createSelector(
-  [selectAllItemsArray],
-  (items) => items.filter(item => item.isEquipped)
-);
-
-export const selectItemsByType = createSelector(
-  [selectAllItemsArray, (state, itemType) => itemType], // Pass itemType as an argument
+const selectItemsByType = createSelector(
+  [selectAllItemsArray, (state, itemType) => itemType],
   (items, itemType) => items.filter(item => item.itemType === itemType)
 );
 
-export const selectItemsBySlotType = createSelector(
-  [selectAllItemsArray, (state, slotType) => slotType], // Pass slotType as an argument
+const selectItemsBySlotType = createSelector(
+  [selectAllItemsArray, (state, slotType) => slotType],
   (items, slotType) => items.filter(item => item.itemType ==='equipment' && item.slotType === slotType)
 );
 
-export const selectSortType = state => state.items.sortType;
+const selectSortType = state => state.items.sortType;
 
-// Memoized selector for selectSortedItems
-export const selectSortedItems = createSelector(
+const selectSortedItems = createSelector(
   [selectAllItemsArray, selectSortType],
   (items, sortType) => {
-    // Create a new array for sorting to avoid mutating the memoized selectAllItemsArray result
     const sortableItems = [...items]; 
     return sortableItems.sort((a, b) => {
       switch (sortType) {
@@ -302,37 +310,108 @@ export const selectSortedItems = createSelector(
   }
 );
 
-export const selectItemWithSummonInfo = createSelector(
-  [selectItemById, (state) => state.summons.allSummons], // Depends on itemSlice and summonSlice
-  (item, allSummons) => {
-    if (!item) return null;
-    const result = { ...item };
-    if (item.equippedBy) {
-      const summon = allSummons[item.equippedBy];
-      if (summon) {
-        result.equippedBySummonName = summon.nickname || summon.name;
+const selectItemEquipInfo = createSelector(
+  [
+    (state) => state.summons.allSummons,
+    (state, itemId) => itemId
+  ],
+  (allSummons, itemId) => {
+    console.log(`[selectItemEquipInfo] Checking item ID: ${itemId}, allSummons available:`, !!allSummons);
+    if (!allSummons) {
+      console.warn("[selectItemEquipInfo] allSummons is undefined or null.");
+      return { isEquipped: false, equippedBySummonId: null, equippedOnSlot: null, equippedBySummonName: null };
+    }
+    for (const summonId in allSummons) {
+      const summon = allSummons[summonId];
+      if (!summon) {
+        console.warn(`[selectItemEquipInfo] Summon object for ID ${summonId} is undefined or null.`);
+        continue; 
+      }
+      console.log(`[selectItemEquipInfo] Checking summon: ${summonId}, Name: ${summon.name}, Nickname: ${summon.nickname}, Equipped IDs:`, summon.equippedItemIds);
+      if (summon.equippedItemIds) {
+        for (const slotType in summon.equippedItemIds) {
+          if (summon.equippedItemIds[slotType] === itemId) {
+            const nameToDisplay = summon.nickname || summon.name || '未知召唤兽';
+            console.log(`[selectItemEquipInfo] Item ${itemId} FOUND equipped by ${summonId} (${nameToDisplay}) in slot ${slotType}`);
+            return {
+              isEquipped: true,
+              equippedBySummonId: summonId,
+              equippedBySummonName: nameToDisplay,
+              equippedOnSlot: slotType
+            };
+          }
+        }
       }
     }
-    return result;
+    console.log(`[selectItemEquipInfo] Item ${itemId} NOT found equipped.`);
+    return { isEquipped: false, equippedBySummonId: null, equippedOnSlot: null, equippedBySummonName: null };
   }
 );
 
-export const selectEquippedItemsWithSummonInfo = createSelector(
-  [selectAllItemsArray, (state) => state.summons.allSummons],
-  (items, allSummons) => {
-    return items
-      .filter(item => item.isEquipped)
-      .map(item => {
-        const result = { ...item };
-        if (item.equippedBy) {
-          const summon = allSummons[item.equippedBy];
-          if (summon) {
-            result.equippedBySummonName = summon.nickname || summon.name;
-          }
-        }
-        return result;
-      });
+const selectItemWithSummonInfo = createSelector(
+  [selectItemById, selectItemEquipInfo],
+  (item, equipInfo) => {
+    if (!item) return null;
+    console.log(`[selectItemWithSummonInfo] For item ${item.id} (${item.name}), equipInfo:`, equipInfo);
+    return { 
+      ...item, 
+      isEquipped: equipInfo.isEquipped,
+      equippedBy: equipInfo.equippedBySummonId,
+      equippedBySummonName: equipInfo.equippedBySummonName,
+      equippedOnSlot: equipInfo.equippedOnSlot
+    };
   }
 );
+
+const selectAllItemsWithSummonInfo = createSelector(
+  [selectAllItemsArray, (state) => state], 
+  (allItemsArray, state) => {
+    return allItemsArray.map(item => selectItemWithSummonInfo(state, item.id));
+  }
+);
+
+const selectEquippedItemsWithSummonInfo = createSelector(
+  [selectAllItemsArray, (state) => state.summons.allSummons],
+  (items, allSummons) => {
+    if (!allSummons) return [];
+    const equippedItemsDetails = [];
+    for (const summonId in allSummons) {
+      const summon = allSummons[summonId];
+      if (summon.equippedItemIds) {
+        for (const slotType in summon.equippedItemIds) {
+          const itemId = summon.equippedItemIds[slotType];
+          if (itemId) {
+            const item = items.find(i => i.id === itemId); 
+            if (item) {
+              equippedItemsDetails.push({
+                ...item,
+                isEquipped: true,
+                equippedBySummonId: summonId,
+                equippedBySummonName: summon.nickname || summon.name,
+                equippedOnSlot: slotType
+              });
+            }
+          }
+        }
+      }
+    }
+    return equippedItemsDetails;
+  }
+);
+
+// Explicitly export all selectors and the reducer
+export {
+  selectAllItemsMap,
+  selectAllItemsArray,
+  selectItemById,
+  selectItemsByType,
+  selectItemsBySlotType,
+  selectSortType,
+  selectSortedItems,
+  selectItemEquipInfo,
+  selectItemWithSummonInfo,
+  selectAllItemsWithSummonInfo, // Ensuring this is explicitly exported
+  selectEquippedItemsWithSummonInfo
+};
 
 export default itemSlice.reducer; 

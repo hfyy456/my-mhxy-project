@@ -6,7 +6,7 @@ import store from '@/store';
 // 设置自定义钩子以便在React组件中使用Redux
 import { useSelector, useDispatch } from 'react-redux';
 import { selectAllSummons, selectCurrentSummonFullData, selectSummonById } from '@/store/slices/summonSlice';
-import { selectAllItemsArray, selectItemById, selectEquippedItems } from '@/store/slices/itemSlice';
+import { selectAllItemsArray, selectItemById, selectEquippedItemsWithSummonInfo } from '@/store/slices/itemSlice';
 import { selectInventorySlots, selectInventoryCapacity, selectGold } from '@/store/slices/inventorySlice';
 
 // 全局标志，防止循环引用
@@ -59,7 +59,7 @@ export const useItemById = (itemId) => {
 };
 
 export const useEquippedItems = () => {
-  return useSelector(selectEquippedItems);
+  return useSelector(selectEquippedItemsWithSummonInfo);
 };
 
 // 背包相关的自定义钩子

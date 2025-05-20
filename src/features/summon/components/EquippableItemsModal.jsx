@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { selectAllItemsArray } from '../../../store/slices/itemSlice';
+import { selectAllItemsWithSummonInfo } from '../../../store/slices/itemSlice';
 import { selectAllSummons } from '../../../store/slices/summonSlice';
 import { petEquipmentConfig, equipmentQualityConfig } from '@/config/petEquipmentConfig';
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from '@/config/uiTextConfig';
@@ -21,21 +21,21 @@ const EquippableItemsModal = ({
   currentSummonId,
   onItemSelected,
 }) => {
-  const allItems = useSelector(selectAllItemsArray);
+  const allItemsWithSummonInfo = useSelector(selectAllItemsWithSummonInfo);
   const summonsMap = useSelector(selectAllSummons);
 
   // -------- START DEBUG LOGS --------
   if (isOpen && slotType) {
     console.log('[EquippableItemsModal] Props:', { isOpen, slotType, currentSummonId });
-    console.log('[EquippableItemsModal] All items from store:', JSON.parse(JSON.stringify(allItems)));
-    const itemsForThisSlotType = allItems.filter(item => item.slotType === slotType);
-    console.log(`[EquippableItemsModal] Items matching slotType "${slotType}":`, JSON.parse(JSON.stringify(itemsForThisSlotType)));
+    console.log('[EquippableItemsModal] All items with summon info (after useSelector):', JSON.parse(JSON.stringify(allItemsWithSummonInfo)));
+    const itemsForThisSlotType = allItemsWithSummonInfo.filter(item => item.slotType === slotType);
+    console.log(`[EquippableItemsModal] Items matching slotType "${slotType}" (with summon info):`, JSON.parse(JSON.stringify(itemsForThisSlotType)));
   }
   // -------- END DEBUG LOGS --------
 
   if (!isOpen || !slotType) return null;
 
-  const equippableItems = allItems.filter(item => {
+  const equippableItems = allItemsWithSummonInfo.filter(item => {
     if (item.slotType !== slotType) return false;
     // Further logic to exclude items already equipped by the current summon in *this* slot could be added
     // For now, we show all items matching the slot type.
@@ -70,6 +70,7 @@ const EquippableItemsModal = ({
           <ul className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
             {equippableItems.map(item => {
               const itemQualityColorName = item.quality ? equipmentQualityConfig.colors[item.quality] || 'normal' : 'normal';
+              
               const isEquippedByOther = item.isEquipped && item.equippedBy && item.equippedBy !== currentSummonId;
               const equippedBySummonName = isEquippedByOther ? getSummonName(item.equippedBy) : null;
 
@@ -103,12 +104,12 @@ const EquippableItemsModal = ({
 
                   {isEquippedByOther && (
                     <p className="text-xs text-yellow-400 mt-2">
-                      (已装备于: {equippedBySummonName})
+                      (已装备于: {equippedBySummonName || getSummonName(item.equippedBy) || '未知召唤兽'})
                     </p>
                   )}
                    {item.isEquipped && item.equippedBy === currentSummonId && (
                     <p className="text-xs text-green-400 mt-2">
-                      (已装备于当前召唤兽)
+                      (已装备于当前召唤兽{item.equippedOnSlot ? `的${uiText.equipmentSlots[item.equippedOnSlot] || item.equippedOnSlot}槽位` : ''})
                     </p>
                   )}
                 </li>

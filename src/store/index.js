@@ -11,6 +11,8 @@ import inventoryReducer from '@/store/slices/inventorySlice';
 import incubatorReducer from '@/store/slices/incubatorSlice';
 import petCatalogReducer from '@/store/slices/petCatalogSlice';
 import saveReducer from '@/store/slices/saveSlice';
+import questReducer from '@/store/slices/questSlice';
+import mapReducer from '@/store/slices/mapSlice';
 
 const store = configureStore({
   reducer: {
@@ -20,6 +22,8 @@ const store = configureStore({
     incubator: incubatorReducer,
     petCatalog: petCatalogReducer,
     saves: saveReducer,
+    quests: questReducer,
+    map: mapReducer,
   },
 });
 

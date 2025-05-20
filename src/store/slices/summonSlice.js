@@ -15,7 +15,7 @@ import {
 // import { equipmentConfig } from '@/config/equipmentConfig'; // Not directly used in this slice's reducers after items are pure data
 import { getRaceBonus } from '@/config/raceConfig'; // 引入种族加成函数
 import { SKILL_MODES } from "@/config/enumConfig";
-import { setItemStatus } from './itemSlice';
+// REMOVED: import { setItemStatus } from './itemSlice';
 import { playerBaseConfig } from '@/config/playerConfig';
 import { calculateDerivedAttributes, getExperienceForLevel } from '@/utils/summonUtils';
 import { selectAllItemsMap } from './itemSlice'; // Make sure to import this selector from itemSlice
@@ -287,18 +287,50 @@ const summonSlice = createSlice({
             summon.equippedItemIds[standardSlot] = null;
           }
         });
+        // Note: Stat recalculation should be triggered by a thunk that calls this action
+        // and then calls recalculateSummonStats for the summonId.
+        // Inventory interaction (removing item from inventory, returning old item) 
+        // should also be handled by that thunk.
         summon.equippedItemIds[slotType] = itemId;
       }
     },
 
     unequipItemFromSummon: (state, action) => {
-      const { summonId, itemId, slotType } = action.payload;
+      const { summonId, itemId, slotType } = action.payload; // itemId is for verification
       const summon = state.allSummons[summonId];
       if (summon && summon.equippedItemIds && summon.equippedItemIds[slotType] === itemId) {
+        // Note: Stat recalculation should be triggered by a thunk that calls this action
+        // and then calls recalculateSummonStats for the summonId.
+        // Inventory interaction (returning item to inventory) 
+        // should also be handled by that thunk.
         summon.equippedItemIds[slotType] = null;
       } else {
         console.warn(`[summonSlice] Failed to unequip item ${itemId} from slot ${slotType} for summon ${summonId}. Slot or item mismatch.`);
       }
+    },
+
+    // New reducer to remove a specific item from all summons that might be equipping it
+    // This should be dispatched when an item is deleted from itemSlice.
+    removeItemFromAllSummons: (state, action) => {
+      const itemIdToRemove = action.payload;
+      let affectedSummonIds = [];
+      for (const summonId in state.allSummons) {
+        const summon = state.allSummons[summonId];
+        if (summon.equippedItemIds) {
+          for (const slotType in summon.equippedItemIds) {
+            if (summon.equippedItemIds[slotType] === itemIdToRemove) {
+              summon.equippedItemIds[slotType] = null;
+              if (!affectedSummonIds.includes(summonId)) {
+                affectedSummonIds.push(summonId);
+              }
+            }
+          }
+        }
+      }
+      // Note: After this, a thunk or subsequent logic should iterate through affectedSummonIds
+      // and dispatch recalculateSummonStats for each to update their derived stats.
+      // For currentSummonFullData, if the currentSummonId is in affectedSummonIds,
+      // recalculateSummonStats for it will handle the update.
     },
     
     learnSkill: (state, action) => {
@@ -388,34 +420,40 @@ const summonSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(setCurrentSummon.fulfilled, (state, action) => {
-        // The main logic for setting currentSummonId is done by dispatching setCurrentSummonAction within the thunk.
-        // Here, we mostly handle the final state after recalculateSummonStats (also part of setCurrentSummon thunk) is done.
-        // The recalculateSummonStats.fulfilled reducer will primarily update currentSummonFullData.
-        console.log("setCurrentSummon thunk fulfilled, ID:", action.payload);
+        // The recalculateSummonStats called within setCurrentSummon thunk handles updating full data.
+        // currentSummonId is already set by setCurrentSummonAction.
+        // This case might just be for logging or additional logic if needed.
+      })
+      .addCase(setCurrentSummon.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.currentSummonFullData = null; // Clear full data on error
+      })
+      .addCase(recalculateSummonStats.pending, (state, action) => {
+        state.isLoading = true;
       })
       .addCase(recalculateSummonStats.fulfilled, (state, action) => {
         const { summonId, allCurrentlyEquippedItemsDataMap } = action.payload;
-        if (state.allSummons[summonId]) {
+        const summon = state.allSummons[summonId];
+        if (summon) {
           summonSlice.caseReducers._internalUpdateSummonCalculatedFields(state, summonId, allCurrentlyEquippedItemsDataMap);
+          // If this is the currently selected summon, update currentSummonFullData
           if (state.currentSummonId === summonId) {
             state.currentSummonFullData = {
-              ...state.allSummons[summonId], // Get the latest version of the summon
-              equippedItems: allCurrentlyEquippedItemsDataMap,
+              ...summon, // Spread the already updated summon from allSummons
+              equippedItems: allCurrentlyEquippedItemsDataMap // Attach the item objects map
             };
           }
         }
+        state.isLoading = false;
+        state.error = null;
       })
       .addCase(recalculateSummonStats.rejected, (state, action) => {
-        console.error("recalculateSummonStats failed:", action.error.message);
+        console.error("[recalculateSummonStats.rejected] Error:", action.error.message);
+        state.isLoading = false;
         state.error = action.error.message;
-      })
-      .addCase('player/addExperience', (state, action) => {
-        const newLevel = action.payload.level;
-        if (typeof newLevel === 'number') {
-            const newMaxSummons = playerBaseConfig.getMaxSummonsByLevel(newLevel);
-            state.maxSummons = newMaxSummons;
-        } else {
-            console.warn("player/addExperience: action.payload.level is missing or not a number, cannot update maxSummons for summonSlice.");
+        // Optionally, if current summon failed recalculation, clear its full data
+        if (state.currentSummonId === action.meta.arg.summonId) {
+            state.currentSummonFullData = null;
         }
       });
   },
@@ -430,6 +468,7 @@ export const {
   resetAllocatedPointsForSummon,
   equipItemToSummon,
   unequipItemFromSummon,
+  removeItemFromAllSummons,
   learnSkill,
   replaceSkill,
   addRefinementHistoryItem,

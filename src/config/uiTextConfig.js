@@ -197,6 +197,26 @@ export const uiText = {
     noEquipment: "暂无装备",
     emptySlot: "空栏位",
     noData: "暂无数据"
+  },
+
+  // 任务日志相关文本
+  questLog: {
+    title: "任务日志", // Missielogboek
+    filterActive: "当前", // Huidig
+    filterCompleted: "已完成", // Voltooid
+    filterAll: "全部", // Alles
+    noQuestsInCategory: "此分类中没有任务。", // Geen missies in deze categorie.
+    unknownQuest: "未知任务 (ID: {id})", // Onbekende missie (ID: {id})
+    rewardsLabel: "奖励:", // Beloningen:
+    rewardExperience: "经验:", // Ervaring:
+    rewardGold: "金币:", // Goud:
+    rewardItems: "物品:", // Items:
+    statusLabel: "状态:", // Status:
+    statusPendingTurnIn: "待交付", // Wacht op inleveren
+    statusInProgress: "进行中", // Bezig
+    statusTurnedIn: "已完成", // Voltooid
+    statusAvailable: "可接取", // Beschikbaar
+    // Voeg hier meer quest-gerelateerde teksten toe indien nodig
   }
 };
 

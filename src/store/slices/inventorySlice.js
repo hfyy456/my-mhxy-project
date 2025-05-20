@@ -42,6 +42,17 @@ const inventorySlice = createSlice({
       delete state.slots[slotId];
     },
     
+    // 新增：根据物品ID从背包移除物品 (用于装备或彻底删除时)
+    removeItemByItemId: (state, action) => {
+      const itemIdToRemove = action.payload;
+      for (const slotId in state.slots) {
+        if (state.slots[slotId] === itemIdToRemove) {
+          delete state.slots[slotId];
+          break; // Assuming an item ID is unique per inventory slot
+        }
+      }
+    },
+    
     // 移动背包中的物品（交换两个格子的物品）
     moveInInventory: (state, action) => {
       const { fromSlot, toSlot } = action.payload;
@@ -140,6 +151,7 @@ const inventorySlice = createSlice({
 export const {
   addToInventory,
   removeFromInventory,
+  removeItemByItemId,
   moveInInventory,
   expandCapacity,
   setGold,

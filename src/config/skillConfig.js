@@ -1,4 +1,4 @@
-import { SKILL_TYPES, SKILL_MODES } from './enumConfig';
+import { SKILL_TYPES, SKILL_MODES, ELEMENT_TYPES } from './enumConfig';
 
 // 技能配置
 export const skillConfig = [
@@ -251,8 +251,11 @@ export const skillConfig = [
     type: SKILL_TYPES.SUPPORT,
     icon: "fa-yin-yang",
     mode: SKILL_MODES.ACTIVE,
-    duration: 10,
-    cooldown: 30
+    cooldown: 30,
+    effects: {
+      yin: { defenseBoost: 0.3, attackReduction: 0.1 },
+      yang: { attackBoost: 0.3, defenseReduction: 0.1 }
+    }
   },
   {
     id: "nether_portal",
@@ -372,5 +375,32 @@ export const skillConfig = [
     effects: {
       magicalDefenseBonusPercentage: 0.2
     }
+  },
+  {
+    id: "SKILL_SLUGGISH",
+    name: "迟钝",
+    description: "行动缓慢，速度降低20%。",
+    type: SKILL_TYPES.SPEED, 
+    icon: "fa-person-walking-dashed-line-arrow-right", 
+    mode: SKILL_MODES.PASSIVE,
+    isNegative: true, 
+    effects: {
+      speedMultiplier: 0.8, 
+    }
+  },
+  {
+    id: "SKILL_WEAK_TO_FIRE",
+    name: "弱点火",
+    description: "对火焰的抗性降低，受到的火焰伤害增加25%。",
+    type: SKILL_TYPES.DEFENSIVE, 
+    icon: "fa-fire-flame-simple", 
+    mode: SKILL_MODES.PASSIVE,
+    isNegative: true, 
+    effects: {
+      fireDamageTakenMultiplier: 1.25, 
+    }
   }
 ];
+
+// Helper function (optional, can be in summon calculations instead)
+export const getSkillById = (id) => skillConfig.find(skill => skill.id === id);
