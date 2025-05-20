@@ -231,81 +231,55 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
     return displayEquipmentSlots.map((slot) => {
       const equippedItem = equippedItems[slot.type];
       
-      const itemQualityColorName = equippedItem
-        ? equipmentQualityConfig.colors[equippedItem.quality] || "normal"
-        : "slate-600";
-      const borderColorClass = equippedItem
-        ? `border-${itemQualityColorName}`
-        : "border-slate-600";
-      const iconColorClass = equippedItem
-        ? `text-${itemQualityColorName}`
-        : "text-slate-400";
-      const nameColorClass = equippedItem
-        ? `text-${itemQualityColorName}`
-        : "text-slate-300";
+      const itemQuality = equippedItem?.quality || 'normal';
+      const qualityColorDetail = equipmentQualityConfig.colors[itemQuality] || equipmentQualityConfig.colors.normal;
+
+      const borderColorClass = `border-${qualityColorDetail}`;
+      const iconColorClass = equippedItem ? `text-${qualityColorDetail}` : "text-slate-400";
+      const nameColorClass = equippedItem ? `text-${qualityColorDetail}` : "text-slate-300";
 
       return (
         <div
           key={slot.type}
-          className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group ${
-            equippedItem ? "" : "hover:border-yellow-500"
-          }`}
+          className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group`}
           onClick={() => handleEquipItem(slot.type)}
           onMouseEnter={(e) => {
             if (equippedItem) {
               const rect = e.currentTarget.getBoundingClientRect();
               const screenWidth = window.innerWidth;
-              
-              // 计算tooltip的预估宽度
-              const tooltipWidth = 280;
-              
-              // 如果右侧空间不足，则显示在左侧
+              const tooltipWidth = 280; // 估算tooltip宽度
               const x = rect.left + rect.width + tooltipWidth > screenWidth 
-                ? rect.left - tooltipWidth - 10 
-                : rect.left + rect.width + 10;
+                ? rect.left - tooltipWidth - 5 
+                : rect.left + rect.width + 5;
               
-              // 确保tooltip不会超出屏幕顶部或底部
-              const screenHeight = window.innerHeight;
-              const tooltipHeight = 200;
               let y = rect.top;
-              
-              if (rect.top + tooltipHeight > screenHeight) {
-                y = screenHeight - tooltipHeight - 10;
+              const tooltipHeight = 150; // 估算tooltip高度
+              if (rect.top + tooltipHeight > window.innerHeight) {
+                y = window.innerHeight - tooltipHeight - 5;
               }
-              
+              if (y < 0) y = 5;
+
               setTooltipPosition({ x, y });
               setTooltipItem(equippedItem);
-              tooltipTimeoutRef.current = setTimeout(() => {
-                setTooltipVisible(true);
-              }, 300);
+              tooltipTimeoutRef.current = setTimeout(() => setTooltipVisible(true), 300);
             }
           }}
           onMouseLeave={() => {
             clearTimeout(tooltipTimeoutRef.current);
             setTooltipVisible(false);
-            setTooltipItem(null);
           }}
         >
-          {equippedItem ? (
-            <>
-              <i
-                className={`fa-solid ${equippedItem.icon || slot.defaultIcon} ${iconColorClass} text-3xl mb-1`}
-              ></i>
-              <span
-                className={`text-xs ${nameColorClass} font-medium text-center leading-tight`}
-              >
-                {equippedItem.name}
-              </span>
-            </>
-          ) : (
-            <>
-              <i
-                className={`fa-solid ${slot.defaultIcon} text-slate-400 text-3xl mb-2`}
-              ></i>
-              <span className="text-xs text-slate-300 font-medium text-center">
-                {uiText.equipmentSlots[slot.type]}
-              </span>
-            </>
+          <div className="w-10 h-10 flex items-center justify-center mb-1 text-2xl">
+            <i className={`fas ${equippedItem && equippedItem.icon ? equippedItem.icon : slot.defaultIcon} ${iconColorClass}`}></i>
+          </div>
+          <p className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}>
+            {equippedItem ? equippedItem.name : slot.displayTypeName}
+          </p>
+          {/* Optionally, show a small level badge or quality indicator on the slot itself */}
+          {equippedItem && (
+            <span className={`absolute top-1 right-1 text-[10px] px-1 rounded-sm bg-slate-900 bg-opacity-70 ${nameColorClass}`}>
+              Lv.{equippedItem.level || '-'}
+            </span>
           )}
         </div>
       );
@@ -315,11 +289,11 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   return (
     <div className="flex flex-col space-y-4">
       {/* Left Column */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-1 flex flex-col gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="md:col-span-5 flex flex-col gap-3">
           <div className="flex justify-center">
             <img
-                className={`w-70 h-70 object-cover border-2 ${quality ? `border-${qualityConfig.colors[quality]}` : 'border-slate-500'} shadow-lg rounded-lg transition-all duration-300`}
+                className={`w-60 h-60 object-cover border-2 ${quality ? `border-${qualityConfig.colors[quality]}` : 'border-slate-500'} shadow-lg rounded-lg transition-all duration-300`}
               src={imageUrl}
               alt={name}
               onError={(e) => {
@@ -330,40 +304,51 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
           <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
             {/* <h2 className="text-2xl font-bold text-purple-300 mb-1 text-center">{displayName}</h2> */}
 
-            <div className="flex justify-center items-center gap-2 mb-3">
-              <span className="text-m text-primary">
-                {nickname ? `${nickname}` : "未设置昵称"}
-              </span>
+            {/* Nickname Section */}
+            <div className="flex justify-between items-center gap-2 mb-3">
+             <div>
+               <span className="text-xs text-gray-400 mr-1">昵称:</span>
+               <span className="text-lg font-semibold text-purple-300">
+                 {nickname || "未设置"}
+               </span>
+             </div>
               <button
                 onClick={() => onOpenNicknameModal(summon)}
-                className="text-xs px-2 py-1 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-lg transition-colors"
+                className="text-xs p-1.5 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-md transition-colors leading-none"
               >
-                <i className="fas fa-edit mr-1"></i>
-                {nickname ? "修改昵称" : "设置昵称"}
+                <i className="fas fa-edit"></i>
               </button>
             </div>
 
-            <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 mb-2">
-              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
-                <span className="text-xs text-gray-300 mr-1">{uiText.labels.level}</span>
+            {/* Attribute Tags Section */}
+           <div className="flex flex-wrap justify-start items-stretch gap-x-2 gap-y-2 mb-2">
+              {/* Level Tag */}
+             <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
+               <i className="fas fa-star text-yellow-400 mr-2"></i>
                 <span className="text-xs font-semibold text-gray-100">{level || 1}</span>
               </div>
               
-              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
-                <span className={`text-xs font-semibold ${qualityColorName}`}>
+              {/* Quality Tag */}
+             <div className={`flex items-center ${qualityConfig.bgColors?.[quality] || 'bg-slate-600/50'} px-3 py-1.5 rounded-lg shadow`}>
+               <i className={`fas fa-gem ${qualityColorName} mr-2`}></i>
+               <span className={`text-xs font-semibold ${qualityConfig.textColors?.[quality] || qualityColorName}`}>
                   {getQualityDisplayName(quality)}
                 </span>
               </div>
               
-              <div className="flex items-center bg-slate-600/50 px-2.5 py-1 rounded-full">
-                <span className="text-xs font-semibold text-gray-100">
+              {/* Race Tag */}
+             <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
+               <i className="fas fa-paw text-sky-400 mr-2"></i>
+               <span className="text-xs font-semibold text-gray-100 ">
                   {getRaceTypeDisplayName(summon.race)}
                 </span>
               </div>
               
+              {/* Five Element Tag */}
               {(summon.fiveElement || petConfig[summon.petId]?.fiveElement) && (
-                 <div className={`flex items-center px-2.5 py-1 rounded-full ${FIVE_ELEMENT_COLORS[summon.fiveElement || petConfig[summon.petId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
-                  <span className="text-xs font-semibold">
+                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${FIVE_ELEMENT_COLORS[summon.fiveElement || petConfig[summon.petId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
+                 <i className="fas fa-adjust mr-2"></i>
+                 <span className="text-xs font-semibold">
                     {getFiveElementDisplayName(summon.fiveElement || petConfig[summon.petId]?.fiveElement)}
                   </span>
                 </div>
@@ -439,7 +424,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
         </div>
 
         {/* Right Column */}
-        <div className="md:col-span-2 flex flex-col gap-3">
+        <div className="md:col-span-7 flex flex-col gap-3">
           <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
               <i className="fa-solid fa-user-shield text-yellow-400 mr-2"></i>

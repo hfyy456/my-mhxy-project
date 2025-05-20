@@ -135,7 +135,7 @@ const SaveManager = ({ toasts, setToasts, onLoadSuccess }) => {
       </div>
 
       {/* 存档列表 */}
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[calc(70vh-200px)] overflow-y-auto p-1">
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>

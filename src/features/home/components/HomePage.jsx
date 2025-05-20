@@ -4,12 +4,10 @@ import { resetSummonState } from '@/store/slices/summonSlice';
 import { resetItemsState } from '@/store/slices/itemSlice';
 import { resetInventory } from '@/store/slices/inventorySlice';
 import SaveManager from '@/features/save/components/SaveManager';
-import SettingsPanel from '@/features/settings/components/SettingsPanel';
 
-const HomePage = ({ onStartGame, toasts, setToasts }) => {
+const HomePage = ({ onStartGame, toasts, setToasts, onOpenSettings }) => {
   const dispatch = useDispatch();
   const [showLoadGame, setShowLoadGame] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   const handleNewGame = () => {
     // 重置所有游戏状态
@@ -62,7 +60,7 @@ const HomePage = ({ onStartGame, toasts, setToasts }) => {
           </button>
 
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={onOpenSettings}
             className="w-full bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 
               text-white font-bold py-4 px-8 rounded-lg shadow-lg hover:shadow-purple-500/30 
               transition-all duration-300 transform hover:scale-105"
@@ -107,14 +105,6 @@ const HomePage = ({ onStartGame, toasts, setToasts }) => {
             </div>
           </div>
         )}
-
-        {/* 设置面板 */}
-        <SettingsPanel
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-          toasts={toasts}
-          setToasts={setToasts}
-        />
       </div>
     </div>
   );

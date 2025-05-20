@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { INVENTORY_CONFIG } from "@/config/inventoryConfig";
-import { useInventory, useCurrentSummon, useItems } from "@/store/reduxSetup";
+import { useInventory, useItems } from "@/store/reduxSetup";
 import {
   moveInInventory,
   addToInventory,
@@ -102,10 +102,95 @@ const ItemTooltip = ({ item, position }) => {
   );
 };
 
-const InventoryPanel = ({ isOpen, onClose }) => {
+// 新增：召唤兽选择模态框组件
+const SummonSelectModal = ({ summons, onItemEquip, onCancel, itemToEquipName }) => {
+  if (!summons || summons.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-800 p-6 rounded-lg shadow-xl text-center">
+          <h3 className="text-xl font-semibold text-white mb-4">没有可选择的召唤兽</h3>
+          <p className="text-slate-300 mb-6">你目前没有任何召唤兽可以装备此物品。</p>
+          <button
+            onClick={onCancel}
+            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-150"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 className="text-xl font-semibold text-white mb-4 text-center">为 {itemToEquipName} 选择装备对象</h3>
+        <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+          {summons.map((summon) => (
+            <button
+              key={summon.id}
+              onClick={() => onItemEquip(summon.id)}
+              className="w-full flex items-center justify-between bg-slate-700 hover:bg-slate-600 p-3 rounded-md transition-colors duration-150"
+            >
+              <span className="text-white">{summon.name} (等级 {summon.level})</span>
+              <span className="text-xs text-slate-400">点击选择</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onCancel}
+            className="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-150"
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 新增：替换确认模态框组件
+const ReplaceConfirmModal = ({ isOpen, onConfirm, onCancel, details }) => {
+  if (!isOpen || !details) return null;
+
+  const { summonToUpdate, oldItem, newItem } = details;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+      <div className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 className="text-xl font-semibold text-white mb-4 text-center">替换装备确认</h3>
+        <p className="text-slate-300 mb-2 text-center">
+          召唤兽 <span className="font-semibold text-purple-400">{summonToUpdate.name || summonToUpdate.nickname}</span> 的 <span className="font-semibold text-yellow-400">{uiText.equipmentSlots[newItem.slotType] || newItem.slotType}</span> 槽位
+        </p>
+        <p className="text-slate-300 mb-2 text-center">
+          当前已装备: <span className="font-semibold text-orange-400">{oldItem.name}</span> (等级 {oldItem.level || 'N/A'})
+        </p>
+        <p className="text-slate-300 mb-6 text-center">
+          是否替换为: <span className="font-semibold text-green-400">{newItem.name}</span> (等级 {newItem.level || 'N/A'})?
+        </p>
+        <div className="flex justify-around mt-6">
+          <button
+            onClick={onConfirm}
+            className="bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-6 rounded-md transition-colors duration-150"
+          >
+            替换
+          </button>
+          <button
+            onClick={onCancel}
+            className="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-6 rounded-md transition-colors duration-150"
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const InventoryPanel = ({ isOpen, onClose, showToast }) => {
   const dispatch = useDispatch();
   const { slots, capacity } = useInventory();
-  const currentSummon = useCurrentSummon();
   const items = useItems();
   const allSummonsMap = useSelector((state) => state.summons.allSummons);
 
@@ -123,6 +208,14 @@ const InventoryPanel = ({ isOpen, onClose }) => {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);
   let tooltipTimeoutRef = React.useRef(null); // Using ref for timeout
+
+  // Summon Selection Modal state
+  const [showSummonSelectModal, setShowSummonSelectModal] = useState(false);
+  const [itemToEquipDetails, setItemToEquipDetails] = useState(null);
+
+  // Replace Confirm Modal State
+  const [showReplaceConfirmModal, setShowReplaceConfirmModal] = useState(false);
+  const [replaceDetails, setReplaceDetails] = useState(null); // { summonToUpdate, oldItem, newItem }
 
   // 获取背包物品数据
   const inventoryItems = useMemo(() => {
@@ -186,23 +279,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     }
   };
 
-  // 处理物品右键点击
-  const handleItemRightClick = (e, slotIndex) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const item = inventoryItems[slotIndex];
-    if (!item) return;
-
-    setSelectedSlot(slotIndex);
-
-    if (item.itemType === "equipment") {
-      setShowEquipmentMenu(true);
-    } else if (item.itemType === "consumable") {
-      handleUseItem(slotIndex);
-    }
-  };
-
   // 处理物品拖拽开始
   const handleDragStart = (e, slotIndex) => {
     const item = inventoryItems[slotIndex];
@@ -230,148 +306,21 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     }
   };
 
-  // 处理装备物品
-  const handleEquipItem = (slotIndexToEquip) => {
-    if (!currentSummon) {
-      alert("请先选择一个召唤兽");
-      return;
-    }
-
-    const itemToEquip = inventoryItems[slotIndexToEquip];
-    if (!itemToEquip || itemToEquip.itemType !== "equipment") {
-      alert("选择的物品不是装备或无效。");
-      console.warn("Invalid item:", itemToEquip);
-      return;
-    }
-
-    const summonIdToUpdate = currentSummon.id;
-
-    // 添加调试日志
-    console.log("装备信息:", {
-      item: itemToEquip,
-      slotType: itemToEquip.slotType,
-      category: itemToEquip.category,
-      type: itemToEquip.type,
-      itemType: itemToEquip.itemType,
-      availableSlots: STANDARD_EQUIPMENT_SLOTS,
-    });
-
-    // 确保装备有正确的槽位类型
-    const slotType = itemToEquip.slotType || itemToEquip.category;
-    if (!slotType) {
-      alert("该装备没有指定槽位类型");
-      console.warn("Missing slot type for item:", itemToEquip);
-      return;
-    }
-
-    if (!STANDARD_EQUIPMENT_SLOTS.includes(slotType)) {
-      alert(
-        `该装备的槽位类型无效: ${slotType}\n可用槽位: ${STANDARD_EQUIPMENT_SLOTS.join(
-          ", "
-        )}`
-      );
-      console.warn(
-        "Invalid slot type:",
-        slotType,
-        "Available slots:",
-        STANDARD_EQUIPMENT_SLOTS
-      );
-      return;
-    }
-
-    // 检查是否有已装备的同类型装备
-    const currentEquippedItems = currentSummon.equippedItemIds || {};
-    const currentEquippedItemId = currentEquippedItems[slotType];
-
-    if (currentEquippedItemId) {
-      // 先取消旧装备的装备状态
-      dispatch(
-        setItemStatus({
-          id: currentEquippedItemId,
-          isEquipped: false,
-          equippedBy: null,
-        })
-      );
-    }
-
-    // 装备新物品
-    dispatch(
-      equipItemToSummon({
-        summonId: summonIdToUpdate,
-        itemId: itemToEquip.id,
-        slotType: slotType,
-      })
-    );
-
-    // 标记新物品为已装备状态
-    dispatch(
-      setItemStatus({
-        id: itemToEquip.id,
-        isEquipped: true,
-        equippedBy: summonIdToUpdate,
-        equippedBySummonName: currentSummon.name
-      })
-    );
-
-    // 重新计算召唤兽属性
-    dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
-
-    setSelectedSlot(null);
-    setShowEquipmentMenu(false);
-  };
-
-  // 处理卸下装备
-  const handleUnequipItem = (itemToUnequip) => {
-    if (!itemToUnequip || !itemToUnequip.isEquipped || !itemToUnequip.equippedBy) {
-      console.error("handleUnequipItem: 无效的物品或物品未装备:", itemToUnequip);
-      alert("无法卸下该物品。");
-      return;
-    }
-
-    const summonId = itemToUnequip.equippedBy;
-    if (!allSummonsMap[summonId]) {
-      alert("未找到装备该物品的召唤兽信息。");
-      return;
-    }
-
-    // 1. 更新物品状态 (isEquipped: false, equippedBy: null)
-    dispatch(setItemStatus({
-      id: itemToUnequip.id,
-      isEquipped: false,
-      equippedBy: null
-    }));
-
-    // 2. 从召唤兽身上移除装备记录
-    dispatch(unequipItemFromSummon({
-      summonId,
-      itemId: itemToUnequip.id,
-      slotType: itemToUnequip.slotType,
-    }));
-
-    // 3. 重新计算召唤兽属性
-    dispatch(recalculateSummonStats({ summonId }));
-
-    alert(`"${itemToUnequip.name}" 已成功卸下。`);
-    setSelectedSlot(null);
-  };
-
   // 处理物品使用
   const handleUseItem = (slotIndex) => {
-    if (!currentSummon) {
-      alert("请先选择一个召唤兽");
-      return;
-    }
-
     const item = inventoryItems[slotIndex];
     if (!item) return;
 
     if (item.itemType === "equipment") {
-      handleEquipItem(slotIndex);
+      // 这里应该添加装备逻辑
+      // 为简单起见，这里只移除物品
+      dispatch(removeFromInventory(slotIndex));
+      showToast(`使用了 ${item.name}`, "info");
     } else if (item.itemType === "consumable") {
       // 这里应该添加消耗品使用的逻辑
       // 为简单起见，这里只移除物品
       dispatch(removeFromInventory(slotIndex));
-      alert(`使用了 ${item.name}`);
+      showToast(`使用了 ${item.name}`, "info");
     }
   };
 
@@ -381,12 +330,12 @@ const InventoryPanel = ({ isOpen, onClose }) => {
 
     const item = inventoryItems[selectedSlot];
     if (!item || !item.stackable || !item.amount || item.amount <= 1) {
-      alert("该物品不可分割或数量不足");
+      showToast("该物品不可分割或数量不足", "warning");
       return;
     }
 
     if (splitAmount >= item.amount) {
-      alert("分割数量不能大于等于物品总数");
+      showToast("分割数量不能大于等于物品总数", "warning");
       return;
     }
 
@@ -400,7 +349,7 @@ const InventoryPanel = ({ isOpen, onClose }) => {
     }
 
     if (emptySlot === null) {
-      alert("背包已满，无法分割物品");
+      showToast("背包已满，无法分割物品", "error");
       return;
     }
 
@@ -490,6 +439,146 @@ const InventoryPanel = ({ isOpen, onClose }) => {
         itemIds: sortedIds,
       })
     );
+  };
+
+  const initiateEquipSequence = (detailsToEquip) => {
+    if (!detailsToEquip || !detailsToEquip.itemId) {
+      console.error("No item selected or item details are missing for equip sequence.");
+      return;
+    }
+    // Check if player has any summons
+    const summonsArray = Object.values(allSummonsMap || {});
+    if (summonsArray.length === 0) {
+      console.info("No summons available to equip the item.");
+      setShowSummonSelectModal(true); // Still show modal, it will display "no summons" message
+      return;
+    }
+    setShowSummonSelectModal(true);
+  };
+
+  const handleConfirmEquipToSummon = (targetSummonId) => {
+    console.log("Attempting to equip. Target Summon ID:", targetSummonId);
+    console.log("Item Details:", itemToEquipDetails);
+    // To inspect allSummonsMap at the moment of this function call, 
+    // you might need to pass it or access it via a useSelector hook if it's not stale.
+    // For now, logging targetSummonId and itemToEquipDetails is the first step.
+
+    if (!itemToEquipDetails || !itemToEquipDetails.itemId || !targetSummonId) {
+      console.error("Missing item details or target summon ID for equip sequence.");
+      setShowSummonSelectModal(false); // Close modal even on error
+      setItemToEquipDetails(null);
+      showToast("装备失败：缺少物品或目标信息", "error");
+      return;
+    }
+
+    const itemToEquip = inventoryItems.find(i => i?.id === itemToEquipDetails.itemId);
+    const summonToUpdate = allSummonsMap ? allSummonsMap[targetSummonId] : null;
+
+    if (!itemToEquip || !summonToUpdate) {
+      console.error("Item to equip or summon details not found for confirmation.");
+      showToast("装备失败：物品或召唤兽数据错误", "error");
+      setShowSummonSelectModal(false);
+      setItemToEquipDetails(null);
+      return;
+    }
+
+    const slotTypeToEquip = itemToEquipDetails.slotType;
+    if (!slotTypeToEquip) {
+        console.error("Item slot type is missing for equip sequence.", itemToEquipDetails);
+        setShowSummonSelectModal(false); 
+        setItemToEquipDetails(null);
+        showToast("装备失败：物品槽位类型缺失", "error");
+        return;
+    }
+
+    // 检查目标槽位是否已有装备
+    const existingItemIdInSlot = summonToUpdate.equippedItemIds ? summonToUpdate.equippedItemIds[slotTypeToEquip] : null;
+
+    if (existingItemIdInSlot && existingItemIdInSlot !== itemToEquip.id) {
+      const oldItem = items.find(i => i.id === existingItemIdInSlot); // `items` from useItems()
+      if (oldItem) {
+        setReplaceDetails({
+          summonToUpdate: summonToUpdate, // pass the full summon object
+          oldItem: oldItem,
+          newItem: itemToEquip, // itemToEquip is the new item from inventory
+        });
+        setShowReplaceConfirmModal(true);
+        // setShowSummonSelectModal(false); // Keep summon select modal open or close? Closing for now.
+        return; // Stop here, wait for user confirmation
+      } else {
+        // Fallback if old item details can't be found, proceed with equip (overwrite)
+        // This case should ideally not happen if data is consistent
+        showToast(`警告：无法找到原装备信息，将直接装备 ${itemToEquip.name}`, "warning");
+      }
+    }
+
+    // ---- Original Equip Logic (if slot is empty or old item not found for confirmation) ----
+    console.log(`Equipping item ${itemToEquip.name} (ID: ${itemToEquip.id}) to summon ${targetSummonId}, slot: ${slotTypeToEquip}`);
+
+    dispatch(
+      equipItemToSummon({
+        summonId: targetSummonId,
+        itemId: itemToEquip.id,
+        slotType: slotTypeToEquip,
+      })
+    );
+    dispatch(recalculateSummonStats({ summonId: targetSummonId }));
+
+    // Update item status in itemSlice
+    dispatch(
+      setItemStatus({
+        id: itemToEquip.id,
+        isEquipped: true,
+        equippedBy: targetSummonId,
+        equippedBySummonName: summonToUpdate ? summonToUpdate.name : '未知召唤兽' // Provide a fallback name
+      })
+    );
+
+    showToast(`${itemToEquip.name} 已装备到 ${summonToUpdate ? summonToUpdate.name : '召唤兽'}`, "success");
+
+    setShowSummonSelectModal(false);
+    setItemToEquipDetails(null); // Clear details after attempting equip
+  };
+
+  const handleConfirmReplacement = () => {
+    if (!replaceDetails) return;
+    const { summonToUpdate, oldItem, newItem } = replaceDetails;
+
+    // 1. Unequip old item
+    dispatch(setItemStatus({ 
+      id: oldItem.id, 
+      isEquipped: false, 
+      equippedBy: null, 
+      equippedBySummonName: null 
+    }));
+    dispatch(unequipItemFromSummon({ 
+      summonId: summonToUpdate.id, 
+      itemId: oldItem.id, 
+      slotType: oldItem.slotType || oldItem.category // ensure correct slotType for old item
+    }));
+
+    // 2. Equip new item
+    dispatch(equipItemToSummon({
+      summonId: summonToUpdate.id,
+      itemId: newItem.id,
+      slotType: newItem.slotType || newItem.category // ensure correct slotType for new item
+    }));
+    dispatch(setItemStatus({
+      id: newItem.id,
+      isEquipped: true,
+      equippedBy: summonToUpdate.id,
+      equippedBySummonName: summonToUpdate.name || summonToUpdate.nickname
+    }));
+
+    // 3. Recalculate stats
+    dispatch(recalculateSummonStats({ summonId: summonToUpdate.id }));
+
+    showToast(`${newItem.name} 已替换 ${oldItem.name} 并装备到 ${summonToUpdate.name || summonToUpdate.nickname}`, "success");
+
+    setShowReplaceConfirmModal(false);
+    setReplaceDetails(null);
+    setShowSummonSelectModal(false); // Close summon select as well
+    setItemToEquipDetails(null); // Clear original equip intent
   };
 
   return (
@@ -675,7 +764,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
                     border ${item ? qualityBorderClass : 'border-slate-700/50'}
                   `}
                   onClick={() => handleItemClick(index)}
-                  onContextMenu={(e) => handleItemRightClick(e, index)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, index)}
                   onMouseEnter={(e) => {
@@ -792,17 +880,41 @@ const InventoryPanel = ({ isOpen, onClose }) => {
                   <>
                     {!inventoryItems[selectedSlot].isEquipped ? (
                       <button
-                        onClick={() => handleEquipItem(selectedSlot)}
-                        className={`px-4 py-2 ${!currentSummon ? 'bg-gray-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'} text-white rounded transition-colors duration-200 flex items-center space-x-2`}
-                        disabled={!currentSummon}
-                        title={!currentSummon ? "请先选择召唤兽" : "装备到当前召唤兽"}
+                        onClick={() => {
+                          const itemToEquip = inventoryItems[selectedSlot];
+                          const currentItemDetails = {
+                            itemId: itemToEquip.id,
+                            slotType: itemToEquip.slotType || itemToEquip.category,
+                            slotIndex: selectedSlot
+                          };
+                          setItemToEquipDetails(currentItemDetails); // Set state for other parts of the flow
+                          initiateEquipSequence(currentItemDetails); // Pass details directly
+                        }}
+                        className={`px-4 py-2 ${Object.keys(allSummonsMap || {}).length === 0 ? 'bg-gray-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'} text-white rounded transition-colors duration-200 flex items-center space-x-2`}
+                        disabled={Object.keys(allSummonsMap || {}).length === 0}
+                        title={Object.keys(allSummonsMap || {}).length === 0 ? "没有可装备的召唤兽" : "选择召唤兽进行装备"}
                       >
                         <i className="fas fa-shield-alt"></i>
-                        <span>装备{!currentSummon && "（请先选择召唤兽）"}</span>
+                        <span>装备</span>
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleUnequipItem(inventoryItems[selectedSlot])}
+                        onClick={() => {
+                          const itemToUnequip = inventoryItems[selectedSlot];
+                          dispatch(setItemStatus({
+                            id: itemToUnequip.id,
+                            isEquipped: false,
+                            equippedBy: null
+                          }));
+                          dispatch(unequipItemFromSummon({
+                            summonId: itemToUnequip.equippedBy,
+                            itemId: itemToUnequip.id,
+                            slotType: itemToUnequip.slotType,
+                          }));
+                          dispatch(recalculateSummonStats(itemToUnequip.equippedBy));
+                          showToast(`\"${itemToUnequip.name}\" 已成功卸下。`, "info");
+                          setSelectedSlot(null);
+                        }}
                         className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors duration-200 flex items-center space-x-2"
                         title="从召唤兽身上卸下装备"
                       >
@@ -817,7 +929,6 @@ const InventoryPanel = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => handleUseItem(selectedSlot)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded"
-                    disabled={!currentSummon}
                   >
                     使用
                   </button>
@@ -845,42 +956,44 @@ const InventoryPanel = ({ isOpen, onClose }) => {
           />
         )}
 
-        {showSplitModal &&
-          selectedSlot !== null &&
-          inventoryItems[selectedSlot] && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-slate-800 p-6 rounded-lg w-80">
-                <h3 className="text-lg font-bold text-white mb-4">分割物品</h3>
+        {/* Summon Selection Modal */}
+        {showSummonSelectModal && itemToEquipDetails && (
+          <SummonSelectModal
+            summons={Object.values(allSummonsMap || {})}
+            itemToEquipName={inventoryItems.find(i => i?.id === itemToEquipDetails.itemId)?.name || '物品'}
+            onItemEquip={(summonId) => {
+              handleConfirmEquipToSummon(summonId);
+            }}
+            onCancel={() => {
+              setShowSummonSelectModal(false);
+              setItemToEquipDetails(null); // Clear details if cancelled
+            }}
+          />
+        )}
 
-                <div className="mb-4">
-                  <label className="block text-gray-300 mb-2">数量</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={inventoryItems[selectedSlot].amount - 1}
-                    value={splitAmount}
-                    onChange={(e) => setSplitAmount(parseInt(e.target.value))}
-                    className="w-full bg-slate-700 text-white p-2 rounded"
-                  />
-                </div>
+        {/* Replace Confirmation Modal */}
+        <ReplaceConfirmModal
+          isOpen={showReplaceConfirmModal}
+          details={replaceDetails}
+          onConfirm={handleConfirmReplacement}
+          onCancel={() => {
+            setShowReplaceConfirmModal(false);
+            setReplaceDetails(null);
+            setShowSummonSelectModal(false); // Also close summon select if replacement is cancelled
+            setItemToEquipDetails(null);
+            showToast("装备替换已取消", "info");
+          }}
+        />
 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleSplitItem}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded"
-                  >
-                    确认
-                  </button>
-                  <button
-                    onClick={() => setShowSplitModal(false)}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Footer */}
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
+          >
+            关闭
+          </button>
+        </div>
       </div>
     </div>
   );

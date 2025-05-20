@@ -78,6 +78,10 @@ export const recalculateSummonStats = createAsyncThunk(
   'summon/recalculateSummonStats',
   async ({ summonId }, { getState }) => {
     const state = getState();
+    // ---- START DIAGNOSTIC LOG ----
+    console.log('[recalculateSummonStats] Received summonId:', summonId);
+    console.log('[recalculateSummonStats] Keys in state.summons.allSummons:', Object.keys(state.summons.allSummons || {}));
+    // ---- END DIAGNOSTIC LOG ----
     const summon = state.summons.allSummons[summonId];
     if (!summon) {
       throw new Error('Summon not found for recalculation');

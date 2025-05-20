@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import HomePage from "@/features/home/components/HomePage";
-import MainMenu from "@/features/main-menu/components/MainMenu";
+// import MainMenu from "@/features/main-menu/components/MainMenu"; // 正确注释掉 MainMenu
+import GameMap from "@/features/game-map/components/GameMap"; // 引入新的地图组件
 import SummonSystem from "@/features/summon/components/SummonSystem";
 import { useToast } from "@/hooks/useToast";
-import { useModalState } from "@/hooks/useModalState";
+// import { useModalState } from "@/hooks/useModalState"; // No longer needed if we manage modals directly
 import { useAutoSave } from "@/features/save/hooks/useAutoSave";
 import ToastContainer from "@/features/ui/components/ToastContainer";
 import InventoryPanel from "@/features/inventory/components/InventoryPanel";
 import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
+import Modal from "@/components/Modal"; // Import the generic Modal component
 import { generateInitialEquipment } from "@/gameLogic";
 import {
   initializeReduxIntegration,
@@ -18,68 +20,43 @@ import {
   useSummons,
 } from "@/store/reduxSetup";
 import { setCurrentSummon } from "@/store/slices/summonSlice";
-import { addItem } from "@/store/slices/itemSlice";
-import { addToInventory } from "@/store/slices/inventorySlice";
+// import { addItem } from "@/store/slices/itemSlice"; // Not used directly in App.jsx
+// import { addToInventory } from "@/store/slices/inventorySlice"; // Not used directly in App.jsx
 
 const App = () => {
   const dispatch = useDispatch();
-  const [currentSystem, setCurrentSystem] = useState("home");
+  const [showHomePage, setShowHomePage] = useState(true); // New state for home page
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
+  
+  // Modal states
+  const [isSummonModalOpen, setIsSummonModalOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
   const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // 从Redux获取召唤兽数据
   const summons = useSummons();
   const summon = useCurrentSummon();
 
-  // 使用自动存档 hook
   useAutoSave();
 
-  // 初始化Redux集成
   useEffect(() => {
     const cleanup = initializeReduxIntegration();
     console.log("[App.jsx] Redux集成已初始化");
-
-    // 移除加载动画
     const loader = document.getElementById('loader-wrapper');
     if (loader) {
       loader.style.display = 'none';
     }
-
     return cleanup;
   }, []);
 
-  const handleSystemChange = (system) => {
-    if (system === "summon") {
-      if (summons.length > 0) {
-        if (!summon) {
-          dispatch(setCurrentSummon(summons[0].id));
-          console.log(
-            "[App.jsx] Switched to Summon System, selected first summon:",
-            summons[0]
-          );
-        }
-      } else {
-        if (summon) {
-          dispatch(setCurrentSummon(null));
-          console.log(
-            "[App.jsx] Switched to Summon System, no summons available"
-          );
-        }
-      }
-    }
-    setCurrentSystem(system);
-  };
+  // No more handleSystemChange
 
-  // 禁用右键菜单
   useEffect(() => {
     const handleContextMenu = (e) => {
       e.preventDefault();
     };
-
     document.addEventListener("contextmenu", handleContextMenu);
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
@@ -87,7 +64,21 @@ const App = () => {
   }, []);
 
   const handleStartGame = () => {
-    setCurrentSystem("main");
+    setShowHomePage(false); 
+  };
+  
+  // Specific open handlers for modals to manage Redux state if needed
+  const openSummonModal = () => {
+    if (summons.length > 0) {
+      if (!summon) {
+        dispatch(setCurrentSummon(summons[0].id));
+      }
+    } else {
+      if (summon) {
+        dispatch(setCurrentSummon(null));
+      }
+    }
+    setIsSummonModalOpen(true);
   };
 
   return (
@@ -95,142 +86,65 @@ const App = () => {
       style={{
         position: "relative",
         minHeight: "100vh",
-        backgroundColor: "#0f172a",
+        backgroundColor: "#0f172a", // Background for the whole app
       }}
     >
-      {currentSystem === "home" ? (
+      {showHomePage ? (
         <HomePage
           onStartGame={handleStartGame}
-          toasts={toasts}
-          setToasts={setToasts}
-        />
-      ) : currentSystem === "main" ? (
-        <MainMenu
-          onOpenSummonSystem={() => handleSystemChange("summon")}
-          onOpenIncubator={() => setIsIncubatorOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          toasts={toasts}
-          setToasts={setToasts}
+          // toasts and setToasts are not typically passed to HomePage
+          // but if it uses them, they can be added back.
         />
       ) : (
-        <SummonSystem
-          onBackToMain={() => handleSystemChange("main")}
-          toasts={toasts}
-          setToasts={setToasts}
+        <GameMap 
+          showToast={showResult}
+          onOpenSummonSystem={openSummonModal} // Use specific handler
+          onOpenIncubator={() => setIsIncubatorOpen(true)}
+          onOpenPlayerInfo={() => setIsPlayerInfoOpen(true)}
+          onOpenInventory={() => setIsInventoryOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       )}
 
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          pointerEvents: "none",
-          zIndex: 99999,
-        }}
-      >
-        <ToastContainer toasts={toasts} setToasts={setToasts} />
-      </div>
+      <Modal isOpen={isSummonModalOpen} onClose={() => setIsSummonModalOpen(false)} title="召唤兽" maxWidthClass="max-w-5xl">
+        <SummonSystem
+          // onBackToMain is no longer needed as it's a modal
+          toasts={toasts} // Pass if SummonSystem uses toasts directly
+          setToasts={setToasts} // Pass if SummonSystem uses toasts directly
+        />
+      </Modal>
 
-      {currentSystem !== "home" && (
-        <div className="fixed bottom-4 left-4 flex gap-2 z-40">
-          {/* 玩家信息按钮 */}
-          <button
-            onClick={() => setIsPlayerInfoOpen(true)}
-            className="bg-slate-900/70 hover:bg-slate-800/90 
-              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
-              transition-all duration-200 border border-slate-700/50 group"
-          >
-            <i className="fas fa-user text-base text-blue-400"></i>
-            <span className="text-xs font-normal">玩家信息</span>
-          </button>
+      <Modal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="背包" maxWidthClass="max-w-5xl">
+        <InventoryPanel 
+          isOpen={isInventoryOpen} // Pass isOpen to InventoryPanel
+          onClose={() => setIsInventoryOpen(false)} // Pass onClose to InventoryPanel
+          showToast={showResult} // Pass showResult as showToast
+        />
+      </Modal>
 
-          {/* 背包按钮 */}
-          <button
-            onClick={() => setIsInventoryOpen(true)}
-            className="bg-slate-900/70 hover:bg-slate-800/90 
-              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
-              transition-all duration-200 border border-slate-700/50 group"
-          >
-            <i className="fas fa-briefcase text-base text-amber-400"></i>
-            <span className="text-xs font-normal">背包</span>
-          </button>
+      <Modal isOpen={isPlayerInfoOpen} onClose={() => setIsPlayerInfoOpen(false)} title="角色信息" maxWidthClass="max-w-2xl">
+        <PlayerInfo 
+           // isOpen and onClose are handled by Modal component
+        />
+      </Modal>
 
-          {/* 设置按钮 */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="bg-slate-900/70 hover:bg-slate-800/90 
-              text-white p-2.5 rounded-md shadow-md flex items-center gap-1.5 
-              transition-all duration-200 border border-slate-700/50 group"
-          >
-            <i className="fas fa-cog text-base text-purple-400"></i>
-            <span className="text-xs font-normal">设置</span>
-          </button>
-        </div>
-      )}
+      <Modal isOpen={isIncubatorOpen} onClose={() => setIsIncubatorOpen(false)} title="孵化器" maxWidthClass="max-w-4xl">
+        <Incubator 
+          toasts={toasts} // Pass if Incubator uses toasts directly
+          setToasts={setToasts} // Pass if Incubator uses toasts directly
+        />
+      </Modal>
+      
+      <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} title="设置" maxWidthClass="max-w-3xl">
+        <SettingsPanel 
+           // isOpen and onClose are handled by Modal component and removed from SettingsPanel props
+           toasts={toasts} // Pass if SettingsPanel uses toasts directly
+           setToasts={setToasts} // Pass if SettingsPanel uses toasts directly
+        />
+      </Modal>
 
-      {/* 背包面板 */}
-      {currentSystem !== "home" && (
-        <>
-          <InventoryPanel
-            isOpen={isInventoryOpen}
-            onClose={() => setIsInventoryOpen(false)}
-            toasts={toasts}
-            setToasts={setToasts}
-          />
-
-          {/* 玩家信息面板 */}
-          <div
-            className={`fixed inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
-              isPlayerInfoOpen
-                ? "opacity-100 z-50"
-                : "opacity-0 pointer-events-none"
-            }`}
-          >
-            <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-4xl max-h-[90vh] overflow-auto relative">
-              <button
-                onClick={() => setIsPlayerInfoOpen(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-              <PlayerInfo
-                isOpen={isPlayerInfoOpen}
-                onClose={() => setIsPlayerInfoOpen(false)}
-              />
-            </div>
-          </div>
-
-          {/* 孵化器面板 */}
-          <div
-            className={`fixed inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
-              isIncubatorOpen
-                ? "opacity-100 z-50"
-                : "opacity-0 pointer-events-none"
-            }`}
-          >
-            <div className="bg-slate-900 rounded-lg shadow-xl w-[90%] max-w-6xl h-[90vh] overflow-auto relative">
-              <button
-                onClick={() => setIsIncubatorOpen(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-              <Incubator toasts={toasts} setToasts={setToasts} />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* 设置面板 */}
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        toasts={toasts}
-        setToasts={setToasts}
-      />
+      <ToastContainer toasts={toasts} setToasts={setToasts} />
     </div>
   );
 };

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-18 04:59:50
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 05:58:04
+ * @LastEditTime: 2025-05-21 02:21:37
  */
 /** @type {import('tailwindcss').Config} */
 export default {

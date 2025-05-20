@@ -10,6 +10,8 @@ import SummonInfo from "./SummonInfo";
 import PetCatalog from "./PetCatalog";
 import SummonList from "./SummonList";
 import HistoryModal from "../../history/components/HistoryModal";
+import EquippableItemsModal from "./EquippableItemsModal";
+import CrossSummonEquipConfirmModal from "./CrossSummonEquipConfirmModal";
 import { useSummonSystem } from "../hooks/useSummonSystem";
 import { 
   setCurrentSummon,
@@ -32,7 +34,7 @@ import { playerBaseConfig } from "@/config/playerConfig";
 import NicknameModal from "./NicknameModal";
 import { generateUniqueId } from "@/utils/idUtils";
 
-const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
+const SummonSystem = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
   const currentSummon = useSelector(selectCurrentSummonFullData);
   const summonsListObject = useSelector(selectAllSummons);
@@ -55,10 +57,13 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   const [isSkillEditorOpen, setIsSkillEditorOpen] = useState(false);
   const [selectedSkillSlotIndex, setSelectedSkillSlotIndex] = useState(null);
   const [currentSkillForSlot, setCurrentSkillForSlot] = useState(null);
-  const [isSummonListOpen, setIsSummonListOpen] = useState(false);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const [selectedPetForNickname, setSelectedPetForNickname] = useState(null);
   const [tempSummonData, setTempSummonData] = useState(null);
+
+  // State for cross-summon equip confirmation
+  const [showCrossEquipConfirm, setShowCrossEquipConfirm] = useState(false);
+  const [crossEquipDetails, setCrossEquipDetails] = useState(null); // { itemToEquip, originalSummon, targetSummon }
 
   const handleOpenEquipmentSelector = useCallback((slotType) => {
     if (!currentSummon) {
@@ -189,40 +194,131 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
       }
       console.log("[SummonSystem] No summons available or list is empty.");
     }
-    return () => {
-      console.log("[SummonSystem] Component will unmount");
-    };
   }, [summonsList, currentSummon, dispatch]);
 
-  const handleConfirmEquipItem = (itemId) => {
-    if (currentSummon && selectedSlotForEquipping && itemId) {
-      const summonIdToUpdate = currentSummon.id;
-      
-      // 更新物品状态，只保存ID关联
-      dispatch(setItemStatus({
-        id: itemId,
-        isEquipped: true,
-        equippedBy: summonIdToUpdate
-      }));
-      
-      // 装备到召唤兽身上
-      dispatch(equipItemToSummon({ 
-        summonId: summonIdToUpdate, 
-        itemId, 
-        slotType: selectedSlotForEquipping 
-      }));
-      
-      // 重新计算属性
-      dispatch(recalculateSummonStats({ summonId: summonIdToUpdate }));
-      
+  // New handler for when an item is selected from EquippableItemsModal
+  const handleItemSelectedForEquip = (itemToEquip) => {
+    if (!currentSummon || !selectedSlotForEquipping) {
+      console.error("Cannot equip item: current summon or slot type is missing.");
+      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备失败：缺少召唤兽或槽位信息", type: 'error' }]);
+      setIsEquipmentSelectorOpen(false); // Close the selector modal
+      return;
+    }
+
+    if (itemToEquip.isEquipped && itemToEquip.equippedBy && itemToEquip.equippedBy !== currentSummon.id) {
+      // Item is equipped by another summon, need confirmation
+      const originalSummon = summonsListObject[itemToEquip.equippedBy];
+      if (originalSummon) {
+        setCrossEquipDetails({
+          itemToEquip: itemToEquip,
+          originalSummon: originalSummon,
+          targetSummon: currentSummon, // currentSummon is the one we want to equip to
+          slotType: selectedSlotForEquipping
+        });
+        setShowCrossEquipConfirm(true);
+        setIsEquipmentSelectorOpen(false); // Close item selector, open confirm modal
+      } else {
+        // Should not happen if data is consistent, but as a fallback, treat as unequipped
+        console.warn(`Item ${itemToEquip.name} reported as equipped by ${itemToEquip.equippedBy}, but summon not found. Proceeding to equip directly.`);
+        processDirectEquip(itemToEquip, currentSummon.id, selectedSlotForEquipping);
+        setIsEquipmentSelectorOpen(false);
+      }
+    } else if (itemToEquip.equippedBy === currentSummon.id) {
+      // Item already equipped by the current summon (likely in a different slot if UI allows, or same slot)
+      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: `${itemToEquip.name} 已装备于当前召唤兽。`, type: 'info' }]);
+      setIsEquipmentSelectorOpen(false); // Close the selector modal
+    } else {
+      // Item is not equipped or equipped by current (which is handled above), proceed to equip directly
+      processDirectEquip(itemToEquip, currentSummon.id, selectedSlotForEquipping);
+      setIsEquipmentSelectorOpen(false); // Close the selector modal
+    }
+  };
+
+  // Helper function for direct equip logic (item is available or confirmed for taking)
+  const processDirectEquip = (itemToEquip, summonId, slotType) => {
+    const targetSummon = summonsListObject[summonId];
+    if (!targetSummon) {
+      console.error(`[SummonSystem] Target summon ${summonId} not found for equipping.`);
       setToasts(prev => [...prev, { 
         id: generateUniqueId('toast'),
-        message: `物品已装备到 ${selectedSlotForEquipping}`, 
-        type: 'success' 
+        message: `装备失败：未找到目标召唤兽 ${summonId}`,
+        type: 'error' 
       }]);
+      return;
     }
-    setIsEquipmentSelectorOpen(false);
+
+    const oldItemIdInSlot = targetSummon.equippedItemIds?.[slotType];
+
+    if (oldItemIdInSlot && oldItemIdInSlot !== itemToEquip.id) {
+      // Dispatch setItemStatus for the old item to mark it as unequipped
+      dispatch(setItemStatus({
+        id: oldItemIdInSlot,
+        isEquipped: false,
+        equippedBy: null,
+        equippedBySummonName: null 
+      }));
+      // Note: The summon's equippedItemIds will be updated by the subsequent equipItemToSummon call.
+      // We might also need to recalculate stats for the summon *after* this old item is virtually unequipped
+      // and *before* the new one is equipped, if interim state matters. For now, one recalc at the end.
+    }
+
+    // Update item status for the new item
+    dispatch(setItemStatus({
+      id: itemToEquip.id,
+      isEquipped: true,
+      equippedBy: summonId,
+      equippedBySummonName: targetSummon.nickname || targetSummon.name || '召唤兽'
+    }));
+    
+    // Equip to summon (this will overwrite summon.equippedItemIds[slotType])
+    dispatch(equipItemToSummon({ 
+      summonId: summonId, 
+      itemId: itemToEquip.id, 
+      slotType: slotType 
+    }));
+    
+    // Recalculate stats for the summon with the new item
+    dispatch(recalculateSummonStats({ summonId: summonId }));
+    
+    setToasts(prev => [...prev, { 
+      id: generateUniqueId('toast'),
+      message: `${itemToEquip.name} 已成功装备到 ${slotType}`, 
+      type: 'success' 
+    }]);
+    // Reset states
     setSelectedSlotForEquipping(null);
+  };
+
+  // Handler for confirming cross-summon equip
+  const handleConfirmCrossEquip = () => {
+    if (!crossEquipDetails) return;
+    const { itemToEquip, originalSummon, targetSummon, slotType } = crossEquipDetails;
+
+    // 1. Unequip from original summon
+    dispatch(setItemStatus({ 
+      id: itemToEquip.id, 
+      isEquipped: false, // This will be set to true again for the new summon
+      equippedBy: null, 
+      equippedBySummonName: null 
+    }));
+    dispatch(unequipItemFromSummon({ 
+      summonId: originalSummon.id, 
+      itemId: itemToEquip.id, 
+      slotType: itemToEquip.slotType || itemToEquip.category // Use item's own slotType for unequip
+    }));
+    dispatch(recalculateSummonStats({ summonId: originalSummon.id }));
+
+    // 2. Equip to target summon (using the helper)
+    processDirectEquip(itemToEquip, targetSummon.id, slotType);
+
+    setToasts(prev => [...prev, { 
+      id: generateUniqueId('toast'),
+      message: `${itemToEquip.name} 已从 ${originalSummon.name} 卸下并装备给 ${targetSummon.name}`, 
+      type: 'success' 
+    }]);
+
+    setShowCrossEquipConfirm(false);
+    setCrossEquipDetails(null);
   };
 
   const handleUnequipItem = () => {
@@ -282,111 +378,132 @@ const SummonSystem = ({ onBackToMain, toasts, setToasts }) => {
   };
 
   return (
-    <div className="game-viewport bg-slate-900 min-h-screen">
-      <main className="game-panel rounded-xl shadow-2xl shadow-purple-500/20 relative">
-        <div className="bg-gradient-to-br from-slate-800 via-purple-900/50 to-slate-800 rounded-xl p-3 shadow-lg flex-grow flex flex-col">
-          <div className="flex-grow overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <button
-                onClick={onBackToMain}
-                className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-gray-200 rounded-lg text-sm transition-colors duration-200 flex items-center"
-              >
-                <i className="fa-solid fa-arrow-left mr-2"></i>
-                返回主菜单
-              </button>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => setIsSummonListOpen(true)} 
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg text-sm transition-all duration-300 flex items-center shadow-lg hover:shadow-blue-500/30 border border-blue-400/30"
-                >
-                  <i className="fa-solid fa-list mr-2 text-blue-200"></i>
-                  <span>选择召唤兽 ({summonsList.length}/{maxSummons})</span>
-                </button>
-                <button 
-                  onClick={() => setIsPetCatalogModalOpen(true)} 
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg text-sm transition-all duration-300 flex items-center shadow-lg hover:shadow-purple-500/30 border border-purple-400/30"
-                >
-                  <i className="fa-solid fa-paw mr-2 text-purple-200"></i>
-                  <span>{uiText.buttons.petCatalog || "召唤兽图鉴"}</span>
-                </button>
-                <button 
-                  onClick={() => setIsHistoryModalOpen(true)} 
-                  className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-lg text-sm transition-all duration-300 flex items-center shadow-lg hover:shadow-amber-500/30 border border-amber-400/30"
-                >
-                  <i className="fa-solid fa-scroll mr-2 text-amber-200"></i>
-                  <span>{uiText.buttons.refineHistory || "炼妖历史"}</span>
-                </button>
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center">
-              <i className="fa-solid fa-dragon text-amber-400 mr-2" />
-              <span>召唤兽系统</span>
-            </h2>
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-grow grid grid-cols-1 md:grid-cols-6 gap-4 p-4 overflow-y-auto">
+        <div className="md:col-span-1 flex flex-col gap-2">
+          <button 
+            onClick={handleRefineMonster} 
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+          >
+            炼妖 (洗宠)
+          </button>
+          
+          {currentSummon && (
+            <button 
+              onClick={() => setIsHistoryModalOpen(true)} 
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+            >
+              培养历史
+            </button>
+          )}
+          <button 
+            onClick={() => setIsPetCatalogModalOpen(true)} 
+            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+          >
+            召唤兽图鉴
+          </button>
 
-            {!currentSummon ? (
-              <div className="text-center text-white p-10">
-                <p>{uiText.notifications.noSummonData}</p>
-                <button 
-                  onClick={handleRefineMonster}
-                  className="mt-4 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors"
-                  disabled={summonsList.length >= maxSummons}
-                >
-                  <i className="fa-solid fa-flask mr-2"></i> {uiText.buttons.refineToGetSummon}
-                </button>
-                {summonsList.length >= maxSummons && (
-                  <p className="mt-2 text-amber-400">
-                    当前等级({playerLevel})最多可拥有{maxSummons}个召唤兽，请提升等级或释放一些召唤兽
-                  </p>
-                )}
-              </div>
-            ) : (
-            <SummonInfo
-                onOpenEquipmentSelectorForSlot={handleOpenEquipmentSelector}
-                onOpenSkillEditorForSlot={handleOpenSkillEditor}
-                onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}
-            />
-            )}
-            
-            <div className="flex justify-center mt-4 mb-4 gap-4">
-              <button
-                id="refineBtn"
-                className="px-6 py-3 bg-slate-700 hover:bg-amber-600 text-gray-100 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-500/50 flex items-center border-2 border-slate-600 hover:border-amber-500"
-                onClick={handleRefineMonster}
-              >
-                <i className="fa-solid fa-flask mr-2"></i> {uiText.buttons.refine || "炼妖"}
-              </button>
+          <div className="bg-slate-800/70 p-2 rounded-lg shadow mt-2 flex-grow flex flex-col min-h-0">
+            <h3 className="text-sm font-semibold text-slate-300 mb-2 px-1 flex-shrink-0">
+              我的召唤兽 ({summonsList.length}/{maxSummons})
+            </h3>
+            <div className="overflow-y-auto space-y-1 pr-1 flex-grow min-h-0">
+              {summonsList.length > 0 ? (
+                summonsList.map(pet => (
+                  <button
+                    key={pet.id}
+                    onClick={() => dispatch(setCurrentSummon(pet.id))}
+                    className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors duration-150 
+                                ${currentSummon?.id === pet.id 
+                                  ? 'bg-blue-600 text-white font-medium shadow-md' 
+                                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100'}`}
+                    title={pet.name}
+                  >
+                    {pet.nickname || pet.name}
+                  </button>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 px-1 py-2">暂无召唤兽</p>
+              )}
             </div>
           </div>
         </div>
-      </main>
 
-      {isHistoryModalOpen && (
-      <HistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-          history={historyList}
-      />
+        <div className="md:col-span-5 bg-slate-700/50 p-4 rounded-lg shadow-inner overflow-y-auto min-h-[450px]">
+          {currentSummon ? (
+            <SummonInfo
+              summon={currentSummon}
+              onOpenEquipmentSelectorForSlot={handleOpenEquipmentSelector}
+              onLearnSkill={handleOpenSkillEditor}
+              onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}
+            />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-10">
+              <i className="fas fa-dragon text-4xl mb-4 text-slate-500"></i>
+              <p>请先选择或召唤一只召唤兽。</p>
+              <p className="text-xs mt-2">您可以从左侧列表选择，或点击"炼妖"获取新的召唤兽。</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isHistoryModalOpen && currentSummon && (
+        <HistoryModal 
+          isOpen={isHistoryModalOpen} 
+          onClose={() => setIsHistoryModalOpen(false)} 
+          history={historyList[currentSummon.id] || []} 
+          summonName={currentSummon.name} 
+        />
       )}
+
       {isPetCatalogModalOpen && (
-      <PetCatalog
-        isOpen={isPetCatalogModalOpen}
-        onClose={() => setIsPetCatalogModalOpen(false)}
-      />
-      )}
-      {isSummonListOpen && (
-        <SummonList
-          isOpen={isSummonListOpen}
-          onClose={() => setIsSummonListOpen(false)}
+        <PetCatalog 
+          isOpen={isPetCatalogModalOpen} 
+          onClose={() => setIsPetCatalogModalOpen(false)} 
         />
       )}
+      
       {isNicknameModalOpen && (
-        <NicknameModal
-          isOpen={isNicknameModalOpen}
-          onClose={() => setIsNicknameModalOpen(false)}
-          onConfirm={handleNicknameConfirm}
-          petName={selectedPetForNickname?.name}
+        <NicknameModal 
+          isOpen={isNicknameModalOpen} 
+          onClose={() => {
+            setIsNicknameModalOpen(false);
+            setSelectedPetForNickname(null);
+            setTempSummonData(null);
+          }}
+          onConfirm={handleNicknameConfirm} 
+          initialNickname={selectedPetForNickname?.nickname || ''}
+          petName={selectedPetForNickname?.name || ''}
         />
       )}
+
+      {/* Equipment Selector Modal */}
+      {currentSummon && (
+        <EquippableItemsModal
+          isOpen={isEquipmentSelectorOpen}
+          onClose={() => {
+            setIsEquipmentSelectorOpen(false);
+            setSelectedSlotForEquipping(null);
+          }}
+          slotType={selectedSlotForEquipping}
+          currentSummonId={currentSummon.id}
+          onItemSelected={handleItemSelectedForEquip}
+        />
+      )}
+
+      {/* Cross-Summon Equip Confirmation Modal */}
+      <CrossSummonEquipConfirmModal
+        isOpen={showCrossEquipConfirm}
+        details={crossEquipDetails}
+        onConfirm={handleConfirmCrossEquip}
+        onCancel={() => {
+          setShowCrossEquipConfirm(false);
+          setCrossEquipDetails(null);
+          // Optionally, re-open item selector or reset further state if needed
+          setSelectedSlotForEquipping(null); // Clear selected slot as the action was cancelled
+          setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "已取消为其他召唤兽装备物品。", type: 'info' }]);
+        }}
+      />
     </div>
   );
 };
