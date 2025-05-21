@@ -1,5 +1,6 @@
 // src/config/mapConfig.js
 import { createNoise2D } from 'simplex-noise'; // 更新导入方式
+import { npcs } from './npcConfig.js'; // <--- 添加导入
 
 // 定义地图单元格类型
 export const CELL_TYPES = {
@@ -21,16 +22,7 @@ export const TILE_CONTENT_TYPES = {
 };
 
 // Example Data Definitions (can be expanded and moved to separate files later)
-export const npcs = {
-  npc_001: { 
-    id: 'npc_001', 
-    name: '老村长', 
-    sprite: 'elder.png', // Placeholder sprite
-    dialogueKey: 'elder_welcome', // Key for uiTextConfig or other dialogue system
-    questsToStart: ['quest_001'],
-  },
-  npc_002: { id: 'npc_002', name: '铁匠铺老板', sprite: 'blacksmith.png', dialogueKey: 'blacksmith_services' },
-};
+// const npcs = { ... }; // <--- 移除这部分
 
 export const monsters = {
   monster_001: {
@@ -65,8 +57,8 @@ export const MAP_VIEW_CONFIG = {
 };
 
 // --- 新的地图生成逻辑 ---
-const defaultMapRows = 50;
-const defaultMapCols = 50;
+const defaultMapRows = 30;
+const defaultMapCols = 30;
 
 // 创建 2D 噪声函数实例 (暂时不使用种子)
 const baseNoise2D = createNoise2D(); 
@@ -251,3 +243,170 @@ export const initialMapData = {
 };
 
 // 也可以在这里定义一些地图相关的辅助函数，例如获取特定单元格数据等 
+
+// 添加地图生成函数供世界地图使用
+export const generateMapGrid = (rows, cols, options = {}) => {
+  const {
+    seed = Math.random(),
+    terrainDistribution = {
+      [CELL_TYPES.GRASS.id]: 0.5,
+      [CELL_TYPES.FOREST.id]: 0.2,
+      [CELL_TYPES.WATER.id]: 0.15,
+      [CELL_TYPES.MOUNTAIN.id]: 0.15,
+    },
+    noiseScale = 70,
+    octaves = 4,
+    persistence = 0.5,
+    lacunarity = 2.0
+  } = options;
+
+  // 创建噪声函数
+  const baseNoise2D = createNoise2D();
+  
+  // 噪声生成函数
+  const generateFractalNoise = (x, y, scale) => {
+    let total = 0;
+    let frequency = 1;
+    let amplitude = 1;
+    let maxValue = 0; 
+
+    for (let i = 0; i < octaves; i++) {
+      total += baseNoise2D((x + seed) * frequency / scale, (y + seed) * frequency / scale) * amplitude;
+      
+      maxValue += amplitude;
+      amplitude *= persistence;
+      frequency *= lacunarity;
+    }
+    return (total / maxValue + 1) / 2; // 映射到 [0, 1]
+  };
+  
+  // 生成地图网格
+  const grid = [];
+  for (let i = 0; i < rows; i++) {
+    const row = [];
+    for (let j = 0; j < cols; j++) {
+      const noiseValue = generateFractalNoise(j, i, noiseScale);
+      
+      // 根据噪声值和地形分布来确定单元格类型
+      let cellType = CELL_TYPES.GRASS.id; // 默认为草地
+      let accumulatedProbability = 0;
+      
+      // 根据地形分布概率确定单元格类型
+      for (const [type, probability] of Object.entries(terrainDistribution)) {
+        accumulatedProbability += probability;
+        if (noiseValue < accumulatedProbability) {
+          cellType = type;
+          break;
+        }
+      }
+      
+      row.push({ type: cellType, content: null });
+    }
+    grid.push(row);
+  }
+
+  // 处理特殊区域 - 如城镇
+  if (terrainDistribution[CELL_TYPES.TOWN.id] > 0) {
+    // 在一个较好的位置放置城镇（偏向中心）
+    const townSize = 5;
+    const townCenterX = Math.floor(cols / 2) + Math.floor(Math.random() * 6) - 3;
+    const townCenterY = Math.floor(rows / 2) + Math.floor(Math.random() * 6) - 3;
+    
+    const townStartX = Math.max(0, townCenterX - Math.floor(townSize / 2));
+    const townEndX = Math.min(cols - 1, townCenterX + Math.floor(townSize / 2));
+    const townStartY = Math.max(0, townCenterY - Math.floor(townSize / 2));
+    const townEndY = Math.min(rows - 1, townCenterY + Math.floor(townSize / 2));
+    
+    for (let y = townStartY; y <= townEndY; y++) {
+      for (let x = townStartX; x <= townEndX; x++) {
+        // 避免在水上建城
+        if (grid[y][x].type !== CELL_TYPES.WATER.id) {
+          grid[y][x].type = CELL_TYPES.TOWN.id;
+        }
+      }
+    }
+  }
+
+  // 放置一些NPC、怪物和资源
+  placeMapContent(grid, rows, cols);
+  
+  return grid;
+};
+
+// 在地图上放置内容（NPC、怪物、资源等）
+const placeMapContent = (grid, rows, cols) => {
+  // 放置NPC
+  let npcPlaced = false;
+  const townCells = [];
+  
+  // 找出所有城镇单元格
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (grid[i][j].type === CELL_TYPES.TOWN.id) {
+        townCells.push({ row: i, col: j });
+      }
+    }
+  }
+  
+  // 如果有城镇，在城镇放NPC
+  if (townCells.length > 0) {
+    const randomTownCell = townCells[Math.floor(Math.random() * townCells.length)];
+    grid[randomTownCell.row][randomTownCell.col].content = { 
+      type: TILE_CONTENT_TYPES.NPC, 
+      id: 'npc_001' 
+    };
+    npcPlaced = true;
+  }
+  
+  // 如果没有城镇或没放置成功，随机放置NPC
+  if (!npcPlaced) {
+    for (let i = 0; i < 50 && !npcPlaced; i++) {
+      const randRow = Math.floor(Math.random() * rows);
+      const randCol = Math.floor(Math.random() * cols);
+      if (grid[randRow][randCol].type !== CELL_TYPES.WATER.id && 
+          grid[randRow][randCol].type !== CELL_TYPES.MOUNTAIN.id) {
+        grid[randRow][randCol].content = { 
+          type: TILE_CONTENT_TYPES.NPC, 
+          id: 'npc_001' 
+        };
+        npcPlaced = true;
+      }
+    }
+  }
+  
+  // 放置怪物
+  for (let i = 0; i < Math.max(3, Math.floor(rows * cols * 0.01)); i++) {
+    let monsterPlaced = false;
+    for (let j = 0; j < 20 && !monsterPlaced; j++) {
+      const randRow = Math.floor(Math.random() * rows);
+      const randCol = Math.floor(Math.random() * cols);
+      const cell = grid[randRow][randCol];
+      
+      if ((cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) && !cell.content) {
+        cell.content = { 
+          type: TILE_CONTENT_TYPES.MONSTER, 
+          id: 'monster_001' 
+        };
+        monsterPlaced = true;
+      }
+    }
+  }
+  
+  // 放置资源
+  for (let i = 0; i < Math.max(2, Math.floor(rows * cols * 0.005)); i++) {
+    let resourcePlaced = false;
+    for (let j = 0; j < 20 && !resourcePlaced; j++) {
+      const randRow = Math.floor(Math.random() * rows);
+      const randCol = Math.floor(Math.random() * cols);
+      const cell = grid[randRow][randCol];
+      
+      if (cell.type !== CELL_TYPES.TOWN.id && cell.type !== CELL_TYPES.WATER.id && !cell.content) {
+        cell.content = { 
+          type: TILE_CONTENT_TYPES.RESOURCE, 
+          id: 'res_001' 
+        };
+        resourcePlaced = true;
+      }
+    }
+  }
+}; 

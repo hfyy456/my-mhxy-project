@@ -223,3 +223,34 @@ html {
     @apply bg-quality-mythic;
   }
 }
+
+/* 加载动画 */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse-slow {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes spin-slower {
+  to {
+    transform: rotate(180deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+.animate-spin-reverse-slow {
+  animation: spin-reverse-slow 1.5s linear infinite;
+}
+
+.animate-spin-slower {
+  animation: spin-slower 2.5s linear infinite;
+}

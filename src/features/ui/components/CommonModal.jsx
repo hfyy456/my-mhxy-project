@@ -2,11 +2,21 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 03:14:12
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-17 03:56:34
+ * @LastEditTime: 2025-05-22 03:05:56
  */
 import React, { useEffect, useRef } from 'react';
 
-const CommonModal = ({ isOpen, onClose, title, children, className = "" }) => {
+const CommonModal = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  className = "",
+  style = {},
+  contentStyle = {},
+  maxWidthClass = "max-w-4xl",
+  centerContent = false
+}) => {
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
 
@@ -57,10 +67,11 @@ const CommonModal = ({ isOpen, onClose, title, children, className = "" }) => {
     >
       <div 
         ref={modalRef} 
-        className={`bg-slate-800 rounded-xl mx-4 max-h-[80vh] transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${className || 'w-full max-w-4xl'}`}
+        className={`bg-slate-800 rounded-xl mx-4 transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${className || `w-full ${maxWidthClass}`}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        style={style}
       >
         {/* Fixed Header */}
         <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-slate-700">
@@ -74,8 +85,11 @@ const CommonModal = ({ isOpen, onClose, title, children, className = "" }) => {
             <i className="fa-solid fa-times text-xl"></i>
           </button>
         </div>
-        {/* Scrollable Content Area */}
-        <div className="overflow-y-auto px-6 pb-6 pt-4 flex-grow">
+        {/* Content Area */}
+        <div 
+          className={`flex-grow ${centerContent ? 'flex items-center justify-center' : 'overflow-y-auto'}`}
+          style={contentStyle}
+        >
           {children}
         </div>
       </div>

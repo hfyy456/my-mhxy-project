@@ -13,6 +13,7 @@ import petCatalogReducer from '@/store/slices/petCatalogSlice';
 import saveReducer from '@/store/slices/saveSlice';
 import questReducer from '@/store/slices/questSlice';
 import mapReducer from '@/store/slices/mapSlice';
+import npcReducer from '@/store/slices/npcSlice';
 
 const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ const store = configureStore({
     saves: saveReducer,
     quests: questReducer,
     map: mapReducer,
+    npcs: npcReducer,
   },
 });
 
