@@ -14,7 +14,13 @@ import {
   // levelExperienceRequirements // Not directly used here, summonSlice will handle
 } from "@/config/config";
 import { petEquipmentConfig } from "@/config/petEquipmentConfig";
-import { SKILL_MODES } from './config/enumConfig';
+import { 
+  SKILL_MODES,
+  UNIQUE_ID_PREFIXES,
+  REFINEMENT_SOURCES,
+  SKILL_OPERATION_OUTCOMES,
+  QUALITY_TYPES
+} from './config/enumConfig';
 import { 
   uiText, 
   getRaceTypeDisplayName,
@@ -65,7 +71,7 @@ export const getRandomEquipment = () => {
   // 注意：这个对象现在是纯数据，用于后续 dispatch(addItem(newEquipmentData))。
   // finalEffects 将由 itemSlice.addItem reducer 计算。
   const newEquipmentData = {
-    id: generateUniqueId('item'),
+    id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
     name: randomEquipmentConfig.name, // 必须与 petEquipmentConfig.js 中的 name 匹配
     quality: randomQuality,
     level: 1, // 初始等级为1
@@ -108,7 +114,7 @@ export const refineMonster = (playerLevel) => {
   const newSummon = generateNewSummon({
     petId: selectedPetId,
     quality: quality,
-    source: 'refinement'
+    source: REFINEMENT_SOURCES.REFINEMENT
   });
 
   // 准备历史记录
@@ -126,13 +132,13 @@ export const refineMonster = (playerLevel) => {
 
   // 从配置中获取经验值
   const qualityMap = {
-    '普通': 'normal',
-    '稀有': 'rare',
-    '史诗': 'epic',
-    '传说': 'legendary',
-    '神话': 'mythic'
+    [getQualityDisplayName(QUALITY_TYPES.NORMAL)]: QUALITY_TYPES.NORMAL,
+    [getQualityDisplayName(QUALITY_TYPES.RARE)]: QUALITY_TYPES.RARE,
+    [getQualityDisplayName(QUALITY_TYPES.EPIC)]: QUALITY_TYPES.EPIC,
+    [getQualityDisplayName(QUALITY_TYPES.LEGENDARY)]: QUALITY_TYPES.LEGENDARY,
+    [getQualityDisplayName(QUALITY_TYPES.MYTHIC)]: QUALITY_TYPES.MYTHIC
   };
-  const experienceGained = experienceConfig.refinement[qualityMap[quality]] || experienceConfig.refinement.normal;
+  const experienceGained = experienceConfig.refinement[qualityMap[getQualityDisplayName(quality)]] || experienceConfig.refinement.normal;
 
   return {
     newSummonPayload: newSummon,
@@ -152,7 +158,7 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
   const availableSkills = skillConfig.filter(skill => skill.level <= maxSkillBookLevel);
   if (availableSkills.length === 0) {
     return {
-      outcome: 'FAILURE_LEVEL_RESTRICTION',
+      outcome: SKILL_OPERATION_OUTCOMES.FAILURE_LEVEL_RESTRICTION,
       message: `当前等级(${playerLevel})无法使用任何技能书，需要提升等级。`,
       experienceGained: 0
     };
@@ -163,7 +169,7 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
 
   if (successProbability >= probabilityConfig.bookSuccessRate) {
     return {
-      outcome: 'FAILURE_NO_SKILL_CHANGE',
+      outcome: SKILL_OPERATION_OUTCOMES.FAILURE_NO_SKILL_CHANGE,
       message: "打书失败，技能未添加",
       skillAttempted: skillId,
       experienceGained: experienceConfig.skillBook.failure
@@ -173,7 +179,7 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
   const skillInfo = skillConfig.find((s) => s.id === skillId);
   if (!skillInfo) {
     return { 
-      outcome: 'FAILURE_CONFIG_NOT_FOUND', 
+      outcome: SKILL_OPERATION_OUTCOMES.FAILURE_CONFIG_NOT_FOUND, 
       message: `打书失败：技能 ${skillId} 配置未找到。`, 
       skillAttempted: skillId,
       experienceGained: experienceConfig.skillBook.failure
@@ -187,7 +193,7 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
 
   if (skillInfo.mode === SKILL_MODES.ACTIVE && activeSkillsCount >= 2) {
     return {
-      outcome: 'FAILURE_ACTIVE_SKILL_LIMIT',
+      outcome: SKILL_OPERATION_OUTCOMES.FAILURE_ACTIVE_SKILL_LIMIT,
       message: "打书失败：最多只能拥有2个主动技能。",
       skillAttempted: skillId,
       currentActiveSkills: activeSkillsCount,
@@ -197,21 +203,21 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
 
   if (currentSkillSet.includes(skillId)) {
     return {
-      outcome: 'SUCCESS_SKILL_ALREADY_PRESENT',
+      outcome: SKILL_OPERATION_OUTCOMES.SUCCESS_SKILL_ALREADY_PRESENT,
       skill: skillId,
       message: `打书成功！但是技能 "${skillInfo.name}" 已存在，无需添加。`,
       experienceGained: experienceConfig.skillBook.success
     };
   } else if (currentSkillSet.length >= 12) {
     return {
-      outcome: 'SUCCESS_REPLACEMENT_NEEDED',
+      outcome: SKILL_OPERATION_OUTCOMES.SUCCESS_REPLACEMENT_NEEDED,
       pendingSkill: skillId,
       message: "打书成功！但技能列表已满 (12/12)，需要替换一个旧技能。",
       experienceGained: experienceConfig.skillBook.success
     };
   } else {
     return {
-      outcome: 'SUCCESS_ADD_SKILL',
+      outcome: SKILL_OPERATION_OUTCOMES.SUCCESS_ADD_SKILL,
       skillToAdd: skillId,
       skillInfo: skillInfo,
       message: `打书成功！获得技能：${skillInfo.name} (${skillInfo.description})`,
@@ -223,7 +229,7 @@ export const bookSkill = (summonId, currentSkillSet, playerLevel) => {
 export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkillId) => {
   if (!pendingSkillId || !currentSkillSet || currentSkillSet.length === 0) {
     return { 
-      outcome: 'INVALID_OPERATION',
+      outcome: SKILL_OPERATION_OUTCOMES.INVALID_OPERATION,
       message: "操作无效，没有待定技能或召唤兽没有技能可替换。"
     };
   }
@@ -235,7 +241,7 @@ export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkillId) =
   const replacedSkillInfo = skillConfig.find((s) => s.id === replacedSkillId);
 
   return {
-    outcome: 'SKILL_REPLACED',
+    outcome: SKILL_OPERATION_OUTCOMES.SKILL_REPLACED,
     summonId: summonId,
     skillAdded: pendingSkillId,
     skillRemoved: replacedSkillId,

@@ -1,11 +1,14 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { INITIAL_INVENTORY_CAPACITY, INITIAL_GOLD } from "@/config/config";
+import { uiText } from "@/config/uiTextConfig";
+import { SORT_ORDERS } from "@/config/enumConfig";
 
 const inventorySlice = createSlice({
   name: 'inventory',
   initialState: {
     slots: {},  // 背包格子映射，key为格子ID，value为物品ID
-    capacity: 20,  // 背包总容量
-    gold: 0,  // 金币
+    capacity: INITIAL_INVENTORY_CAPACITY,  // 背包总容量
+    gold: INITIAL_GOLD,  // 金币
     loading: false,
     error: null,
   },
@@ -31,7 +34,7 @@ const inventorySlice = createSlice({
           state.slots[emptySlot] = itemId;
         } else {
           // 背包已满，可以在这里设置错误状态
-          state.error = '背包已满';
+          state.error = uiText.messages.inventoryFull;
         }
       }
     },
@@ -93,8 +96,8 @@ const inventorySlice = createSlice({
     // 重置背包
     resetInventory: (state) => {
       state.slots = {};
-      state.capacity = 20;
-      state.gold = 0;
+      state.capacity = INITIAL_INVENTORY_CAPACITY;
+      state.gold = INITIAL_GOLD;
       state.loading = false;
       state.error = null;
     },
@@ -111,7 +114,7 @@ const inventorySlice = createSlice({
 
     // 对背包物品进行排序
     sortInventory: (state, action) => {
-      const { sortType, sortOrder = 'asc' } = action.payload;
+      const { sortType, sortOrder = SORT_ORDERS.ASC } = action.payload;
       const currentSlots = { ...state.slots };
       const itemIds = Object.values(currentSlots).filter(id => id !== null);
       
@@ -122,7 +125,7 @@ const inventorySlice = createSlice({
       let sortedItemIds = [...itemIds];
       
       // 排序逻辑将在组件中实现，这里只负责重新分配格子
-      if (sortOrder === 'desc') {
+      if (sortOrder === SORT_ORDERS.DESC) {
         sortedItemIds.reverse();
       }
       
@@ -139,7 +142,7 @@ const inventorySlice = createSlice({
       return {
         slots: action.payload.slots || {},
         capacity: action.payload.capacity || state.capacity,
-        gold: action.payload.gold || 0,
+        gold: action.payload.gold !== undefined ? action.payload.gold : state.gold,
         loading: false,
         error: null
       };
@@ -161,7 +164,8 @@ export const {
   resetInventory,
   setLoading,
   setError,
-  sortInventory
+  sortInventory,
+  setState
 } = inventorySlice.actions;
 
 // 导出选择器

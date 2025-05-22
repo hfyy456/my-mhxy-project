@@ -6,6 +6,7 @@
  */
 import store from '@/store';
 import { createSave, setCurrentSaveId } from '@/store/slices/saveSlice';
+import { LOCAL_STORAGE_SAVES_KEY } from "@/config/config";
 
 // 获取需要保存的游戏状态
 const getGameState = () => {
@@ -33,13 +34,13 @@ export const createNewSave = (description = '') => {
     }));
 
     // 同时保存到 localStorage
-    const saves = JSON.parse(localStorage.getItem('mhxy_saves') || '{}');
+    const saves = JSON.parse(localStorage.getItem(LOCAL_STORAGE_SAVES_KEY) || '{}');
     saves[saveId] = {
       data: gameState,
       description,
       timestamp: Date.now(),
     };
-    localStorage.setItem('mhxy_saves', JSON.stringify(saves));
+    localStorage.setItem(LOCAL_STORAGE_SAVES_KEY, JSON.stringify(saves));
 
     return true;
   } catch (error) {
@@ -51,7 +52,7 @@ export const createNewSave = (description = '') => {
 // 从 localStorage 加载存档
 export const loadSavesFromStorage = () => {
   try {
-    const saves = JSON.parse(localStorage.getItem('mhxy_saves') || '{}');
+    const saves = JSON.parse(localStorage.getItem(LOCAL_STORAGE_SAVES_KEY) || '{}');
     return saves;
   } catch (error) {
     console.error('加载存档失败:', error);
@@ -122,7 +123,7 @@ export const loadSave = (saveId) => {
 
     // 更新 localStorage 中的存档时间
     saves[saveId].timestamp = Date.now();
-    localStorage.setItem('mhxy_saves', JSON.stringify(saves));
+    localStorage.setItem(LOCAL_STORAGE_SAVES_KEY, JSON.stringify(saves));
 
     return true;
   } catch (error) {
@@ -137,7 +138,7 @@ export const deleteSave = (saveId) => {
     // 从 localStorage 中删除
     const saves = loadSavesFromStorage();
     delete saves[saveId];
-    localStorage.setItem('mhxy_saves', JSON.stringify(saves));
+    localStorage.setItem(LOCAL_STORAGE_SAVES_KEY, JSON.stringify(saves));
 
     // 从 Redux store 中删除
     store.dispatch({

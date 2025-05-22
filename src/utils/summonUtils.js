@@ -9,6 +9,7 @@ import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } fr
 import { getRaceBonus } from '@/config/raceConfig';
 import { unlockPet } from '@/store/slices/petCatalogSlice';
 import { generateUniqueId } from '@/utils/idUtils';
+import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from "@/config/enumConfig";
 
 /**
  * 计算召唤兽的派生属性
@@ -58,12 +59,20 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
       value += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
     }
 
-    // 检查装备是否直接增加这个派生属性
     if (equipmentContributions.hasOwnProperty(attrKey) && !basicAttributesWithPoints.hasOwnProperty(attrKey)) {
       value += equipmentContributions[attrKey];
     }
     
-    if (["critRate", "critDamage", "dodgeRate"].includes(attrKey)) {
+    // Corrected: Use EQUIPMENT_EFFECT_TYPES and ensure values are compared consistently (e.g., all lowercase)
+    // Assuming attrKey from derivedAttributeConfig is 'critRate', 'critDamage', 'dodgeRate'
+    // and EQUIPMENT_EFFECT_TYPES values are also these exact strings.
+    const criticalAttributeKeys = [
+      EQUIPMENT_EFFECT_TYPES.CRIT_RATE,
+      EQUIPMENT_EFFECT_TYPES.CRIT_DAMAGE,
+      EQUIPMENT_EFFECT_TYPES.DODGE_RATE
+    ];
+
+    if (criticalAttributeKeys.includes(attrKey)) {
       derived[attrKey] = parseFloat(value.toFixed(5));
     } else {
       derived[attrKey] = Math.floor(value);
@@ -94,7 +103,7 @@ export const getExperienceForLevel = (level) => {
  * @param {Object} params - 生成召唤兽所需的参数
  * @param {string} params.petId - 召唤兽的ID
  * @param {string} params.quality - 召唤兽的品质
- * @param {'incubation' | 'refinement' | 'capture' | 'gift'} params.source - 召唤兽的来源
+ * @param {SUMMON_SOURCES[keyof SUMMON_SOURCES]} params.source - 召唤兽的来源 (using enum values)
  * @param {Function} params.dispatch - Redux dispatch 函数
  * @returns {Object} 新的召唤兽数据
  */
@@ -112,8 +121,7 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
     throw new Error(`找不到召唤兽配置：${petId}`);
   }
 
-  // 生成唯一ID
-  const summonId = generateUniqueId('summon');
+  const summonId = generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON);
 
   // 基础数据结构
   const newSummon = {
@@ -141,8 +149,8 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
     skillSet: petData.initialSkills || [],
     equippedItemIds: {},
     race: petData.race,
-    source: source, // 记录召唤兽的来源
-    obtainedAt: new Date().toISOString(), // 获得时间
+    source: source,
+    obtainedAt: new Date().toISOString(),
   };
 
   // 根据品质调整属性

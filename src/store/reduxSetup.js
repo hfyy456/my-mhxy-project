@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-18 01:36:41
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-22 18:29:42
+ */
 /**
  * 此文件负责设置和初始化整个Redux状态管理系统与现有系统的集成
  */

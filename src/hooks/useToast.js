@@ -6,10 +6,11 @@
  */
 import { useCallback } from 'react';
 import { generateUniqueId } from '@/utils/idUtils';
+import { UNIQUE_ID_PREFIXES, TOAST_TYPES } from "@/config/enumConfig";
+import { TOAST_ICON_CLASSES } from "@/config/config";
 
 export const useToast = (toasts, setToasts) => {
-  const showResult = useCallback((message, type) => {
-    // console.log('[useToast] showResult called:', { message, type });
+  const showResult = useCallback((message, type = TOAST_TYPES.INFO) => {
     if (!message) {
       console.log('[useToast] No message provided, returning');
       return;
@@ -17,17 +18,11 @@ export const useToast = (toasts, setToasts) => {
     
     const now = new Date();
     const timeString = now.toLocaleString();
-    let iconClass;
-    if (type === "success") {
-      iconClass = "fa-solid fa-check-circle text-green-500";
-    } else if (type === "error") {
-      iconClass = "fa-solid fa-times-circle text-red-500";
-    } else {
-      iconClass = "fa-solid fa-info-circle text-blue-500";
-    }
+    
+    const iconClass = TOAST_ICON_CLASSES[type] || TOAST_ICON_CLASSES[TOAST_TYPES.INFO];
 
     const newToast = {
-      id: generateUniqueId('toast'),
+      id: generateUniqueId(UNIQUE_ID_PREFIXES.TOAST),
       message,
       iconClass,
       timeString,
@@ -35,17 +30,8 @@ export const useToast = (toasts, setToasts) => {
       isExiting: false
     };
 
-    // console.log('[useToast] Adding new toast:', newToast);
-    // console.log('[useToast] Current toasts:', toasts);
+    setToasts(prevToasts => [...prevToasts, newToast]);
     
-    setToasts(prevToasts => {
-      const newToasts = [...prevToasts, newToast];
-      // console.log('[useToast] Previous toasts:', prevToasts);
-      // console.log('[useToast] New toasts array:', newToasts);
-      return newToasts;
-    });
-    
-    // Removed setTimeout logic for auto-dismissal from here
   }, [setToasts]);
 
   return {

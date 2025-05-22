@@ -400,7 +400,7 @@ export const petConfig = {
   blackTortoise: {
     id: "blackTortoise",
     name: "玄武",
-    fiveElement: FIVE_ELEMENTS.WATER,
+    fiveElement: FIVE_ELEMENTS.WATER, 
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.05,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,

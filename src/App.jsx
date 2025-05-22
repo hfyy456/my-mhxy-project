@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import store from "@/store"; // 导入store以便获取用户阵型数据
 
 // REMOVING global PixiJS and @pixi/react imports for extend
 // import { extend } from '@pixi/react';
@@ -14,7 +15,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import HomePage from "@/features/home/components/HomePage";
 // import MainMenu from "@/features/main-menu/components/MainMenu"; // 正确注释掉 MainMenu
-import GameMap from "@/features/game-map/components/GameMap"; // 引入新的地图组件 // Temporarily commented out for testing
+import GameMap from "@/features/game-map/components/GameMap";
 import SummonSystem from "@/features/summon/components/SummonSystem";
 import { useToast } from "@/hooks/useToast";
 // import { useModalState } from "@/hooks/useModalState"; // No longer needed if we manage modals directly
@@ -24,63 +25,90 @@ import InventoryPanel from "@/features/inventory/components/InventoryPanel";
 import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
-import QuestLogPanel from "@/features/quests/components/QuestLogPanel"; // 导入任务日志面板
-import MinimapPanel from '@/features/minimap/components/MinimapPanel'; // Import MinimapPanel
+import QuestLogPanel from "@/features/quests/components/QuestLogPanel";
+import MinimapPanel from '@/features/minimap/components/MinimapPanel';
 // import TileInfoPanel from '@/features/tile-info/components/TileInfoPanel'; // REMOVE THIS LINE
-import DialoguePanel from "@/features/ui/components/DialoguePanel"; // <--- 添加导入
-import NpcPanel from "@/features/npc/components/NpcPanel"; // 导入NPC面板
+import DialoguePanel from "@/features/ui/components/DialoguePanel";
+import NpcPanel from "@/features/npc/components/NpcPanel";
 import { generateInitialEquipment } from "@/gameLogic";
 import {
   initializeReduxIntegration,
-  useCurrentSummon,
-  useSummons,
+  // useCurrentSummon, // Now used within useAppModals
+  // useSummons, // Now used within useAppModals
 } from "@/store/reduxSetup";
-import { setCurrentSummon } from "@/store/slices/summonSlice";
-import { initializePlayerQuests } from "@/store/slices/questSlice"; // 初始化任务
-import { selectIsWorldMapOpen } from "@/store/slices/mapSlice"; // 世界地图状态
+// import { setCurrentSummon } from "@/store/slices/summonSlice"; // Now used within useAppModals
+import { initializePlayerQuests } from "@/store/slices/questSlice";
+import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 // import { addItem } from "@/store/slices/itemSlice"; // Not used directly in App.jsx
 // import { addToInventory } from "@/store/slices/inventorySlice"; // Not used directly in App.jsx
 
-import CommonModal from "@/features/ui/components/CommonModal"; // 导入统一的模态框组件
-import LoadingScreen from "@/features/ui/components/LoadingScreen"; // 导入加载页面组件
+import CommonModal from "@/features/ui/components/CommonModal";
+import LoadingScreen from "@/features/ui/components/LoadingScreen";
+import { useAppModals } from "@/hooks/useAppModals";
+import { uiText } from "@/config/uiTextConfig";
+import { LOADER_WRAPPER_ID } from "@/config/config";
+import FormationSetup from "@/features/formation/components/FormationSetup";
+import BattleScreen from "@/features/battle/components/BattleScreen";
+import { selectIsBattleActive } from "@/store/slices/battleSlice";
+import { selectAllSummons } from "@/store/slices/summonSlice";
 
 const App = () => {
   const dispatch = useDispatch();
-  const [showHomePage, setShowHomePage] = useState(true); // New state for home page
+  const [showHomePage, setShowHomePage] = useState(true);
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
   
-  // Modal states
-  const [isSummonModalOpen, setIsSummonModalOpen] = useState(false);
-  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
-  const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isQuestLogModalOpen, setQuestLogModalOpen] = useState(false);
-  const [isMinimapModalOpen, setMinimapModalOpen] = useState(false); // State for Minimap Modal
-  const [isNpcPanelOpen, setIsNpcPanelOpen] = useState(false); // NPC面板状态
-  const [selectedNpcId, setSelectedNpcId] = useState(null); // 选中的NPC ID
+  const {
+    isSummonModalOpen,
+    openSummonModal,
+    closeSummonModal,
+    isInventoryOpen,
+    openInventoryModal,
+    closeInventoryModal,
+    isIncubatorOpen,
+    openIncubatorModal,
+    closeIncubatorModal,
+    isPlayerInfoOpen,
+    openPlayerInfoModal,
+    closePlayerInfoModal,
+    isSettingsOpen,
+    openSettingsModal,
+    closeSettingsModal,
+    isQuestLogModalOpen,
+    openQuestLogModal,
+    closeQuestLogModal,
+    isMinimapModalOpen,
+    openMinimapModal,
+    closeMinimapModal,
+    isNpcPanelOpen,
+    selectedNpcId,
+    openNpcPanelModal,
+    closeNpcPanelModal,
+    isFormationModalOpen,
+    openFormationModal,
+    closeFormationModal,
+  } = useAppModals();
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState("正在加载游戏资源...");
 
-  const summons = useSummons();
-  const summon = useCurrentSummon();
-
-  const isWorldMapOpen = useSelector(selectIsWorldMapOpen); // 获取世界地图打开状态
+  const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
+  const isBattleActive = useSelector(selectIsBattleActive);
+  const summonsListObject = useSelector(selectAllSummons);
 
   useAutoSave();
 
   useEffect(() => {
     const cleanup = initializeReduxIntegration();
-    dispatch(initializePlayerQuests()); // 初始化玩家任务数据
+    dispatch(initializePlayerQuests());
     console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
-    const loader = document.getElementById('loader-wrapper');
+    const loader = document.getElementById(LOADER_WRAPPER_ID);
     if (loader) {
       loader.style.display = 'none';
     }
     return cleanup;
-  }, [dispatch]); // Added dispatch to dependency array
+  }, [dispatch]);
 
   // No more handleSystemChange
 
@@ -112,7 +140,7 @@ const App = () => {
     ];
 
     for (const stage of stages) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 150));
       setLoadingProgress(stage.progress);
       setLoadingMessage(stage.message);
     }
@@ -126,35 +154,13 @@ const App = () => {
     simulateLoading();
   };
   
-  // Specific open handlers for modals to manage Redux state if needed
-  const openSummonModal = () => {
-    if (summons.length > 0) {
-      if (!summon) {
-        dispatch(setCurrentSummon(summons[0].id));
-      }
-    } else {
-      if (summon) {
-        dispatch(setCurrentSummon(null));
-      }
-    }
-    setIsSummonModalOpen(true);
-  };
-
-  const handleOpenQuestLog = () => setQuestLogModalOpen(true);
-  const handleCloseQuestLog = () => setQuestLogModalOpen(false);
-
-  const handleOpenMinimap = () => setMinimapModalOpen(true); // Handler to open Minimap
-  const handleCloseMinimap = () => setMinimapModalOpen(false); // Handler to close Minimap
-
-  const openNpcPanel = (npcId) => {
-    setSelectedNpcId(npcId);
-    setIsNpcPanelOpen(true);
-  };
-
-  const closeNpcPanel = () => {
-    setIsNpcPanelOpen(false);
-    setSelectedNpcId(null);
-  };
+  // Dummy button bar for now, can be integrated into GameMap or other UI element
+  const GameActionBar = () => (
+    <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '5px' }}>
+      <button onClick={openFormationModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#555', border: 'none', borderRadius: '3px' }}>阵型</button>
+      {/* Add other action buttons here */}
+    </div>
+  );
 
   return (
     <div
@@ -164,32 +170,6 @@ const App = () => {
         backgroundColor: "#0f172a", // Background for the whole app
       }}
     >
-      {showHomePage ? (
-        <HomePage
-          onStartGame={handleStartGame}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          // toasts and setToasts are not typically passed to HomePage
-          // but if it uses them, they can be added back.
-        />
-      ) : (
-        <>
-          <GameMap 
-            showToast={showResult}
-            onOpenSummonSystem={openSummonModal} // Use specific handler
-            onOpenIncubator={() => setIsIncubatorOpen(true)}
-            onOpenPlayerInfo={() => setIsPlayerInfoOpen(true)}
-            onOpenInventory={() => setIsInventoryOpen(true)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenQuestLog={handleOpenQuestLog} // 将打开任务日志的函数传递给 GameMap
-            onOpenMinimap={handleOpenMinimap} // Pass handler for Minimap
-            onOpenNpcPanel={openNpcPanel} // 将打开NPC面板的函数传递给 GameMap
-          />
-          {/* <TileInfoPanel /> */}
-          <DialoguePanel /> {/* <--- 添加 DialoguePanel */}
-        </>
-      )}
-
-      {/* 加载页面 */}
       {isLoading && (
         <LoadingScreen 
           progress={loadingProgress}
@@ -197,13 +177,103 @@ const App = () => {
         />
       )}
 
-      {/* 仅在世界地图未打开时显示这些模态框 */}
+      {!isLoading && showHomePage && (
+        <HomePage
+          onStartGame={handleStartGame}
+          onOpenSettings={openSettingsModal}
+        />
+      )}
+
+      {!isLoading && !showHomePage && !isBattleActive && (
+          <>
+            <GameMap 
+              showToast={showResult}
+              onOpenSummonSystem={openSummonModal}
+              onOpenIncubator={openIncubatorModal}
+              onOpenPlayerInfo={openPlayerInfoModal}
+              onOpenInventory={openInventoryModal}
+              onOpenSettings={openSettingsModal}
+              onOpenQuestLog={openQuestLogModal}
+              onOpenMinimap={openMinimapModal}
+              onOpenNpcPanel={openNpcPanelModal}
+            />
+            <DialoguePanel />
+            {!isWorldMapOpen && <GameActionBar />}
+            
+            {/* 测试战斗按钮 */}
+            {!isWorldMapOpen && !isBattleActive && (
+              <div className="absolute bottom-4 left-4 z-20">
+                <button
+                  onClick={() => {
+                    // 导入并准备战斗数据
+                    import('@/features/battle/logic/battleLogic').then(({ prepareBattleSetupData }) => {
+                      import('@/config/enemyConfig').then(({ getEnemyTemplateById }) => {
+                        import('@/config/petConfig').then(({ petConfig }) => {
+                          // 获取玩家的召唤兽和阵型
+                          const playerSummons = Object.values(summonsListObject || {}).reduce((acc, summon) => {
+                            acc[summon.id] = summon;
+                            return acc;
+                          }, {});
+                          
+                          // 从 Redux store 中获取玩家设置的阵型
+                          const userFormation = store.getState().formation.grid;
+                          
+                          // 如果用户没有设置阵型或阵型中没有召唤兽，创建一个默认阵型
+                          let playerFormation;
+                          
+                          // 检查用户阵型是否有效
+                          const hasValidFormation = userFormation && 
+                            userFormation.some(row => row.some(summonId => summonId && playerSummons[summonId]));
+                          
+                          if (hasValidFormation) {
+                            // 使用用户设置的阵型
+                            playerFormation = JSON.parse(JSON.stringify(userFormation));
+                          } else {
+                            // 创建默认阵型，将第一个召唤兽放在中间
+                            playerFormation = [
+                              [null, null, null],
+                              [null, Object.keys(playerSummons)[0] || null, null],
+                              [null, null, null]
+                            ];
+                          }
+                          
+                          // 创建敌人模板
+                          const enemyTemplates = [
+                            { template: getEnemyTemplateById('goblin_grunt'), position: { team: 'enemy', row: 1, col: 1 } },
+                          ];
+                          
+                          // 准备战斗数据
+                          const payload = prepareBattleSetupData(
+                            `battle_${Date.now()}`,
+                            playerSummons,
+                            playerFormation,
+                            enemyTemplates,
+                            petConfig
+                          );
+                          
+                          // 触发战斗
+                          dispatch({ type: 'battle/setupBattle', payload });
+                        });
+                      });
+                    });
+                  }}
+                  className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
+                >
+                  <i className="fas fa-swords"></i> 测试战斗
+                </button>
+              </div>
+            )}
+          </>
+        )
+      }
+
+      {/* 模态框组件 */}
       {!isWorldMapOpen && (
         <>
           <CommonModal 
             isOpen={isSummonModalOpen} 
-            onClose={() => setIsSummonModalOpen(false)} 
-            title="召唤兽" 
+            onClose={closeSummonModal}
+            title={uiText.titles.summonModal}
             maxWidthClass="max-w-5xl"
             centerContent={false}
           >
@@ -216,14 +286,14 @@ const App = () => {
           {/* 背包面板 */}
           <InventoryPanel 
             isOpen={isInventoryOpen}
-            onClose={() => setIsInventoryOpen(false)}
+            onClose={closeInventoryModal}
             showToast={showResult}
           />
 
           <CommonModal 
             isOpen={isPlayerInfoOpen} 
-            onClose={() => setIsPlayerInfoOpen(false)} 
-            title="角色信息" 
+            onClose={closePlayerInfoModal}
+            title={uiText.titles.playerInfoModal}
             maxWidthClass="max-w-2xl"
             centerContent={true}
           >
@@ -232,8 +302,8 @@ const App = () => {
 
           <CommonModal 
             isOpen={isIncubatorOpen} 
-            onClose={() => setIsIncubatorOpen(false)} 
-            title="孵化器" 
+            onClose={closeIncubatorModal}
+            title={uiText.titles.incubatorModal}
             maxWidthClass="max-w-4xl"
             centerContent={false}
           >
@@ -245,39 +315,66 @@ const App = () => {
           
           <CommonModal 
             isOpen={isSettingsOpen} 
-            onClose={() => setIsSettingsOpen(false)} 
-            title="设置" 
+            onClose={closeSettingsModal}
+            title={uiText.titles.settingsModal}
             maxWidthClass="max-w-3xl"
             centerContent={true}
           >
-            <SettingsPanel 
-              toasts={toasts}
-              setToasts={setToasts}
-            />
+            <SettingsPanel />
           </CommonModal>
 
           {/* 任务日志面板 */}
-          <QuestLogPanel 
+          <CommonModal
             isOpen={isQuestLogModalOpen} 
-            onClose={handleCloseQuestLog} 
-          />
+            onClose={closeQuestLogModal}
+            title={uiText.titles.questLogModal}
+            maxWidthClass="max-w-3xl"
+            centerContent={true}
+          >
+            <QuestLogPanel />
+          </CommonModal>
 
           {/* NPC 面板 */}
           <CommonModal
             isOpen={isNpcPanelOpen}
-            onClose={closeNpcPanel}
-            title="NPC 信息"
-            maxWidthClass="max-w-lg" // 可以根据NPC面板内容调整
-            centerContent={false} // 通常NPC信息面板不需要内容居中
+            onClose={closeNpcPanelModal}
+            title={uiText.titles.npcPanelModal}
+            maxWidthClass="max-w-lg"
+            centerContent={false}
           >
-            {selectedNpcId && <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanel} />}
+            {selectedNpcId && <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanelModal} />}
           </CommonModal>
 
           {/* Render MinimapPanel */}
           <MinimapPanel 
             isOpen={isMinimapModalOpen} 
-            onClose={handleCloseMinimap} 
+            onClose={closeMinimapModal}
           />
+
+          {/* Formation Setup Modal */}
+          <CommonModal
+            isOpen={isFormationModalOpen}
+            onClose={closeFormationModal}
+            title={uiText.titles.formationModal}
+            maxWidthClass="max-w-4xl"
+            centerContent={false}
+          >
+            <FormationSetup showToast={showResult} />
+          </CommonModal>
+          
+          {/* Battle Modal */}
+          <CommonModal
+            isOpen={isBattleActive}
+            onClose={() => dispatch({ type: 'battle/endBattle' })}
+            title={uiText.titles.battleModal || ""}
+            maxWidthClass="max-w-none"
+            centerContent={false}
+            hideCloseButton={true} // 战斗中不允许直接关闭
+            fullScreen={true}
+            padding="px-4 py-2"
+          >
+            <BattleScreen />
+          </CommonModal>
         </>
       )}
 

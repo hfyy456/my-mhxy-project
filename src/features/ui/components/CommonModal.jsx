@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 03:14:12
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 03:05:56
+ * @LastEditTime: 2025-05-23 01:00:00
  */
 import React, { useEffect, useRef } from 'react';
 
@@ -15,7 +15,10 @@ const CommonModal = ({
   style = {},
   contentStyle = {},
   maxWidthClass = "max-w-4xl",
-  centerContent = false
+  centerContent = false,
+  fullScreen = false,
+  hideCloseButton = false,
+  padding = "px-6 pt-6 pb-4"
 }) => {
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -67,24 +70,28 @@ const CommonModal = ({
     >
       <div 
         ref={modalRef} 
-        className={`bg-slate-800 rounded-xl mx-4 transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${className || `w-full ${maxWidthClass}`}`}
+        className={`bg-slate-800 rounded-xl transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${fullScreen ? 'w-full h-full max-w-none m-0 rounded-none' : `mx-4 ${className || `w-full ${maxWidthClass}`}`}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         style={style}
       >
         {/* Fixed Header */}
-        <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-slate-700">
-          <h3 id="modal-title" className="text-xl font-bold text-purple-300">{title}</h3>
-          <button 
-            ref={closeButtonRef} 
-            className="text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-md p-1"
-            onClick={onClose}
-            aria-label="Close modal"
-          >
-            <i className="fa-solid fa-times text-xl"></i>
-          </button>
-        </div>
+        {title && (
+          <div className={`flex justify-between items-center ${padding} border-b border-slate-700`}>
+            <h3 id="modal-title" className="text-xl font-bold text-purple-300">{title}</h3>
+            {!hideCloseButton && (
+              <button 
+                ref={closeButtonRef} 
+                className="text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-md p-1"
+                onClick={onClose}
+                aria-label="Close modal"
+              >
+                <i className="fa-solid fa-times text-xl"></i>
+              </button>
+            )}
+          </div>
+        )}
         {/* Content Area */}
         <div 
           className={`flex-grow ${centerContent ? 'flex items-center justify-center' : 'overflow-y-auto'}`}

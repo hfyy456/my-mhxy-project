@@ -42,7 +42,23 @@ export const uiText = {
     petList: "召唤兽列表",
     petDetails: "召唤兽详情",
     skillEditor: "技能编辑",
-    equipmentSelector: "装备选择"
+    equipmentSelector: "装备选择",
+    summonModal: "召唤兽",
+    playerInfoModal: "角色信息",
+    incubatorModal: "孵化器",
+    settingsModal: "设置",
+    npcPanelModal: "NPC 信息",
+    questLogModal: "任务日志",
+    formationModal: "阵型设置"
+  },
+
+  // 阵型特定文本 (New Section)
+  formation: {
+    frontRow: "前阵",
+    midRow: "中枢",
+    backRow: "后阵",
+    maxSummonsReached: "阵型已满，最多允许5个召唤兽。",
+    summonCount: "当前数量: {count}/5"
   },
 
   // 属性名称
@@ -177,7 +193,8 @@ export const uiText = {
     confirmDelete: "确认要删除吗？",
     confirmReset: "确认要重置吗？",
     saveSuccess: "保存成功",
-    saveFailed: "保存失败"
+    saveFailed: "保存失败",
+    inventoryFull: "背包已满"
   },
 
   // 通知消息

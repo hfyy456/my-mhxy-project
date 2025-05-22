@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:44:31
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 00:22:36
+ * @LastEditTime: 2025-05-22 16:05:22
  */
 import { petConfig } from "@/config/petConfig";
 import { skillConfig } from "@/config/skillConfig";
@@ -96,3 +96,25 @@ export const MAX_LEVEL = 100; // 召唤兽最大等级
 export const POINTS_PER_LEVEL = 5; // 每升一级获得的潜力点 (注意: petConfig 中也可能有此设定，需协调)
 export const MAX_SKILLS = 12; // 召唤兽最大技能槽数量
 export const ACTIVE_SKILL_LIMIT = 2; // 最大可拥有主动技能数量
+
+export const LOADER_WRAPPER_ID = 'loader-wrapper';
+
+// Toast Icon Classes
+import { TOAST_TYPES } from "./enumConfig"; // Import TOAST_TYPES
+
+export const TOAST_ICON_CLASSES = {
+  [TOAST_TYPES.SUCCESS]: "fa-solid fa-check-circle text-green-500",
+  [TOAST_TYPES.ERROR]: "fa-solid fa-times-circle text-red-500",
+  [TOAST_TYPES.INFO]: "fa-solid fa-info-circle text-blue-500",
+};
+
+// Local Storage Keys
+export const LOCAL_STORAGE_SAVES_KEY = 'mhxy_saves';
+
+// Inventory Config
+export const INITIAL_INVENTORY_CAPACITY = 20;
+export const INITIAL_GOLD = 0;
+
+// Formation Config
+export const FORMATION_ROWS = 3;
+export const FORMATION_COLS = 3;

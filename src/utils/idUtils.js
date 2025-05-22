@@ -1,5 +1,7 @@
 // src/utils/idUtils.js
 
+import { UNIQUE_ID_PREFIXES, ID_GENERATION_CONSTANTS } from "@/config/enumConfig";
+
 /**
  * Generates a unique ID with a given prefix, using a UUID for the core identifier.
  * Structure: prefix-UUID
@@ -40,10 +42,10 @@
  *       If targeting very old environments, a polyfill or a different UUID library might be needed,
  *       but for typical Vite/React projects, this should be fine.
  */
-export const generateUniqueId = (prefix = 'id') => {
+export const generateUniqueId = (prefix = UNIQUE_ID_PREFIXES.DEFAULT) => {
   if (typeof prefix !== 'string' || prefix.length === 0) {
-    console.warn('generateUniqueId: Prefix should be a non-empty string. Using default "id".');
-    prefix = 'id';
+    console.warn(`generateUniqueId: Prefix should be a non-empty string. Using default "${UNIQUE_ID_PREFIXES.DEFAULT}".`);
+    prefix = UNIQUE_ID_PREFIXES.DEFAULT;
   }
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     const uuid = crypto.randomUUID();
@@ -55,6 +57,6 @@ export const generateUniqueId = (prefix = 'id') => {
     const timestampPart = Date.now().toString(36);
     const randomPart1 = Math.random().toString(36).substring(2, 10); // 8 chars
     const randomPart2 = Math.random().toString(36).substring(2, 10); // 8 chars
-    return `${prefix.toLowerCase()}-fb-${timestampPart}-${randomPart1}-${randomPart2}`;
+    return `${prefix.toLowerCase()}-${ID_GENERATION_CONSTANTS.FALLBACK_INDICATOR}-${timestampPart}-${randomPart1}-${randomPart2}`;
   }
 };

@@ -176,4 +176,60 @@ export const SKILL_EFFECTS = {
   POWER_STRIKE: "powerStrike",    // 强力
   COMBO: "combo",                 // 连击
   MAGIC_SURGE: "magicSurge"       // 法术波动
+};
+
+// Unique ID Prefixes
+export const UNIQUE_ID_PREFIXES = {
+  ITEM: "item",
+  SUMMON: "summon",
+  TOAST: "toast",
+  DEFAULT: "id",
+  // Add other prefixes as needed
+};
+
+// Refinement Sources
+export const REFINEMENT_SOURCES = {
+  REFINEMENT: "refinement",
+  // Add other sources as needed
+};
+
+// Skill Operation Outcomes
+export const SKILL_OPERATION_OUTCOMES = {
+  FAILURE_LEVEL_RESTRICTION: "FAILURE_LEVEL_RESTRICTION",
+  FAILURE_NO_SKILL_CHANGE: "FAILURE_NO_SKILL_CHANGE",
+  FAILURE_CONFIG_NOT_FOUND: "FAILURE_CONFIG_NOT_FOUND",
+  FAILURE_ACTIVE_SKILL_LIMIT: "FAILURE_ACTIVE_SKILL_LIMIT",
+  SUCCESS_SKILL_ALREADY_PRESENT: "SUCCESS_SKILL_ALREADY_PRESENT",
+  SUCCESS_REPLACEMENT_NEEDED: "SUCCESS_REPLACEMENT_NEEDED",
+  SUCCESS_ADD_SKILL: "SUCCESS_ADD_SKILL",
+  INVALID_OPERATION: "INVALID_OPERATION",
+  SKILL_REPLACED: "SKILL_REPLACED",
+  // Add other outcomes as needed
+};
+
+// Toast Types
+export const TOAST_TYPES = {
+  SUCCESS: "success",
+  ERROR: "error",
+  INFO: "info",
+};
+
+// ID Generation Constants
+export const ID_GENERATION_CONSTANTS = {
+  FALLBACK_INDICATOR: "fb",
+};
+
+// Summon Sources
+export const SUMMON_SOURCES = {
+  INCUBATION: "incubation",
+  REFINEMENT: "refinement", // Matches REFINEMENT_SOURCES.REFINEMENT
+  CAPTURE: "capture",
+  GIFT: "gift",
+  // Add other sources as needed
+};
+
+// Sort Orders
+export const SORT_ORDERS = {
+  ASC: "asc",
+  DESC: "desc",
 }; 

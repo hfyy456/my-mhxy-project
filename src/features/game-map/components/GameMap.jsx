@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-21 02:52:59
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-22 20:02:03
+ */
 import React, {
   useState,
   useRef,
@@ -6,7 +12,6 @@ import React, {
   useMemo,
 } from "react";
 import { useDispatch, useSelector } from "react-redux"; // Import Redux hooks
-import * as PIXI from "pixi.js"; // <--- 导入 PIXI
 import { Application, useApplication, extend } from "@pixi/react";
 import {
   Container as PixiJsContainer, // Keep original import from pixi.js, aliased
