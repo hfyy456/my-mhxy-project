@@ -240,6 +240,7 @@ const App = () => {
                           // 创建敌人模板
                           const enemyTemplates = [
                             { template: getEnemyTemplateById('goblin_grunt'), position: { team: 'enemy', row: 1, col: 1 } },
+                            { template: getEnemyTemplateById('test_dummy'), position: { team: 'enemy', row: 0, col: 0 } },
                           ];
                           
                           // 准备战斗数据

@@ -598,8 +598,8 @@ export const petConfig = {
     initialSkills: ["storm_judgment", "divine_might", "agility_boost"],
     background: "生有双翼的远古巨龙，能呼风唤雨，曾助黄帝战胜蚩尤，威震四海。",
   },
-  bai_ze: {
-    id: "bai_ze",
+  baize: {
+    id: "baize",
     name: "白泽",
     fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {

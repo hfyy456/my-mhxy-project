@@ -53,7 +53,7 @@ const initialState = {
   // 回合和行动逻辑
   turnOrder: [], // battleUnitId 数组，表示行动顺序
   currentTurnUnitId: null, // 当前行动的单位ID
-  currentPhase: 'idle', // 战斗阶段: 'idle', 'preparation', 'execution', 'battle_over', 'victory', 'defeat'
+  currentPhase: 'idle', // 战斗阶段: 'idle', 'preparation', 'execution', 'awaiting_final_animation', 'battle_over', 'victory', 'defeat'
   currentRound: 1, // 当前回合数
   
   // 单位行动指令
@@ -66,6 +66,7 @@ const initialState = {
   // 战斗日志和结果
   battleLog: [], // { turn: number, unitId: string, action: string, result: string, timestamp: number }
   rewards: null, // { experience: number, items: [{ itemId: string, quantity: number }], currency: number }
+  battleResult: null, // 'victory' 或 'defeat'
 
   // UI 相关的状态 (可选，也可以在组件内部管理)
   // showSkillMenu: false,
@@ -173,7 +174,22 @@ const battleSlice = createSlice({
         if (changes.currentHp <= 0) {
             state.battleUnits[unitId].currentHp = 0;
             state.battleUnits[unitId].isDefeated = true;
-             state.battleLog.push({ message: `${state.battleUnits[unitId].name} 被击败了！` });
+            state.battleLog.push({ 
+              message: `${state.battleUnits[unitId].name} 被击败了！`,
+              timestamp: Date.now() 
+            });
+            
+            // 检查战斗是否结束
+            const playerUnits = Object.values(state.battleUnits).filter(unit => unit.isPlayerUnit);
+            const enemyUnits = Object.values(state.battleUnits).filter(unit => !unit.isPlayerUnit);
+            
+            const allPlayerDefeated = playerUnits.every(unit => unit.isDefeated);
+            const allEnemyDefeated = enemyUnits.every(unit => unit.isDefeated);
+            
+            if (allPlayerDefeated || allEnemyDefeated) {
+              state.currentPhase = 'awaiting_final_animation';
+              // Actual resolution will happen in finalizeBattleResolution
+            }
         }
       }
     },
@@ -211,7 +227,7 @@ const battleSlice = createSlice({
       // 注意：敌方AI行动设置已移动到setEnemyAIActions异步thunk中
       // 这里只添加战斗日志
       state.battleLog.push({ 
-        message: `回合 ${state.currentRound} - 准备阶段开始！请为所有玩家单位分配行动指令。`, 
+        message: `【回合 ${state.currentRound}】准备阶段开始！请为所有玩家单位分配行动指令。`, 
         timestamp: Date.now(),
         round: state.currentRound,
         phase: 'preparation'
@@ -230,7 +246,7 @@ const battleSlice = createSlice({
       state.currentTurnUnitId = state.turnOrder[0] || null;
       
       state.battleLog.push({ 
-        message: `回合 ${state.currentRound} - 执行阶段开始！单位将按速度依次执行行动。`, 
+        message: `【回合 ${state.currentRound}】执行阶段开始！单位将按速度依次执行行动。`, 
         timestamp: Date.now(),
         round: state.currentRound,
         phase: 'execution'
@@ -260,16 +276,37 @@ const battleSlice = createSlice({
         case 'attack': {
           if (!action.targetIds || action.targetIds.length === 0) break;
           
-          const targetId = action.targetIds[0];
-          const target = state.battleUnits[targetId];
+          let targetId = action.targetIds[0];
+          let target = state.battleUnits[targetId];
           
+          // 如果目标已经死亡，尝试自动选择新目标
           if (!target || target.isDefeated) {
-            state.battleLog.push({
-              message: `${unit.name} 的目标已经被击败，攻击无效。`,
-              timestamp: Date.now(),
-              unitId
-            });
-            break;
+            // 确定目标队伍（玩家或敌人）
+            const isTargetingPlayer = state.playerFormation.flat().filter(id => id).includes(targetId);
+            const targetFormation = isTargetingPlayer ? state.playerFormation : state.enemyFormation;
+            
+            // 尝试找到一个活着的目标
+            const aliveTargets = targetFormation.flat()
+              .filter(id => id && state.battleUnits[id] && !state.battleUnits[id].isDefeated);
+            
+            if (aliveTargets.length > 0) {
+              // 随机选择一个新目标
+              targetId = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+              target = state.battleUnits[targetId];
+              
+              state.battleLog.push({
+                message: `${unit.name} 的原目标已经被击败，自动切换攻击目标为 ${target.name}。`,
+                timestamp: Date.now(),
+                unitId
+              });
+            } else {
+              state.battleLog.push({
+                message: `${unit.name} 的目标已经被击败，且找不到新目标，攻击无效。`,
+                timestamp: Date.now(),
+                unitId
+              });
+              break;
+            }
           }
           
           // 计算伤害
@@ -326,16 +363,37 @@ const battleSlice = createSlice({
         case 'skill': {
           if (!action.targetIds || action.targetIds.length === 0 || !action.skillId) break;
           
-          const targetId = action.targetIds[0];
-          const target = state.battleUnits[targetId];
+          let targetId = action.targetIds[0];
+          let target = state.battleUnits[targetId];
           
+          // 如果目标已经死亡，尝试自动选择新目标
           if (!target || target.isDefeated) {
-            state.battleLog.push({
-              message: `${unit.name} 的目标已经被击败，技能使用无效。`,
-              timestamp: Date.now(),
-              unitId
-            });
-            break;
+            // 确定目标队伍（玩家或敌人）
+            const isTargetingPlayer = state.playerFormation.flat().filter(id => id).includes(targetId);
+            const targetFormation = isTargetingPlayer ? state.playerFormation : state.enemyFormation;
+            
+            // 尝试找到一个活着的目标
+            const aliveTargets = targetFormation.flat()
+              .filter(id => id && state.battleUnits[id] && !state.battleUnits[id].isDefeated);
+            
+            if (aliveTargets.length > 0) {
+              // 随机选择一个新目标
+              targetId = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+              target = state.battleUnits[targetId];
+              
+              state.battleLog.push({
+                message: `${unit.name} 的原目标已经被击败，自动切换技能目标为 ${target.name}。`,
+                timestamp: Date.now(),
+                unitId
+              });
+            } else {
+              state.battleLog.push({
+                message: `${unit.name} 的目标已经被击败，且找不到新目标，技能使用无效。`,
+                timestamp: Date.now(),
+                unitId
+              });
+              break;
+            }
           }
           
           // 简单技能逻辑 - 消耗MP并造成更高伤害
@@ -387,32 +445,7 @@ const battleSlice = createSlice({
           });
       }
       
-      // 检查战斗是否结束
-      const allPlayerUnitsDefeated = state.playerFormation.flat()
-        .filter(id => id)
-        .every(id => state.battleUnits[id].isDefeated);
-      
-      const allEnemyUnitsDefeated = state.enemyFormation.flat()
-        .filter(id => id)
-        .every(id => state.battleUnits[id].isDefeated);
-      
-      if (allPlayerUnitsDefeated) {
-        state.battleResult = 'defeat';
-        state.currentPhase = 'battle_end';
-        state.battleLog.push({
-          message: `战斗结束！你的队伍被击败了。`,
-          timestamp: Date.now(),
-          phase: 'battle_end'
-        });
-      } else if (allEnemyUnitsDefeated) {
-        state.battleResult = 'victory';
-        state.currentPhase = 'battle_end';
-        state.battleLog.push({
-          message: `战斗结束！你的队伍获得了胜利！`,
-          timestamp: Date.now(),
-          phase: 'battle_end'
-        });
-      }
+      // 战斗结算逻辑已移至endRound函数，确保攻击动画有足够时间播放完成
     },
     
     // 进入下一个单位的回合
@@ -432,55 +465,9 @@ const battleSlice = createSlice({
           unitId: state.currentTurnUnitId
         });
       } else {
-        // 所有单位都行动完毕，结束回合
-        // 直接在这里执行结束回合的逻辑，而不是调用endRound reducer
-        
-        // 处理状态效果
-        Object.values(state.battleUnits).forEach(unit => {
-          // 减少状态效果持续时间并移除过期效果
-          if (unit.statusEffects && unit.statusEffects.length > 0) {
-            const expiredEffects = [];
-            
-            unit.statusEffects = unit.statusEffects.filter(effect => {
-              if (effect.duration <= 1) {
-                expiredEffects.push(effect);
-                return false;
-              }
-              effect.duration -= 1;
-              return true;
-            });
-            
-            // 移除过期效果的影响
-            expiredEffects.forEach(effect => {
-              if (effect.stat && effect.value) {
-                unit.stats[effect.stat] -= effect.value;
-                state.battleLog.push({
-                  message: `${unit.name} 的 ${effect.name} 效果已消失。`,
-                  timestamp: Date.now(),
-                  unitId: unit.id
-                });
-              }
-            });
-          }
-        });
-        
-        state.currentRound += 1;
-        state.unitActions = {}; // 清空行动
-        state.battleLog.push({ 
-          message: `回合 ${state.currentRound - 1} 结束！`, 
-          timestamp: Date.now(),
-          round: state.currentRound - 1,
-          phase: 'end'
-        });
-        
-        // 自动进入下一回合的准备阶段
-        state.currentPhase = 'preparation';
-        state.battleLog.push({ 
-          message: `回合 ${state.currentRound} - 准备阶段开始！请为所有玩家单位分配行动指令。`, 
-          timestamp: Date.now(),
-          round: state.currentRound,
-          phase: 'preparation'
-        });
+        // 所有单位都行动完毕，调用endRound函数结束回合
+        // 这样可以确保战斗结算逻辑在回合结束时触发
+        battleSlice.caseReducers.endRound(state);
       }
     },
     
@@ -515,23 +502,53 @@ const battleSlice = createSlice({
         }
       });
       
-      state.currentRound += 1;
-      state.unitActions = {}; // 清空行动
-      state.battleLog.push({ 
-        message: `回合 ${state.currentRound - 1} 结束！`, 
-        timestamp: Date.now(),
-        round: state.currentRound - 1,
-        phase: 'end'
-      });
+      // 检查战斗是否结束
+      const allPlayerUnitsDefeated = state.playerFormation.flat()
+        .filter(id => id)
+        .every(id => state.battleUnits[id].isDefeated);
       
-      // 自动进入下一回合的准备阶段
-      state.currentPhase = 'preparation';
-      state.battleLog.push({ 
-        message: `回合 ${state.currentRound} - 准备阶段开始！请为所有单位分配行动指令。`, 
-        timestamp: Date.now(),
-        round: state.currentRound,
-        phase: 'preparation'
-      });
+      const allEnemyUnitsDefeated = state.enemyFormation.flat()
+        .filter(id => id)
+        .every(id => state.battleUnits[id].isDefeated);
+      
+      if (allPlayerUnitsDefeated) {
+        state.battleResult = 'defeat';
+        state.currentPhase = 'battle_end';
+        state.battleLog.push({
+          message: `战斗结束！你的队伍被击败了。`,
+          timestamp: Date.now(),
+          phase: 'battle_end'
+        });
+      } else if (allEnemyUnitsDefeated) {
+        state.battleResult = 'victory';
+        state.currentPhase = 'battle_end';
+        state.battleLog.push({
+          message: `战斗结束！你的队伍获得了胜利！`,
+          timestamp: Date.now(),
+          phase: 'battle_end'
+        });
+      } else {
+        // 战斗未结束，当前回合的执行阶段结束，进入下一回合
+        state.battleLog.push({ 
+          message: `【回合 ${state.currentRound}】执行阶段结束！`, 
+          timestamp: Date.now(),
+          round: state.currentRound,
+          phase: 'end'
+        });
+        
+        // 增加回合数，进入下一回合
+        state.currentRound += 1;
+        state.unitActions = {}; // 清空行动
+        
+        // 自动进入下一回合的准备阶段
+        state.currentPhase = 'preparation';
+        state.battleLog.push({ 
+          message: `【回合 ${state.currentRound}】准备阶段开始！请为所有玩家单位分配行动指令。`, 
+          timestamp: Date.now(),
+          round: state.currentRound,
+          phase: 'preparation'
+        });
+      }
     }
   },
 });
@@ -545,11 +562,11 @@ export const {
   endBattle,
   updateBattleUnit,
   addBattleLog,
-  // 新增回合相关的action
   setUnitAction,
   startPreparationPhase,
   startExecutionPhase,
   executeAction,
+  finalizeBattleResolution,
   nextTurn,
   endRound,
 } = battleSlice.actions;
@@ -564,6 +581,7 @@ export const selectCurrentTurnUnitId = (state) => state.battle.currentTurnUnitId
 export const selectCurrentPhase = (state) => state.battle.currentPhase;
 export const selectBattleLog = (state) => state.battle.battleLog;
 export const selectRewards = (state) => state.battle.rewards;
+export const selectBattleResult = (state) => state.battle.battleResult;
 export const selectBattleUnitById = (state, unitId) => state.battle.battleUnits[unitId];
 
 // 新增回合相关的selector
@@ -571,11 +589,14 @@ export const selectCurrentRound = (state) => state.battle.currentRound;
 export const selectUnitActions = (state) => state.battle.unitActions;
 export const selectUnitActionById = (state, unitId) => state.battle.unitActions[unitId];
 export const selectAllUnitsHaveActions = (state) => {
-  // 只检查玩家单位是否都已经设置了行动
-  const activePlayerUnitIds = Object.keys(state.battle.battleUnits)
-    .filter(id => !state.battle.battleUnits[id].isDefeated && state.battle.battleUnits[id].isPlayerUnit);
-  return activePlayerUnitIds.every(id => state.battle.unitActions[id]);
+  const { battleUnits, unitActions, playerFormation } = state.battle;
+  
+  // 只检查玩家单位是否都有行动
+  const playerUnitIds = playerFormation.flat().filter(id => id);
+  
+  return playerUnitIds
+    .filter(id => !battleUnits[id].isDefeated) // 排除已击败的单位
+    .every(id => unitActions[id]); // 检查每个单位是否都有行动
 };
 
-
-export default battleSlice.reducer; 
+export default battleSlice.reducer;

@@ -27,7 +27,7 @@ const ActionOrderTimeline = ({ units, currentTurnUnitId }) => {
   const tickInterval = speedRange / 4; // 分成4份，产生5个点
   
   return (
-    <div className="w-full bg-gradient-to-r from-gray-900/80 to-gray-800/80 rounded-lg border border-gray-700/50 p-3 mb-3 shadow-md">
+    <div className="w-full bg-gradient-to-r from-gray-900/80 to-gray-800/80 rounded-lg border border-gray-700/50 p-2 mb-2 shadow-md">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <div className="w-6 h-6 rounded-full bg-blue-900/50 flex items-center justify-center mr-2 border border-blue-800/50">
@@ -48,7 +48,7 @@ const ActionOrderTimeline = ({ units, currentTurnUnitId }) => {
         </div>
       </div>
       
-      <div className="relative w-full h-12 bg-gray-800/70 rounded-xl overflow-hidden border border-gray-700/50 shadow-inner px-10">
+      <div className="relative w-full h-10 bg-gray-800/70 rounded-xl overflow-hidden border border-gray-700/50 shadow-inner px-8">
         {/* 进度条背景 */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-red-900/20"></div>
         
@@ -99,7 +99,7 @@ const ActionOrderTimeline = ({ units, currentTurnUnitId }) => {
           return (
             <div 
               key={unit.id}
-              className={`absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-9 h-9 ${bgColor} ${borderColor} ${currentUnitStyle} ${defeatedStyle} rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 shadow-md hover:scale-110`}
+              className={`absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-7 h-7 ${bgColor} ${borderColor} ${currentUnitStyle} ${defeatedStyle} rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 shadow-md hover:scale-110`}
               style={{ left: position }}
               title={`${unit.name} (速度: ${unit.stats.speed})`}
             >

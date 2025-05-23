@@ -7,6 +7,7 @@ import ActionContentSelector from './ActionContentSelector';
 import ActionOrderTimeline from './ActionOrderTimeline';
 import BattleLogPanel from './BattleLogPanel';
 import BattleAnimations from './BattleAnimations';
+import BattleResultsScreen from './BattleResultsScreen';
 
 import {
   selectIsBattleActive,
@@ -19,6 +20,7 @@ import {
   selectUnitActions,
   selectAllUnitsHaveActions,
   selectTurnOrder,
+  selectBattleResult,
   playerSelectTargets,
   endBattle,
   startPreparationPhase,
@@ -42,6 +44,7 @@ const BattleScreen = () => {
   const enemyFormation = useSelector(selectEnemyFormation);
   const unitActions = useSelector(selectUnitActions);
   const allUnitsHaveActions = useSelector(selectAllUnitsHaveActions);
+  const battleResult = useSelector(selectBattleResult);
   
   // 添加选中召唤兽的状态
   const [selectedUnitId, setSelectedUnitId] = useState(null);
@@ -189,13 +192,21 @@ const BattleScreen = () => {
     }
   }, [currentPhase, unitActions, battleUnits]);
   
+  // 创建一个ref来跟踪当前处理的单位，防止重复执行
+  // 注意：React Hooks必须在函数组件的顶层调用
+  const isProcessingRef = React.useRef(false);
+  
   // 处理执行阶段的自动行动
   useEffect(() => {
-    if (currentPhase === 'execution' && currentTurnUnitId) {
+    if (currentPhase === 'execution' && currentTurnUnitId && !isProcessingRef.current) {
       const currentUnit = battleUnits[currentTurnUnitId];
+      
+      // 标记正在处理中
+      isProcessingRef.current = true;
       
       // 如果是敌方单位，自动执行行动
       if (currentUnit && !currentUnit.isPlayerUnit) {
+        console.log(`开始处理敌方单位 ${currentUnit.name} 的行动`);
         // 给一个短暂停，让玩家可以看到当前行动单位
         const actionTimer = setTimeout(() => {
           dispatch(executeAction());
@@ -203,15 +214,14 @@ const BattleScreen = () => {
           // 执行完行动后，等待一会再进入下一个单位的回合
           const nextTurnTimer = setTimeout(() => {
             dispatch(nextTurn());
+            // 重置处理标记
+            isProcessingRef.current = false;
           }, 1000);
-          
-          return () => clearTimeout(nextTurnTimer);
         }, 800);
-        
-        return () => clearTimeout(actionTimer);
       } 
       // 如果是玩家单位，并且已经设置了行动，则自动执行
       else if (currentUnit && currentUnit.isPlayerUnit && unitActions[currentTurnUnitId]) {
+        console.log(`开始处理玩家单位 ${currentUnit.name} 的行动`);
         // 选中当前行动单位
         setSelectedUnitId(currentTurnUnitId);
         
@@ -222,12 +232,13 @@ const BattleScreen = () => {
           // 执行完行动后，等待一会再进入下一个单位的回合
           const nextTurnTimer = setTimeout(() => {
             dispatch(nextTurn());
+            // 重置处理标记
+            isProcessingRef.current = false;
           }, 1000);
-          
-          return () => clearTimeout(nextTurnTimer);
         }, 1200); // 玩家单位给更长的时间观察
-        
-        return () => clearTimeout(actionTimer);
+      } else {
+        // 如果没有有效的行动，重置处理标记
+        isProcessingRef.current = false;
       }
     }
   }, [currentPhase, currentTurnUnitId, battleUnits, unitActions, dispatch, setSelectedUnitId]);
@@ -264,64 +275,82 @@ const BattleScreen = () => {
   }
 
   return (
-    <div className="flex flex-col bg-gray-900 bg-opacity-90 p-6 text-white font-sans max-w-[1600px] mx-auto">
-      {/* 战斗动画层 */}
+    <div className="relative w-full h-screen bg-gray-900 text-white font-sans overflow-hidden">
+      {/* 战斗动画层 - 绝对定位在最上层 */}
       <BattleAnimations />
-      <div className="flex justify-between items-center p-2 bg-gray-800 bg-opacity-70 rounded-lg mb-4 border border-gray-700 shadow-md">
-        <div className="text-amber-400 font-bold px-3 py-1 bg-gray-900 rounded-md mx-auto">
+      
+      {/* 战斗结算界面 - 绝对定位在最上层 */}
+      {currentPhase === 'battle_end' && battleResult && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <BattleResultsScreen result={battleResult} />
+        </div>
+      )}
+      
+      {/* 战斗网格背景 - 铺满整个屏幕 */}
+      <div className="absolute inset-0 w-full h-full bg-cover bg-center" 
+           style={{ backgroundImage: 'url(/assets/backgrounds/battle_bg.jpg)', filter: 'brightness(0.7)' }}>
+        {/* 战斗网格 - 占据大部分屏幕空间 */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <BattleGridRenderer onUnitClick={handleUnitClick} />
+        </div>
+      </div>
+      
+      {/* 顶部状态栏 - 半透明悬浮在战斗网格上 */}
+      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 px-4 py-1.5 bg-gray-900 bg-opacity-50 backdrop-blur-sm rounded-lg border border-gray-700/30 shadow-lg">
+        <div className="text-amber-400 font-bold text-center text-sm">
           回合: {currentRound} | 阶段: {
             currentPhase === 'preparation' ? '准备阶段' : 
             currentPhase === 'execution' ? '执行阶段' : 
-            currentPhase === 'player_target_selection' ? '选择目标' : currentPhase
+            currentPhase === 'player_target_selection' ? '选择目标' : 
+            currentPhase === 'battle_over' ? '战斗结束' : currentPhase
           }
         </div>
       </div>
       
-      <div className=" bg-gray-800 bg-opacity-50 rounded-lg mb-4 border border-gray-700 shadow-lg overflow-hidden">
-        <BattleGridRenderer onUnitClick={handleUnitClick} />
+      {/* 行动顺序时间轴 - 悬浮在上方 */}
+      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-10 w-[80%] max-w-[900px]">
+        <ActionOrderTimeline 
+          units={Object.values(battleUnits).filter(unit => !unit.isDefeated)} 
+          currentTurnUnitId={currentTurnUnitId} 
+        />
       </div>
       
-      {/* 行动顺序时间轴 */}
-      <ActionOrderTimeline 
-        units={Object.values(battleUnits).filter(unit => !unit.isDefeated)} 
-        currentTurnUnitId={currentTurnUnitId} 
-      />
-  
-
-      {/* 底部面板 - 简化版本 */}
-      <div className="grid grid-cols-12 gap-3 h-[400px] bg-gray-800 bg-opacity-50 rounded-lg p-3 border border-gray-700 shadow-lg overflow-hidden">
-        {/* 左侧区域 - 行动类型选择 */}
-        <div className="col-span-3 rounded-lg shadow-md overflow-hidden">
-          <ActionTypeSelector 
-            selectedUnit={selectedUnit} 
-            selectedAction={selectedAction} 
-            setSelectedAction={setSelectedAction} 
-          />
-        </div>
-        
-        {/* 中间区域 - 行动内容选择 */}
-        <div className="col-span-4 rounded-lg shadow-md overflow-hidden">
-          <ActionContentSelector 
-            selectedUnit={selectedUnit}
-            selectedAction={selectedAction}
-            selectedSkill={selectedSkill}
-            setSelectedSkill={setSelectedSkill}
-            selectedTarget={selectedTarget}
-            setSelectedTarget={setSelectedTarget}
-            getTargets={getTargets}
-            getSkills={getSkills}
-            confirmAction={confirmAction}
-            hasAction={unitActions[selectedUnitId]}
-            getActionDescription={getActionDescription}
-            dispatch={dispatch}
-            setUnitAction={setUnitAction}
-            selectedUnitId={selectedUnitId}
-          />
-        </div>
-        
-        {/* 右侧战斗日志面板 */}
-        <div className="col-span-5 rounded-lg shadow-md overflow-hidden">
-          <BattleLogPanel />
+      {/* 底部操作面板和日志 - 悬浮在战斗网格上 */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10 w-[90%] max-w-[1100px]">
+        <div className="grid grid-cols-12 gap-2 bg-gray-900 bg-opacity-40 backdrop-blur-sm rounded-lg p-2 border border-gray-700/30 shadow-lg">
+          {/* 左侧区域 - 行动类型选择 */}
+          <div className="col-span-3 rounded-lg shadow-md overflow-hidden h-[200px] bg-gray-900/50">
+            <ActionTypeSelector 
+              selectedUnit={selectedUnit} 
+              selectedAction={selectedAction} 
+              setSelectedAction={setSelectedAction} 
+            />
+          </div>
+          
+          {/* 中间区域 - 行动内容选择 */}
+          <div className="col-span-4 rounded-lg shadow-md overflow-hidden h-[200px] bg-gray-900/50">
+            <ActionContentSelector 
+              selectedUnit={selectedUnit}
+              selectedAction={selectedAction}
+              selectedSkill={selectedSkill}
+              setSelectedSkill={setSelectedSkill}
+              selectedTarget={selectedTarget}
+              setSelectedTarget={setSelectedTarget}
+              getTargets={getTargets}
+              getSkills={getSkills}
+              confirmAction={confirmAction}
+              hasAction={unitActions[selectedUnitId]}
+              getActionDescription={getActionDescription}
+              dispatch={dispatch}
+              setUnitAction={setUnitAction}
+              selectedUnitId={selectedUnitId}
+            />
+          </div>
+          
+          {/* 右侧战斗日志面板 */}
+          <div className="col-span-5 rounded-lg shadow-md overflow-hidden h-[200px] bg-gray-900/50">
+            <BattleLogPanel />
+          </div>
         </div>
       </div>
     </div>

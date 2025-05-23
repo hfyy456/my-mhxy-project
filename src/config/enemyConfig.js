@@ -18,7 +18,7 @@ export const enemyConfig = {
     level: 1,
     spriteAssetKey: "goblin_grunt_sprite", // Placeholder, needs actual asset key or path
     stats: {
-      maxHp: 300,
+      maxHp: 20,
       maxMp: 0,
       attack: 8,
       defense: 3,
@@ -87,10 +87,34 @@ export const enemyConfig = {
       ],
     },
   },
+  // 测试用敌人，有很高的血量但不会攻击
+  test_dummy: {
+    id: "test_dummy",
+    name: "测试木桩",
+    level: 1,
+    spriteAssetKey: "goblin_grunt_sprite", // 使用哥布林的精灵图
+    stats: {
+      maxHp: 500,
+      maxMp: 0,
+      attack: 0,
+      defense: 0,
+      speed: 1, // 非常慢，确保它总是最后行动
+      hitRate: 0,
+      dodgeRate: 0,
+      critRate: 0,
+      critDamageMultiplier: 1.0,
+    },
+    skills: ["basic_attack"], // 只有基础攻击
+    rewards: {
+      experience: 0,
+      gold: 0,
+      items: [], // 不掉落物品
+    },
+  },
   // Add more enemy templates here
 };
 
 // It might be useful to have a function to get an enemy by ID
 export const getEnemyTemplateById = (id) => {
   return enemyConfig[id] || null;
-}; 
+};

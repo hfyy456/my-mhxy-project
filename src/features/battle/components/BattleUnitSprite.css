@@ -23,7 +23,7 @@
 
 /* 攻击动画 - 使用CSS变量实现移动到目标位置 */
 .attacker-move {
-  animation: move-to-target 1.2s ease-in-out;
+  animation: move-to-target 0.5s ease-in-out; /* 减少动画时间从1.2s到0.8s */
   transform-origin: center center;
   z-index: 1000 !important;
   position: relative;
@@ -32,8 +32,8 @@
 
 @keyframes move-to-target {
   0% { transform: translateX(0) translateY(0); }
-  30% { transform: translateX(calc(var(--move-x) * 0.8 * var(--move-direction))) translateY(calc(var(--move-y) * 0.8)); } /* 加快到达目标的速度 */
-  70% { transform: translateX(calc(var(--move-x) * 0.8 * var(--move-direction))) translateY(calc(var(--move-y) * 0.8)); } /* 停留在目标位置 */
+  20% { transform: translateX(calc(var(--move-x) * 0.85 * var(--move-direction))) translateY(calc(var(--move-y) * 0.85)); } /* 更快到达目标 */
+  60% { transform: translateX(calc(var(--move-x) * 0.85 * var(--move-direction))) translateY(calc(var(--move-y) * 0.85)); } /* 缩短停留时间 */
   100% { transform: translateX(0) translateY(0); }
 }
 
@@ -89,27 +89,34 @@
   height: 100%;
   pointer-events: none;
   z-index: 90;
+  overflow: visible;
 }
 
-/* 攻击波纹特效 - 简化版本 */
+/* 攻击波纹特效 - 优化版本 */
 .attack-effect {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 70%);
-  animation: attack-pulse 0.6s ease-out;
+  top: -15%;
+  left: -15%;
+  width: 130%;
+  height: 130%;
+  background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,0,0,0.3) 40%, rgba(255,255,255,0) 70%);
+  animation: attack-pulse 0.4s ease-out;
   border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: opacity, transform;
+  pointer-events: none;
 }
 
-/* 移除闪光特效，使用更简单的效果 */
-.attack-flash {
-  display: none;
-}
+
 
 @keyframes attack-pulse {
-  0% { opacity: 0.5; }
+  0% { opacity: 0.9; transform: scale(0.8); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+@keyframes flash-pulse {
+  0% { opacity: 0.8; }
   100% { opacity: 0; }
 }
 
