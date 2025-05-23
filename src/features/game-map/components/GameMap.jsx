@@ -301,9 +301,20 @@ const GameMap = ({
   const triggerShake = useCallback(() => {
     if (mapContainerRef.current) {
       mapContainerRef.current.classList.add("map-shake");
-      setTimeout(() => {
-        mapContainerRef.current?.classList.remove("map-shake");
-      }, 300); // Duration of the animation
+      
+      const startTime = performance.now();
+      const duration = 300; // Duration of the animation
+      
+      const removeShakeClass = (timestamp) => {
+        const elapsed = timestamp - startTime;
+        if (elapsed >= duration) {
+          mapContainerRef.current?.classList.remove("map-shake");
+          return;
+        }
+        requestAnimationFrame(removeShakeClass);
+      };
+      
+      requestAnimationFrame(removeShakeClass);
     }
   }, []);
 
@@ -345,7 +356,7 @@ const GameMap = ({
     setCurrentPath([]);
     setCurrentPathIndex(0);
     if (autoMoveTimeoutRef.current) {
-      clearTimeout(autoMoveTimeoutRef.current);
+      cancelAnimationFrame(autoMoveTimeoutRef.current);
       autoMoveTimeoutRef.current = null;
     }
   }, []);
@@ -477,9 +488,19 @@ const GameMap = ({
       currentPathIndex < currentPath.length
     ) {
       if (autoMoveTimeoutRef.current) {
-        clearTimeout(autoMoveTimeoutRef.current);
+        cancelAnimationFrame(autoMoveTimeoutRef.current);
       }
-      autoMoveTimeoutRef.current = setTimeout(() => {
+      
+      const startTime = performance.now();
+      const moveDuration = 200;
+      
+      const executeMove = (timestamp) => {
+        const elapsed = timestamp - startTime;
+        if (elapsed < moveDuration) {
+          autoMoveTimeoutRef.current = requestAnimationFrame(executeMove);
+          return;
+        }
+        
         const nextStep = currentPath[currentPathIndex];
         const moveSuccess = attemptPlayerMove(nextStep.row, nextStep.col);
 
@@ -488,7 +509,11 @@ const GameMap = ({
         } else {
           cancelAutoMove();
         }
-      }, 200);
+        
+        autoMoveTimeoutRef.current = null;
+      };
+      
+      autoMoveTimeoutRef.current = requestAnimationFrame(executeMove);
     } else if (
       isAutoMoving &&
       currentPathIndex >= currentPath.length &&
@@ -498,7 +523,7 @@ const GameMap = ({
     }
     return () => {
       if (autoMoveTimeoutRef.current) {
-        clearTimeout(autoMoveTimeoutRef.current);
+        cancelAnimationFrame(autoMoveTimeoutRef.current);
       }
     };
   }, [

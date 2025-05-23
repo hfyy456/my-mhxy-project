@@ -1,7 +1,18 @@
-import { BASE_CONFIG } from './baseConfig';
-import { raceConfig } from './raceConfig';
-import { skillConfig } from './skillConfig';
-import { PET_TYPES, RACE_TYPES, GROWTH_RATE_TIERS, COLOR_TYPES, ATTRIBUTE_TYPES, FIVE_ELEMENTS } from './enumConfig';
+import { BASE_CONFIG } from "./baseConfig";
+import { raceConfig } from "./raceConfig";
+import { skillConfig } from "./skillConfig";
+import {
+  PET_TYPES,
+  RACE_TYPES,
+  GROWTH_RATE_TIERS,
+  COLOR_TYPES,
+  ATTRIBUTE_TYPES,
+  FIVE_ELEMENTS,
+} from "./enumConfig";
+
+// 攻击距离说明：
+// 最小攻击距离为2，表示从左到右，第3排可以打到第5排，第2排可以打到第4排
+// 攻击距离为5时，第1排可以打到第6排
 
 // 宠物配置
 export const petConfig = {
@@ -19,6 +30,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: COLOR_TYPES.BLUE,
     race: RACE_TYPES.NETHER,
+    attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
       [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
@@ -30,10 +42,10 @@ export const petConfig = {
       "magic_critical",
       "agility_boost",
       "perception",
-      "magic_heart"
+      "magic_heart",
     ],
-    background: "来自幽冥世界的神秘生灵，掌握着强大的法术力量。它们生前多为修炼者，因执念不散而化为幽灵，擅长使用各种神秘法术攻击敌人。",
-    
+    background:
+      "来自幽冥世界的神秘生灵，掌握着强大的法术力量。它们生前多为修炼者，因执念不散而化为幽灵，擅长使用各种神秘法术攻击敌人。",
   },
   heavenGuard: {
     id: "heavenGuard",
@@ -49,6 +61,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: COLOR_TYPES.AMBER,
     race: RACE_TYPES.WARRIOR,
+    attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
       [ATTRIBUTE_TYPES.STRENGTH]: [180, 280],
@@ -56,10 +69,7 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [70, 170],
       [ATTRIBUTE_TYPES.LUCK]: [50, 150],
     },
-    initialSkills: [
-      "critical_strike",
-      "defense_boost"
-    ],
+    initialSkills: ["critical_strike", "defense_boost"],
     background:
       "天庭四大天王之一的部下，是守护天庭的精锐力量。作为天兵中的佼佼者，他们身负神威，手持天界神兵，是维护天界秩序的中坚力量。在战斗中表现出色的武艺和无畏的战斗意志，是天庭军队中的重要战力。",
   },
@@ -77,6 +87,7 @@ export const petConfig = {
     type: PET_TYPES.SPEED,
     color: COLOR_TYPES.YELLOW,
     race: RACE_TYPES.SPIRIT,
+    attackRange: 4, // 攻击距离为4，可以从第1排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [80, 180],
       [ATTRIBUTE_TYPES.STRENGTH]: [60, 160],
@@ -84,11 +95,7 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [80, 180],
       [ATTRIBUTE_TYPES.LUCK]: [60, 160],
     },
-    initialSkills: [
-      "agility_boost",
-      "perception",
-      "night_combat"
-    ],
+    initialSkills: ["agility_boost", "perception", "night_combat"],
     background:
       "居住在雷泽中的神兽，身体轻盈如燕，速度快如闪电。它们能够操纵雷电之力，在战斗中常常出其不意地攻击敌人，让对手防不胜防。",
   },
@@ -106,6 +113,7 @@ export const petConfig = {
     type: PET_TYPES.DEFENSE,
     color: COLOR_TYPES.GREEN,
     race: RACE_TYPES.NETHER,
+    attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [200, 300],
       [ATTRIBUTE_TYPES.STRENGTH]: [100, 200],
@@ -113,12 +121,7 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [80, 180],
       [ATTRIBUTE_TYPES.LUCK]: [80, 180],
     },
-    initialSkills: [
-      "divine_protection",
-      "stealth",
-      "counter",
-      "defense_boost"
-    ],
+    initialSkills: ["divine_protection", "stealth", "counter", "defense_boost"],
     background:
       "来自异域的神秘生物，以吸食鲜血为生。它们拥有强大的生命力和恢复能力，能够在战斗中不断地补充自己的体力，是战场上的不死之身。",
   },
@@ -136,6 +139,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: "orange-500",
     race: RACE_TYPES.MACHINE,
+    attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
       [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
@@ -161,6 +165,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "pink-500",
     race: RACE_TYPES.SPIRIT,
+    attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
       [ATTRIBUTE_TYPES.STRENGTH]: [200, 300],
@@ -186,6 +191,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "brown-500",
     race: RACE_TYPES.BEAST,
+    attackRange: 4, // 攻击距离为4，可以从第1排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [110, 210],
       [ATTRIBUTE_TYPES.STRENGTH]: [190, 290],
@@ -196,31 +202,6 @@ export const petConfig = {
     initialSkills: ["power_strike", "stealth", "combo_attack"],
     background:
       "生活在深山老林中的猛兽，性格暴躁，攻击力极强。它们拥有锋利的爪子和牙齿，能够轻易地撕裂敌人的防御，是战场上的恐怖杀手。",
-  },
-  chaosBeast: {
-    id: "chaosBeast",
-    name: "混沌兽",
-    fiveElement: FIVE_ELEMENTS.FIRE,
-    growthRates: {
-      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
-      [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
-      [ATTRIBUTE_TYPES.AGILITY]: 0.035,
-      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.045,
-      [ATTRIBUTE_TYPES.LUCK]: 0.02,
-    },
-    type: PET_TYPES.MAGICAL,
-    color: "indigo-500",
-    race: RACE_TYPES.NETHER,
-    basicAttributeRanges: {
-      [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
-      [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
-      [ATTRIBUTE_TYPES.AGILITY]: [130, 230],
-      [ATTRIBUTE_TYPES.INTELLIGENCE]: [200, 300],
-      [ATTRIBUTE_TYPES.LUCK]: [70, 170],
-    },
-    initialSkills: ["magic_critical", "magic_heart", "magic_surge"],
-    background:
-      "来自混沌空间的神秘生物，身体中蕴含着混沌之力。它们能够操纵各种元素的力量，施展出强大的法术攻击，甚至可以扭曲空间，让敌人陷入困境。",
   },
   yaksha: {
     id: "yaksha",
@@ -236,6 +217,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "cyan-500",
     race: RACE_TYPES.NETHER,
+    attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
       [ATTRIBUTE_TYPES.STRENGTH]: [200, 300],
@@ -261,6 +243,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: "teal-500",
     race: RACE_TYPES.BEAST,
+    attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
       [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
@@ -286,6 +269,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: "orange-600",
     race: RACE_TYPES.CELESTIAL,
+    attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [110, 210],
       [ATTRIBUTE_TYPES.STRENGTH]: [90, 190],
@@ -311,6 +295,7 @@ export const petConfig = {
     type: PET_TYPES.SUPPORT,
     color: "purple-600",
     race: RACE_TYPES.CELESTIAL,
+    attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [150, 250],
       [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
@@ -336,6 +321,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: "blue-600",
     race: RACE_TYPES.CELESTIAL,
+    attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
       [ATTRIBUTE_TYPES.STRENGTH]: [90, 190],
@@ -361,6 +347,7 @@ export const petConfig = {
     },
     color: "pink-600",
     race: RACE_TYPES.CELESTIAL,
+    attackRange: 4, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
       [ATTRIBUTE_TYPES.STRENGTH]: [100, 200],
@@ -386,6 +373,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "orange-500",
     race: RACE_TYPES.BEAST,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [140, 240],
       [ATTRIBUTE_TYPES.STRENGTH]: [210, 310],
@@ -393,14 +381,19 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [60, 160],
       [ATTRIBUTE_TYPES.LUCK]: [60, 160],
     },
-    initialSkills: ["tiger_roar", "power_strike", "combo_attack", "night_combat"],
+    initialSkills: [
+      "tiger_roar",
+      "power_strike",
+      "combo_attack",
+      "night_combat",
+    ],
     background:
       "深山中百兽之王，威严霸气，身躯强健。古称'山君'，是山林的主宰者。百年修行使其获得了通灵的能力，能够发出震慑心魄的虎啸，让敌人胆寒畏惧，在战斗中展现无穷的力量。",
   },
   blackTortoise: {
     id: "blackTortoise",
     name: "玄武",
-    fiveElement: FIVE_ELEMENTS.WATER, 
+    fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.05,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
@@ -411,6 +404,7 @@ export const petConfig = {
     type: PET_TYPES.DEFENSE,
     color: "blue-900",
     race: RACE_TYPES.BEAST,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [220, 320],
       [ATTRIBUTE_TYPES.STRENGTH]: [120, 220],
@@ -436,6 +430,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: "purple-800",
     race: RACE_TYPES.NETHER,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
       [ATTRIBUTE_TYPES.STRENGTH]: [100, 200],
@@ -443,7 +438,12 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [200, 300],
       [ATTRIBUTE_TYPES.LUCK]: [80, 180],
     },
-    initialSkills: ["life_death_book", "ghost_fire", "yin_yang_switch", "nether_portal"],
+    initialSkills: [
+      "life_death_book",
+      "ghost_fire",
+      "yin_yang_switch",
+      "nether_portal",
+    ],
     background:
       "地府中的生死簿掌管者，手持生死簿和朱笔，能够判断生死。在战斗中使用阴间法术，能够攻击敌人的灵魂，甚至可以短暂地将敌人传送到冥界中受苦。",
   },
@@ -461,6 +461,7 @@ export const petConfig = {
     type: PET_TYPES.SUPPORT,
     color: "white",
     race: RACE_TYPES.SPIRIT,
+    attackRange: 3,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [110, 210],
       [ATTRIBUTE_TYPES.STRENGTH]: [60, 160],
@@ -486,6 +487,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "amber-500",
     race: RACE_TYPES.WARRIOR,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [150, 250],
       [ATTRIBUTE_TYPES.STRENGTH]: [180, 280],
@@ -511,6 +513,7 @@ export const petConfig = {
     type: PET_TYPES.PHYSICAL,
     color: "amber-600",
     race: RACE_TYPES.WARRIOR,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [160, 260],
       [ATTRIBUTE_TYPES.STRENGTH]: [170, 270],
@@ -536,6 +539,7 @@ export const petConfig = {
     type: PET_TYPES.MAGICAL,
     color: COLOR_TYPES.AMBER,
     race: RACE_TYPES.BEAST,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [180, 280],
       [ATTRIBUTE_TYPES.STRENGTH]: [160, 260],
@@ -543,27 +547,25 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.INTELLIGENCE]: [180, 280],
       [ATTRIBUTE_TYPES.LUCK]: [120, 220],
     },
-    initialSkills: [
-      "magic_critical",
-      "divine_protection",
-      "magic_heart",
-    ],
-    background: "上古四大瑞兽之首，形似麋身龙鳞，额生独角，尾如牛，蹄似马，浑身散发祥瑞之气。性格温和，不践生草，不食生物，具有极高的灵性和智慧。在战斗中能够运用神圣之力，既可进行强大的法术攻击，又能为队友提供保护。",
+    initialSkills: ["magic_critical", "divine_protection", "magic_heart"],
+    background:
+      "上古四大瑞兽之首，形似麋身龙鳞，额生独角，尾如牛，蹄似马，浑身散发祥瑞之气。性格温和，不践生草，不食生物，具有极高的灵性和智慧。在战斗中能够运用神圣之力，既可进行强大的法术攻击，又能为队友提供保护。",
   },
   hundun: {
     id: "hundun",
     name: "混沌",
     fiveElement: FIVE_ELEMENTS.FIRE,
     growthRates: {
-      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.050,
-      [ATTRIBUTE_TYPES.STRENGTH]: 0.030,
-      [ATTRIBUTE_TYPES.AGILITY]: 0.020,
+      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.05,
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
+      [ATTRIBUTE_TYPES.AGILITY]: 0.02,
       [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.045,
-      [ATTRIBUTE_TYPES.LUCK]: 0.030,
+      [ATTRIBUTE_TYPES.LUCK]: 0.03,
     },
-    type: PET_TYPES.MAGICAL, 
+    type: PET_TYPES.MAGICAL,
     color: "gray-800",
     race: RACE_TYPES.ANCIENT_BEAST,
+    attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [250, 350],
       [ATTRIBUTE_TYPES.STRENGTH]: [100, 200],
@@ -572,7 +574,8 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.LUCK]: [100, 200],
     },
     initialSkills: ["chaos_devour", "divine_protection", "magic_surge"],
-    background: "诞生于天地未开之前的原始神兽，形态不可名状，拥有吞噬一切的力量。",
+    background:
+      "诞生于天地未开之前的原始神兽，形态不可名状，拥有吞噬一切的力量。",
   },
   yinglong: {
     id: "yinglong",
@@ -580,14 +583,15 @@ export const petConfig = {
     fiveElement: FIVE_ELEMENTS.WATER,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.042,
-      [ATTRIBUTE_TYPES.STRENGTH]: 0.040, 
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.04,
       [ATTRIBUTE_TYPES.AGILITY]: 0.035,
       [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.045,
       [ATTRIBUTE_TYPES.LUCK]: 0.025,
     },
     type: PET_TYPES.MAGICAL,
-    color: "cyan-700", 
+    color: "cyan-700",
     race: RACE_TYPES.ANCIENT_BEAST,
+    attackRange: 5,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [200, 300],
       [ATTRIBUTE_TYPES.STRENGTH]: [180, 280],
@@ -604,14 +608,15 @@ export const petConfig = {
     fiveElement: FIVE_ELEMENTS.WOOD,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
-      [ATTRIBUTE_TYPES.STRENGTH]: 0.020,
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.02,
       [ATTRIBUTE_TYPES.AGILITY]: 0.035,
-      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.050,
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.05,
       [ATTRIBUTE_TYPES.LUCK]: 0.045,
     },
     type: PET_TYPES.SUPPORT,
     color: "yellow-300",
     race: RACE_TYPES.ANCIENT_BEAST,
+    attackRange: 3,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [150, 250],
       [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
@@ -620,8 +625,9 @@ export const petConfig = {
       [ATTRIBUTE_TYPES.LUCK]: [200, 300],
     },
     initialSkills: ["omniscience", "luck_boost", "healing"],
-    background: "通晓万物情状的神兽，能言语，知过去未来，趋吉避凶。外形似狮，头有双角，身有山羊胡。",
-  }
+    background:
+      "通晓万物情状的神兽，能言语，知过去未来，趋吉避凶。外形似狮，头有双角，身有山羊胡。",
+  },
 };
 
 // 宠物评分计算函数

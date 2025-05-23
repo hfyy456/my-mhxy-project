@@ -19,6 +19,8 @@
   transition: transform 0.2s ease;
   will-change: transform;
   transform-origin: center bottom;
+  /* 添加呼吸效果动画 */
+  animation: breathing 4s ease-in-out infinite;
 }
 
 /* 攻击动画 - 使用CSS变量实现移动到目标位置 */
@@ -73,6 +75,75 @@
   animation: float-damage 1.5s ease-out forwards;
 }
 
+/* 防御状态样式 */
+.defending {
+  position: relative;
+}
+
+.defending::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #3498db;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #3498db, inset 0 0 10px #3498db;
+  opacity: 0.5;
+  animation: defend-pulse 2s infinite;
+  z-index: 5;
+  pointer-events: none;
+}
+
+@keyframes defend-pulse {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.05); opacity: 0.7; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+/* 防御特效容器 */
+.defend-effect-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* 防御盾牌特效 */
+.defend-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.defend-effect i {
+  font-size: 40px;
+  color: #3498db;
+  text-shadow: 0 0 10px #3498db, 0 0 20px #3498db;
+  animation: shield-pulse 2s infinite;
+}
+
+@keyframes shield-pulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
 @keyframes float-damage {
   0% { transform: translateY(0) scale(0.8); opacity: 0; }
   20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
@@ -115,6 +186,60 @@
   100% { opacity: 0; transform: scale(1.2); }
 }
 
+/* 呼吸效果动画 */
+@keyframes breathing {
+  0%, 100% {
+    transform: scale(1) translateZ(20px) scaleX(var(--sprite-direction, -1));
+  }
+  50% {
+    transform: scale(1.03) translateZ(20px) scaleX(var(--sprite-direction, -1));
+  }
+}
+
+/* 轻微摇摆效果 */
+@keyframes idle-sway {
+  0%, 100% {
+    transform: rotateX(0deg);
+  }
+  25% {
+    transform: rotateX(1deg);
+  }
+  75% {
+    transform: rotateX(-1deg);
+  }
+}
+
+/* 鼠标悬停时的交互效果 */
+.sprite-container:hover {
+  transform: translateY(-5px);
+}
+
+.sprite-container:hover .sprite-image {
+  animation-play-state: paused;
+  transform: scale(1.05) translateZ(30px) scaleX(var(--sprite-direction, -1));
+  filter: drop-shadow(0 15px 10px rgba(0, 0, 0, 0.4));
+}
+
+/* 添加精灵图阴影效果 */
+.sprite-shadow {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.sprite-container:hover .sprite-shadow {
+  width: 75%;
+  opacity: 0.3;
+  filter: blur(7px);
+}
+
 @keyframes flash-pulse {
   0% { opacity: 0.8; }
   100% { opacity: 0; }
@@ -129,6 +254,10 @@
   position: relative;
   transform-style: preserve-3d;
   z-index: 100 !important; /* 确保精灵容器始终在最上层 */
+  perspective: 1000px; /* 添加3D视角 */
+  transition: transform 0.3s ease;
+  /* 添加轻微摇摆效果 */
+  animation: idle-sway 6s ease-in-out infinite;
 }
 
 .sprite-container::after {

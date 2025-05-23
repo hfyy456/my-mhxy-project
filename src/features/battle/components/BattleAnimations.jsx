@@ -8,6 +8,7 @@ const BattleAnimations = () => {
   const dispatch = useDispatch();
   const [animation, setAnimation] = useState(null);
   const [damageNumbers, setDamageNumbers] = useState([]);
+  const [effects, setEffects] = useState([]);
   
   // 从Redux获取当前战斗状态
   const currentTurnUnitId = useSelector(state => state.battle.currentTurnUnitId);
@@ -46,6 +47,11 @@ const BattleAnimations = () => {
         }
       }
     }
+    
+    // 检查是否有特效信息
+    if (latestLog.effect && latestLog.unitId) {
+      triggerEffect(latestLog.unitId, latestLog.effect);
+    }
   }, [battleLog, battleUnits, currentPhase]); // 依赖项保持简洁
 
   // Listen for awaiting_final_animation phase to finalize battle
@@ -53,12 +59,57 @@ const BattleAnimations = () => {
     if (currentPhase === 'awaiting_final_animation') {
       // Delay to allow animations to complete (e.g., damage numbers last 2s)
       const animationBufferTime = 2500; // ms
-      const timer = setTimeout(() => {
-        dispatch(finalizeBattleResolution());
-      }, animationBufferTime);
-      return () => clearTimeout(timer); // Cleanup timer on component unmount or phase change
+      const startTime = performance.now();
+      
+      const finalizeAnimation = (timestamp) => {
+        const elapsed = timestamp - startTime;
+        if (elapsed >= animationBufferTime) {
+          dispatch(finalizeBattleResolution());
+          return;
+        }
+        const animFrameId = requestAnimationFrame(finalizeAnimation);
+        return () => cancelAnimationFrame(animFrameId);
+      };
+      
+      const animFrameId = requestAnimationFrame(finalizeAnimation);
+      return () => cancelAnimationFrame(animFrameId); // Cleanup animation frame on component unmount or phase change
     }
   }, [currentPhase, dispatch]);
+  
+  // 触发特效
+  const triggerEffect = (unitId, effectInfo) => {
+    const { type, icon, color, size, duration } = effectInfo;
+    
+    // 添加新特效
+    setEffects(prev => [
+      ...prev,
+      {
+        id: `effect-${Date.now()}`,
+        unitId,
+        type,
+        icon,
+        color,
+        size,
+        startTime: Date.now(),
+        duration: duration || 1000
+      }
+    ]);
+    
+    // 特效结束后清除
+    const startTime = performance.now();
+    const effectDuration = duration || 1000;
+    
+    const clearEffect = (timestamp) => {
+      const elapsed = timestamp - startTime;
+      if (elapsed >= effectDuration) {
+        setEffects(prev => prev.filter(e => e.unitId !== unitId || e.type !== type));
+        return;
+      }
+      requestAnimationFrame(clearEffect);
+    };
+    
+    requestAnimationFrame(clearEffect);
+  };
   
   // 触发攻击动画
   const triggerAttackAnimation = (attackerId, targetId, damage) => {
@@ -81,14 +132,32 @@ const BattleAnimations = () => {
     ]);
     
     // 动画结束后清除
-    setTimeout(() => {
-      setAnimation(null);
-    }, 1000);
+    const animStartTime = performance.now();
+    
+    const clearAnimation = (timestamp) => {
+      const elapsed = timestamp - animStartTime;
+      if (elapsed >= 1000) {
+        setAnimation(null);
+        return;
+      }
+      requestAnimationFrame(clearAnimation);
+    };
+    
+    requestAnimationFrame(clearAnimation);
     
     // 伤害数字动画结束后清除
-    setTimeout(() => {
-      setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId));
-    }, 2000);
+    const damageStartTime = performance.now();
+    
+    const clearDamageNumbers = (timestamp) => {
+      const elapsed = timestamp - damageStartTime;
+      if (elapsed >= 2000) {
+        setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId));
+        return;
+      }
+      requestAnimationFrame(clearDamageNumbers);
+    };
+    
+    requestAnimationFrame(clearDamageNumbers);
   };
   
   // 渲染攻击动画
@@ -152,10 +221,46 @@ const BattleAnimations = () => {
     });
   };
   
+  // 渲染特效
+  const renderEffects = () => {
+    return effects.map(effectInfo => {
+      const { id, unitId, type, icon, color, size, startTime } = effectInfo;
+      
+      // 获取目标的DOM元素位置
+      const unitElement = document.querySelector(`[data-unit-id="${unitId}"]`);
+      if (!unitElement) return null;
+      
+      // 获取元素在页面中的位置
+      const unitRect = unitElement.getBoundingClientRect();
+      
+      // 计算特效位置
+      const effectStyle = {
+        position: 'fixed',
+        top: `${unitRect.top}px`,
+        left: `${unitRect.left}px`,
+        width: `${unitRect.width}px`,
+        height: `${unitRect.height}px`,
+        zIndex: 1002,
+        color: color || '#ffffff',
+        fontSize: size === 'large' ? '48px' : '24px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      };
+      
+      return (
+        <div key={id} className={`battle-effect ${type}-effect`} style={effectStyle}>
+          <i className={`fas ${icon}`}></i>
+        </div>
+      );
+    });
+  };
+  
   return (
     <>
       {renderAttackAnimation()}
       {renderDamageNumbers()}
+      {renderEffects()}
     </>
   );
 };

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { getUnitStatsDetails } from '@/features/battle/logic/battleLogic';
 
 const BattleInfoPanel = ({ unit }) => {
   if (!unit) {
@@ -19,12 +20,16 @@ const BattleInfoPanel = ({ unit }) => {
 };
 
 const UnitInfoCard = ({ unit }) => {
+  const [showDetailedStats, setShowDetailedStats] = useState(false);
   const { name, stats, spriteAssetKey, isDefeated, isPlayerUnit } = unit;
-  const { hp, maxHp, mp, maxMp, attack, defense, speed } = stats;
+  const { currentHp, maxHp, currentMp, maxMp } = stats;
+  
+  // 获取单位的详细属性
+  const unitDetails = getUnitStatsDetails(unit);
 
   // 计算HP和MP百分比
-  const hpPercent = (hp / maxHp) * 100;
-  const mpPercent = (mp / maxMp) * 100;
+  const hpPercent = (currentHp / maxHp) * 100;
+  const mpPercent = (currentMp / maxMp) * 100;
 
   // 根据HP百分比确定颜色
   const getHpColor = (percent) => {
@@ -79,35 +84,130 @@ const UnitInfoCard = ({ unit }) => {
       </div>
       
       {/* 生命值和法力值条 */}
-      <div className="flex flex-col gap-1 w-full mt-0.5">
+      <div className="flex flex-col gap-1">
         {/* HP条 */}
-        <div>
-          <div className="flex justify-between text-[10px] mb-0.5">
-            <span className="text-green-400">生命值</span>
-            <span className="text-green-400">{hp}/{maxHp}</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${getHpColor(hpPercent)} transition-all duration-500`}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold w-8">HP</span>
+          <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${getHpColor(hpPercent)}`}
               style={{ width: `${hpPercent}%` }}
             ></div>
           </div>
+          <span className="text-xs font-mono">{currentHp}/{maxHp}</span>
         </div>
         
         {/* MP条 */}
-        <div>
-          <div className="flex justify-between text-[10px] mb-0.5">
-            <span className="text-blue-400">法力值</span>
-            <span className="text-blue-400">{mp}/{maxMp}</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-600 transition-all duration-500"
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold w-8">MP</span>
+          <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600"
               style={{ width: `${mpPercent}%` }}
             ></div>
           </div>
+          <span className="text-xs font-mono">{currentMp}/{maxMp}</span>
         </div>
       </div>
+      
+      {/* 切换详细属性按钮 */}
+      <button 
+        onClick={() => setShowDetailedStats(!showDetailedStats)}
+        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-2 rounded transition-colors duration-200"
+      >
+        {showDetailedStats ? '隐藏详细属性' : '显示详细属性'}
+      </button>
+      
+      {/* 详细属性面板 */}
+      {showDetailedStats && (
+        <div className="mt-2 p-2 bg-gray-700 bg-opacity-50 rounded-lg text-xs">
+          <h3 className="text-center font-semibold mb-2 text-yellow-300">单位详细属性</h3>
+          
+          {/* 攻击属性 */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-red-400">物理攻击</span>
+              <span className="font-mono">{unitDetails.physicalAttack}</span>
+            </div>
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-blue-400">法术攻击</span>
+              <span className="font-mono">{unitDetails.magicalAttack}</span>
+            </div>
+          </div>
+          
+          {/* 防御属性 */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-yellow-400">物理防御</span>
+              <span className="font-mono">{unitDetails.physicalDefense}</span>
+            </div>
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-purple-400">法术防御</span>
+              <span className="font-mono">{unitDetails.magicalDefense}</span>
+            </div>
+          </div>
+          
+          {/* 战斗相关属性 */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-green-400">速度</span>
+              <span className="font-mono">{unitDetails.speed}</span>
+            </div>
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-indigo-400">命中率</span>
+              <span className="font-mono">{unitDetails.hitRate}</span>
+            </div>
+          </div>
+          
+          {/* 暴击和闪避 */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-orange-400">暴击率</span>
+              <span className="font-mono">{unitDetails.critRate}</span>
+            </div>
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-teal-400">暴击伤害</span>
+              <span className="font-mono">{unitDetails.critDamage}</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-pink-400">闪避率</span>
+              <span className="font-mono">{unitDetails.dodgeRate}</span>
+            </div>
+            <div className="bg-gray-800 p-1 rounded flex justify-between">
+              <span className="text-gray-400">减伤率</span>
+              <span className="font-mono">{unitDetails.percentDamageReduction}</span>
+            </div>
+          </div>
+          
+          {/* 首选攻击类型 */}
+          <div className="bg-gray-800 p-1 rounded flex justify-between mt-1">
+            <span className="text-white">首选攻击类型</span>
+            <span className={unitDetails.preferredAttackType === 'physical' ? 'text-red-400' : 'text-blue-400'}>
+              {unitDetails.preferredAttackType === 'physical' ? '物理攻击' : '法术攻击'}
+            </span>
+          </div>
+        </div>
+      )}
+      
+      {/* 基础属性概览 */}
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="bg-gray-700 bg-opacity-50 p-1 rounded flex justify-between">
+          <span>攻击</span>
+          <span className="font-mono">{Math.max(stats.physicalAttack, stats.magicalAttack)}</span>
+        </div>
+        <div className="bg-gray-700 bg-opacity-50 p-1 rounded flex justify-between">
+          <span>防御</span>
+          <span className="font-mono">{Math.max(stats.physicalDefense, stats.magicalDefense)}</span>
+        </div>
+        <div className="bg-gray-700 bg-opacity-50 p-1 rounded flex justify-between">
+          <span>速度</span>
+          <span className="font-mono">{stats.speed}</span>
+        </div>
+      </div>
+      
       {/* 状态效果 */}
       {unit.statusEffects && (
         <div className="mt-2">

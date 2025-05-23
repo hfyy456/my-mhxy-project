@@ -57,6 +57,21 @@ export const SKILL_MODES = {
   ACTIVE: "active"
 };
 
+// 技能目标类型
+export const SKILL_TARGET_TYPES = {
+  SINGLE: "single",      // 单体技能
+  GROUP: "group",       // 群体技能
+  NONE: "none"          // 无目标技能（如自身增益）
+};
+
+// 技能影响范围类型
+export const SKILL_AREA_TYPES = {
+  CROSS: "cross",       // 十字范围
+  ROW: "row",          // 一行
+  COLUMN: "column",     // 一列
+  SQUARE: "square"      // 全体范围(3x3)
+};
+
 // 种族特性类型
 export const RACE_TRAIT_TYPES = {
   COMBAT: "combat",
@@ -101,7 +116,7 @@ export const EQUIPMENT_EFFECT_TYPES = {
   INTELLIGENCE: "intelligence",   // 智力
   LUCK: "luck",                  // 幸运
 
-  // 衍生属性
+  // 核心属性
   HP: "hp",                      // 生命值
   MP: "mp",                      // 法力值
   PHYSICAL_ATTACK: "physicalAttack",    // 物理攻击
@@ -178,11 +193,54 @@ export const SKILL_EFFECTS = {
   MAGIC_SURGE: "magicSurge"       // 法术波动
 };
 
+// 被动技能触发时机
+export const PASSIVE_SKILL_TIMING = {
+  // 回合相关
+  TURN_START: "turn_start",          // 回合开始时
+  TURN_END: "turn_end",             // 回合结束时
+  
+  // 普通攻击相关
+  BEFORE_NORMAL_ATTACK: "before_normal_attack",   // 普通攻击前
+  AFTER_NORMAL_ATTACK: "after_normal_attack",    // 普通攻击后
+  
+  // 法术技能相关
+  BEFORE_MAGIC_SKILL: "before_magic_skill",     // 法术技能攻击前
+  AFTER_MAGIC_SKILL: "after_magic_skill",      // 法术技能攻击后
+  
+  // 物理技能相关
+  BEFORE_PHYSICAL_SKILL: "before_physical_skill", // 物理技能攻击前
+  AFTER_PHYSICAL_SKILL: "after_physical_skill",  // 物理技能攻击后
+  
+  // 任何攻击相关
+  BEFORE_ANY_ATTACK: "before_any_attack",      // 任何攻击前
+  AFTER_ANY_ATTACK: "after_any_attack",       // 任何攻击后
+  
+  // 伤害相关
+  ON_PHYSICAL_DAMAGE: "on_physical_damage",    // 受到物理伤害时
+  ON_MAGICAL_DAMAGE: "on_magical_damage",     // 受到法术伤害时
+  ON_ANY_DAMAGE: "on_any_damage",           // 受到任何伤害时
+  AFTER_DAMAGE: "after_damage",             // 受到伤害后
+  
+  // 战斗状态相关
+  ON_DODGE: "on_dodge",                    // 闪避成功时
+  ON_CRIT: "on_crit",                     // 暴击成功时
+  ON_KILL: "on_kill",                     // 击杀目标时
+  ON_DEATH: "on_death",                   // 死亡时
+  
+  // 战斗开始结束
+  BATTLE_START: "battle_start",             // 战斗开始时
+  BATTLE_END: "battle_end",                // 战斗结束时
+  
+  // 其他
+  ALWAYS: "always"                         // 始终生效
+};
+
 // Unique ID Prefixes
 export const UNIQUE_ID_PREFIXES = {
   ITEM: "item",
   SUMMON: "summon",
   TOAST: "toast",
+  BATTLE_UNIT: "battle_unit", // 战斗单位 ID 前缀
   DEFAULT: "id",
   // Add other prefixes as needed
 };
@@ -191,6 +249,24 @@ export const UNIQUE_ID_PREFIXES = {
 export const REFINEMENT_SOURCES = {
   REFINEMENT: "refinement",
   // Add other sources as needed
+};
+
+// 战斗阶段
+export const BATTLE_PHASES = {
+  PREPARATION: "preparation",           // 准备阶段 - 玩家选择行动
+  PLAYER_TARGET_SELECTION: "player_target_selection", // 玩家选择目标阶段
+  EXECUTION: "execution",              // 执行阶段 - 按速度顺序执行行动
+  AWAITING_FINAL_ANIMATION: "awaiting_final_animation", // 等待最终动画完成
+  BATTLE_OVER: "battle_over",          // 战斗结束
+  BATTLE_END: "battle_end"             // 战斗完全结束，准备退出
+};
+
+// 战斗单位类型
+export const BATTLE_UNIT_TYPES = {
+  PLAYER: "player",                    // 玩家单位
+  ENEMY: "enemy",                     // 敌方单位
+  NEUTRAL: "neutral",                  // 中立单位
+  ENVIRONMENT: "environment"           // 环境单位（如障碍物）
 };
 
 // Skill Operation Outcomes

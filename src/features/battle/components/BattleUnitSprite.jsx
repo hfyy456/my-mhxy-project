@@ -10,6 +10,7 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   // 状态用于控制攻击动画
   const [isAttacking, setIsAttacking] = useState(false);
   const [isReceivingDamage, setIsReceivingDamage] = useState(false);
+  const [showDefendEffect, setShowDefendEffect] = useState(false);
   
   // 获取当前战斗阶段和单位行动
   const currentPhase = useSelector(selectCurrentPhase);
@@ -37,6 +38,7 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   const isAnimationInProgressRef = useRef(false);
   const processedLogsRef = useRef(new Set());
   const lastProcessedDamageRef = useRef(null);
+  const defendEffectAnimFrameRef = useRef(null);
   
   // 限制缓存大小，防止内存泄漏
   useEffect(() => {
@@ -50,8 +52,36 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
       processedLogsRef.current.clear();
       isAnimationInProgressRef.current = false;
       lastProcessedDamageRef.current = null;
+      
+      // 清理防御特效的动画帧
+      if (defendEffectAnimFrameRef.current) {
+        cancelAnimationFrame(defendEffectAnimFrameRef.current);
+      }
     };
   }, []);
+  
+  // 清除防御特效的函数
+  const clearDefendEffect = () => {
+    if (defendEffectAnimFrameRef.current) {
+      cancelAnimationFrame(defendEffectAnimFrameRef.current);
+    }
+    
+    const startTime = performance.now();
+    const duration = 800; // 与受击动画时间相同
+    
+    const hideDefendEffect = (timestamp) => {
+      const elapsed = timestamp - startTime;
+      if (elapsed >= duration) {
+        setShowDefendEffect(false);
+        // 清除动画帧引用
+        defendEffectAnimFrameRef.current = null;
+        return;
+      }
+      defendEffectAnimFrameRef.current = requestAnimationFrame(hideDefendEffect);
+    };
+    
+    defendEffectAnimFrameRef.current = requestAnimationFrame(hideDefendEffect);
+  };
   
   // 监听战斗日志变化，触发攻击动画
   useEffect(() => {
@@ -118,11 +148,21 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
           setIsAttacking(true);
           
           // 动画结束后恢复原状态
-          setTimeout(() => {
-            setIsAttacking(false);
-            // 标记动画完成
-            isAnimationInProgressRef.current = false;
-          }, 800); // 与 CSS 中的动画时间保持一致（从 1200ms 减少到 800ms）
+          const startTime = performance.now();
+          const duration = 800; // 与 CSS 中的动画时间保持一致（从 1200ms 减少到 800ms）
+          
+          const resetAttackAnimation = (timestamp) => {
+            const elapsed = timestamp - startTime;
+            if (elapsed >= duration) {
+              setIsAttacking(false);
+              // 标记动画完成
+              isAnimationInProgressRef.current = false;
+              return;
+            }
+            requestAnimationFrame(resetAttackAnimation);
+          };
+          
+          requestAnimationFrame(resetAttackAnimation);
         }
       }
     }
@@ -148,22 +188,63 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
       processedLogsRef.current.add(logId);
       
       // 缩短等待时间，加快动画衔接
-      setTimeout(() => {
+      const startWaitTime = performance.now();
+      const waitDuration = 300; // 缩短等待时间
+      
+      const startDamageAnimation = (timestamp) => {
+        const elapsed = timestamp - startWaitTime;
+        if (elapsed < waitDuration) {
+          requestAnimationFrame(startDamageAnimation);
+          return;
+        }
+        
         // 触发受伤动画
         setIsReceivingDamage(true);
         
-        setTimeout(() => {
-          setIsReceivingDamage(false);
-          // 标记动画完成
-          isAnimationInProgressRef.current = false;
-        }, 800); // 受击动画时间
-      }, 300); // 缩短等待时间
+        // 如果单位处于防御状态，显示防御特效
+        if (unit.isDefending) {
+          setShowDefendEffect(true);
+          // 清除之前的防御特效
+          clearDefendEffect();
+        } else {
+          // 确保非防御状态下不显示防御特效
+          setShowDefendEffect(false);
+        }
+        
+        // 设置受击动画结束的动画帧
+        const startDamageTime = performance.now();
+        const damageAnimDuration = 800; // 受击动画时间
+        
+        const resetDamageAnimation = (innerTimestamp) => {
+          const damageElapsed = innerTimestamp - startDamageTime;
+          if (damageElapsed >= damageAnimDuration) {
+            setIsReceivingDamage(false);
+            // 标记动画完成
+            isAnimationInProgressRef.current = false;
+            return;
+          }
+          requestAnimationFrame(resetDamageAnimation);
+        };
+        
+        requestAnimationFrame(resetDamageAnimation);
+      };
+      
+      requestAnimationFrame(startDamageAnimation);
     }
   }, [battleLog, unit]);
   if (!unit) return null;
 
   const { name, stats, isPlayerUnit, isDefeated } = unit;
   const { currentHp, maxHp, currentMp, maxMp } = stats;
+  
+  // 组件卸载时清理动画帧
+  useEffect(() => {
+    return () => {
+      if (defendEffectAnimFrameRef.current) {
+        cancelAnimationFrame(defendEffectAnimFrameRef.current);
+      }
+    };
+  }, []);
 
   const handleUnitClick = () => {
     if (onClick && !isDefeated) {
@@ -192,13 +273,14 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   const spriteAnimationClasses = `
     ${isAttacking ? 'attacker-move' : ''}
     ${isReceivingDamage ? 'receiving-damage' : ''}
+    ${unit.isDefending || showDefendEffect ? 'defending' : ''}
   `;
   
   // 设置较高的z-index，确保精灵图显示在格子上方
   const unitZIndexStyle = { zIndex: 50 };
   
-  // 精灵图容器样式
-  const spriteContainerClasses = "w-[120px] h-[120px] flex flex-col items-center justify-center relative mb-1 shadow-md";
+  // 精灵图容器样式 - 移除阴影
+  const spriteContainerClasses = "w-[120px] h-[120px] flex flex-col items-center justify-center relative mb-1";
   const spriteStateClasses = isDefeated ? "opacity-60" : "";
   
   return (
@@ -218,9 +300,10 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
             alt={name}
             className={`w-[120px] h-[120px] object-contain ${isDefeated ? 'grayscale opacity-50' : ''} sprite-image`}
             style={{ 
-              transform: `scale(1) translateZ(20px) ${isPlayerUnit ? 'scaleX(-1)' : ''}`, 
+              // 使用CSS变量控制精灵方向，便于动画使用
+              '--sprite-direction': isPlayerUnit ? '-1' : '1',
               transformStyle: 'preserve-3d',
-              filter: 'drop-shadow(0 10px 8px rgba(0, 0, 0, 0.3))',
+              // 移除阴影效果
               imageRendering: 'pixelated',
               backfaceVisibility: 'hidden'
             }}
@@ -229,12 +312,22 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
               e.target.src = images['/src/assets/summons/default.png'].default;
             }}
           />
+          {/* 阴影元素已移除 */}
         </div>
         
         {/* 攻击特效 - 增强版本 */}
         {isReceivingDamage && (
           <div className="attack-effect-container">
             <div className="attack-effect"></div>
+          </div>
+        )}
+        
+        {/* 防御特效 */}
+        {showDefendEffect && (
+          <div className="defend-effect-container">
+            <div className="defend-effect">
+              <i className="fas fa-shield-alt"></i>
+            </div>
           </div>
         )}
         

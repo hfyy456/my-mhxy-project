@@ -8,6 +8,9 @@ import ActionOrderTimeline from './ActionOrderTimeline';
 import BattleLogPanel from './BattleLogPanel';
 import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
+import BattleUnitStats from './BattleUnitStats';
+import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/battleLogic';
+import { petConfig } from '@/config/petConfig';
 
 import {
   selectIsBattleActive,
@@ -81,10 +84,23 @@ const BattleScreen = () => {
   const getTargets = () => {
     if (!selectedUnit) return [];
     
-    // 如果是攻击或技能，目标是敌方单位
-    if (selectedAction === 'attack' || selectedAction === 'skill') {
-      return Object.values(battleUnits)
-        .filter(unit => !unit.isPlayerUnit && !unit.isDefeated);
+    // 如果是攻击，使用战斗逻辑中的函数获取有效目标
+    if (selectedAction === 'attack') {
+      // 获取所有单位数组
+      const allUnits = Object.values(battleUnits);
+      
+      // 使用getValidTargetsForUnit函数获取可攻击的目标
+      return getValidTargetsForUnit(selectedUnit, allUnits, petConfig, 'normal');
+    }
+    
+    // 如果是技能，使用技能特定的目标选择逻辑
+    if (selectedAction === 'skill' && selectedSkill) {
+      // 获取所有单位数组
+      const allUnits = Object.values(battleUnits);
+      
+      // 如果有技能配置对象，可以使用getValidTargetsForSkill
+      // 这里暂时使用普通攻击目标选择逻辑
+      return getValidTargetsForUnit(selectedUnit, allUnits, petConfig, 'skill');
     }
     
     // 如果是防御或其他，没有目标
@@ -208,16 +224,38 @@ const BattleScreen = () => {
       if (currentUnit && !currentUnit.isPlayerUnit) {
         console.log(`开始处理敌方单位 ${currentUnit.name} 的行动`);
         // 给一个短暂停，让玩家可以看到当前行动单位
-        const actionTimer = setTimeout(() => {
+        const actionStartTime = performance.now();
+        const actionDuration = 800;
+        
+        const executeActionFrame = (timestamp) => {
+          const elapsed = timestamp - actionStartTime;
+          if (elapsed < actionDuration) {
+            requestAnimationFrame(executeActionFrame);
+            return;
+          }
+          
           dispatch(executeAction());
           
           // 执行完行动后，等待一会再进入下一个单位的回合
-          const nextTurnTimer = setTimeout(() => {
+          const nextTurnStartTime = performance.now();
+          const nextTurnDuration = 1000;
+          
+          const nextTurnFrame = (innerTimestamp) => {
+            const nextElapsed = innerTimestamp - nextTurnStartTime;
+            if (nextElapsed < nextTurnDuration) {
+              requestAnimationFrame(nextTurnFrame);
+              return;
+            }
+            
             dispatch(nextTurn());
             // 重置处理标记
             isProcessingRef.current = false;
-          }, 1000);
-        }, 800);
+          };
+          
+          requestAnimationFrame(nextTurnFrame);
+        };
+        
+        requestAnimationFrame(executeActionFrame);
       } 
       // 如果是玩家单位，并且已经设置了行动，则自动执行
       else if (currentUnit && currentUnit.isPlayerUnit && unitActions[currentTurnUnitId]) {
@@ -226,16 +264,38 @@ const BattleScreen = () => {
         setSelectedUnitId(currentTurnUnitId);
         
         // 给一个短暂停，让玩家可以看到当前行动单位
-        const actionTimer = setTimeout(() => {
+        const actionStartTime = performance.now();
+        const actionDuration = 1200; // 玩家单位给更长的时间观察
+        
+        const executeActionFrame = (timestamp) => {
+          const elapsed = timestamp - actionStartTime;
+          if (elapsed < actionDuration) {
+            requestAnimationFrame(executeActionFrame);
+            return;
+          }
+          
           dispatch(executeAction());
           
           // 执行完行动后，等待一会再进入下一个单位的回合
-          const nextTurnTimer = setTimeout(() => {
+          const nextTurnStartTime = performance.now();
+          const nextTurnDuration = 1000;
+          
+          const nextTurnFrame = (innerTimestamp) => {
+            const nextElapsed = innerTimestamp - nextTurnStartTime;
+            if (nextElapsed < nextTurnDuration) {
+              requestAnimationFrame(nextTurnFrame);
+              return;
+            }
+            
             dispatch(nextTurn());
             // 重置处理标记
             isProcessingRef.current = false;
-          }, 1000);
-        }, 1200); // 玩家单位给更长的时间观察
+          };
+          
+          requestAnimationFrame(nextTurnFrame);
+        };
+        
+        requestAnimationFrame(executeActionFrame);
       } else {
         // 如果没有有效的行动，重置处理标记
         isProcessingRef.current = false;
@@ -279,6 +339,9 @@ const BattleScreen = () => {
       {/* 战斗动画层 - 绝对定位在最上层 */}
       <BattleAnimations />
       
+      {/* 战斗单位属性面板 - 右侧悬浮 */}
+      <BattleUnitStats />
+      
       {/* 战斗结算界面 - 绝对定位在最上层 */}
       {currentPhase === 'battle_end' && battleResult && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
@@ -288,24 +351,18 @@ const BattleScreen = () => {
       
       {/* 战斗网格背景 - 铺满整个屏幕 */}
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" 
-           style={{ backgroundImage: 'url(/assets/backgrounds/battle_bg.jpg)', filter: 'brightness(0.7)' }}>
+           style={{ backgroundImage: 'url(/assets/backgrounds/battle_bg.jpg)', filter: 'brightness(1.1)' }}>
         {/* 战斗网格 - 占据大部分屏幕空间 */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <BattleGridRenderer onUnitClick={handleUnitClick} />
+          <BattleGridRenderer 
+            onUnitClick={handleUnitClick} 
+            selectedUnitId={selectedUnitId}
+            selectedAction={selectedAction}
+          />
         </div>
       </div>
       
-      {/* 顶部状态栏 - 半透明悬浮在战斗网格上 */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 px-4 py-1.5 bg-gray-900 bg-opacity-50 backdrop-blur-sm rounded-lg border border-gray-700/30 shadow-lg">
-        <div className="text-amber-400 font-bold text-center text-sm">
-          回合: {currentRound} | 阶段: {
-            currentPhase === 'preparation' ? '准备阶段' : 
-            currentPhase === 'execution' ? '执行阶段' : 
-            currentPhase === 'player_target_selection' ? '选择目标' : 
-            currentPhase === 'battle_over' ? '战斗结束' : currentPhase
-          }
-        </div>
-      </div>
+      {/* 回合和阶段信息已移至VS上方显示 */}
       
       {/* 行动顺序时间轴 - 悬浮在上方 */}
       <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-10 w-[80%] max-w-[900px]">

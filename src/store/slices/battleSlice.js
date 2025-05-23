@@ -1,5 +1,21 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { setEnemyUnitsActions } from '@/features/battle/logic/battleAI';
+import { 
+  removeBuff, 
+  clearAllBuffs, 
+  processBuffsOnTurnStart, 
+  processBuffsOnTurnEnd,
+  canUnitAct,
+  canUnitUseSkill,
+  canUnitBeTargeted,
+  calculateModifiedAttribute,
+  processReflectDamage
+} from '@/features/battle/logic/buffManager';
+import { passiveSkillConfig } from '@/config/passiveSkillConfig';
+import { activeSkillConfig } from '@/config/activeSkillConfig';
+import { buffConfig } from '@/config/buffConfig';
+import * as buffManager from '@/features/battle/logic/buffManager';
+import { calculateBattleDamage } from '@/features/battle/logic/battleLogic';
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;
@@ -42,7 +58,8 @@ const initialState = {
 
   // 战斗单元存储 (key: battleUnitId, value: BattleUnit object)
   // BattleUnit 对象将包含: id, sourceId (原始召唤兽ID或敌人模板ID), isPlayerUnit, name, level,
-  // currentHp, maxHp, currentMp, maxMp, stats (atk, def, spd, etc.), skills, statusEffects,
+  // stats (包含 currentHp, maxHp, currentMp, maxMp, attack, defense, speed 等), 
+  // skillIds, statusEffects (存储BUFF实例),
   // gridPosition ({ team: 'player'|'enemy', row, col }), spriteAssetKey, isDefeated
   battleUnits: {}, 
 
@@ -98,29 +115,405 @@ const battleSlice = createSlice({
       state.battleLog = [{ 
         message: '战斗开始！', 
         timestamp: Date.now() 
-      }, { 
+      }];
+      state.rewards = null;
+      
+      // 应用所有单位的被动技能BUFF
+      
+      // 遍历所有战斗单位
+      Object.values(state.battleUnits).forEach(unit => {
+        if (!unit.skillIds || unit.skillIds.length === 0) return;
+        
+        // 遍历单位的所有技能
+        unit.skillIds.forEach(skillId => {
+          // 获取被动技能配置
+          const passiveSkill = passiveSkillConfig.find(s => s.id === skillId && s.mode === 'passive');
+          if (!passiveSkill) return;
+          
+          // 应用永久BUFF
+          if (passiveSkill.permanentBuffs && passiveSkill.permanentBuffs.length > 0) {
+            passiveSkill.permanentBuffs.forEach(buffConfig => {
+              let targetUnit;
+              
+              // 确定目标
+              if (buffConfig.target === 'self' || !buffConfig.target) {
+                targetUnit = unit;
+              } else if (buffConfig.target === 'ally') {
+                // 这里可以扩展为随机选择队友
+                const allyUnits = Object.values(state.battleUnits).filter(u => 
+                  u.isPlayerUnit === unit.isPlayerUnit && u.id !== unit.id && !u.isDefeated
+                );
+                if (allyUnits.length > 0) {
+                  targetUnit = allyUnits[Math.floor(Math.random() * allyUnits.length)];
+                }
+              } else if (buffConfig.target === 'enemy') {
+                // 这里可以扩展为随机选择敌人
+                const enemyUnits = Object.values(state.battleUnits).filter(u => 
+                  u.isPlayerUnit !== unit.isPlayerUnit && !u.isDefeated
+                );
+                if (enemyUnits.length > 0) {
+                  targetUnit = enemyUnits[Math.floor(Math.random() * enemyUnits.length)];
+                }
+              }
+              
+              if (targetUnit) {
+                // 应用BUFF
+                const result = applyBuffFunc(targetUnit, buffConfig.buffId, unit.id, buffConfig.level || 1);
+                
+                if (result.success) {
+                  state.battleLog.push({ 
+                    message: `${unit.name} 的被动技能 ${passiveSkill.name} 触发：${result.message}`, 
+                    timestamp: Date.now(),
+                    unitId: unit.id,
+                    targetId: targetUnit.id,
+                    buffId: buffConfig.buffId,
+                    skillId: passiveSkill.id
+                  });
+                }
+              }
+            });
+          }
+        });
+      });
+      
+      // 添加回合开始日志
+      state.battleLog.push({ 
         message: `回合 ${state.currentRound} - 准备阶段开始！请为所有单位分配行动指令。`, 
         timestamp: Date.now() + 1,
         round: state.currentRound,
         phase: 'preparation'
-      }];
-      state.rewards = null;
+      });
     },
 
     // 单位行动 (例如，使用技能)
     unitPerformAction: (state, action) => {
       // payload: { unitId: string, actionType: 'skill'|'item', skillId?: string, itemId?: string, targetIds: string[] }
-      // 1. 验证行动是否合法 (轮到该单位行动? MP足够? etc.)
-      // 2. 根据 actionType, skillId/itemId, targetIds 计算伤害/效果
-      // 3. 更新目标单位的 HP, statusEffects 等 (在 battleUnits 中)
-      // 4. 添加战斗日志
-      // 5. 检查战斗是否结束 (一方全部defeated)
-      // 6. 如果未结束，进入下一个回合或阶段 (e.g., 'action_resolution' 后到 'next_turn_calculation')
       const { unitId, actionType, skillId, targetIds } = action.payload;
-      // ... (此处应有详细的行动处理逻辑)
-      state.battleLog.push({ message: `${unitId} 对 ${targetIds.join(', ')} 使用了 ${skillId || actionType}` });
-      // 假设行动后进入下一回合的准备阶段
-      state.currentPhase = 'action_resolution'; 
+      const sourceUnit = state.battleUnits[unitId];
+      
+      if (!sourceUnit || sourceUnit.isDefeated) {
+        state.battleLog.push({ 
+          message: `行动失败：单位 ${unitId} 不存在或已被击败`, 
+          timestamp: Date.now() 
+        });
+        return;
+      }
+      
+      // 检查单位是否可以行动（不受眩晕、冻结等控制效果影响）
+      const actCheck = canUnitAct(sourceUnit);
+      if (!actCheck.canAct) {
+        state.battleLog.push({ 
+          message: `${sourceUnit.name} 无法行动：${actCheck.reason}`, 
+          timestamp: Date.now(),
+          unitId: unitId
+        });
+        return;
+      }
+      
+      // 如果是技能，检查单位是否可以使用技能（不受沉默等效果影响）
+      if (actionType === 'skill' && skillId) {
+        const skillCheck = canUnitUseSkill(sourceUnit);
+        if (!skillCheck.canUseSkill) {
+          state.battleLog.push({ 
+            message: `${sourceUnit.name} 无法使用技能：${skillCheck.reason}`, 
+            timestamp: Date.now(),
+            unitId: unitId
+          });
+          return;
+        }
+        
+        // 这里可以添加MP消耗等逻辑
+      }
+      
+      // 处理目标单位
+      const validTargets = targetIds.filter(targetId => {
+        const targetUnit = state.battleUnits[targetId];
+        if (!targetUnit || targetUnit.isDefeated) return false;
+        
+        // 检查目标是否可以被选中（考虑隐身等效果）
+        const targetCheck = canUnitBeTargeted(targetUnit, sourceUnit);
+        return targetCheck.canBeTargeted;
+      });
+      
+      if (validTargets.length === 0) {
+        state.battleLog.push({ 
+          message: `${sourceUnit.name} 的行动没有有效目标`, 
+          timestamp: Date.now(),
+          unitId: unitId
+        });
+        return;
+      }
+      
+      // 根据行动类型执行不同逻辑
+      switch (actionType) {
+        case 'attack':
+          // 普通攻击逻辑
+          validTargets.forEach(targetId => {
+            const targetUnit = state.battleUnits[targetId];
+            // 计算攻击伤害（考虑BUFF加成）
+            const attackValue = calculateModifiedAttribute(sourceUnit, 'attack');
+            const defenseValue = calculateModifiedAttribute(targetUnit, 'defense');
+            
+            // 简单的伤害计算公式
+            // 基础伤害
+            let baseDamage = Math.max(1, Math.round(attackValue - defenseValue * 0.5));
+            
+            // 防御现在默认抗挕15%的所有伤害
+            let damageReduction = 0.15;
+            
+            // 检查是否处于防御状态
+            if (targetUnit.isDefending) {
+              // 如果在防御状态，再减兆15%伤害
+              damageReduction += 0.15;
+              state.battleLog.push({ 
+                message: `${targetUnit.name} 的防御姿态减少了额外的15%伤害`, 
+                timestamp: Date.now(),
+                unitId: targetId,
+                effect: {
+                  type: 'shield',
+                  icon: 'fa-shield-alt',
+                  color: '#3498db',
+                  size: 'large',
+                  duration: 1000  // 特效持续1秒
+                }
+              });
+            }
+            
+            let damage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
+            
+            // 处理护盾吸收
+            const shieldResult = processShieldAbsorption(targetUnit, damage);
+            if (shieldResult.absorbedDamage > 0) {
+              damage = shieldResult.remainingDamage;
+              state.battleLog.push({ 
+                message: shieldResult.message, 
+                timestamp: Date.now(),
+                unitId: targetId
+              });
+            }
+            
+            // 应用最终伤害
+            targetUnit.stats.currentHp = Math.max(0, targetUnit.stats.currentHp - damage);
+            
+            state.battleLog.push({ 
+              message: `${sourceUnit.name} 对 ${targetUnit.name} 造成 ${damage} 点伤害`, 
+              timestamp: Date.now(),
+              unitId: unitId,
+              targetId: targetId,
+              damage: damage
+            });
+            
+            // 触发目标的被动技能 - 受到物理伤害时
+            battleSlice.caseReducers.triggerPassiveSkills(state, {
+              payload: {
+                unitId: targetId,
+                triggerType: 'ON_PHYSICAL_DAMAGE',
+                sourceUnitId: unitId,
+                damageAmount: damage
+              }
+            });
+            
+            // 处理反弹伤害
+            const reflectResult = processReflectDamage(sourceUnit, targetUnit, damage);
+            if (reflectResult.reflectedDamage > 0) {
+              state.battleLog.push({ 
+                message: reflectResult.message, 
+                timestamp: Date.now(),
+                unitId: targetId,
+                targetId: unitId,
+                damage: reflectResult.reflectedDamage
+              });
+            }
+            
+            // 检查目标是否被击败
+            if (targetUnit.stats.currentHp <= 0) {
+              targetUnit.isDefeated = true;
+              state.battleLog.push({ 
+                message: `${targetUnit.name} 被击败了！`, 
+                timestamp: Date.now(),
+                unitId: targetId
+              });
+            }
+          });
+          break;
+          
+        case 'skill':
+          // 获取技能配置
+          const skill = activeSkillConfig.find(s => s.id === skillId);
+          
+          if (!skill) {
+            state.battleLog.push({ 
+              message: `技能 ${skillId} 不存在`, 
+              timestamp: Date.now(),
+              unitId: unitId
+            });
+            break;
+          }
+          
+          // 记录技能使用
+          state.battleLog.push({ 
+            message: `${sourceUnit.name} 使用了技能 ${skill.name}`, 
+            timestamp: Date.now(),
+            unitId: unitId,
+            skillId: skillId
+          });
+          
+          // 处理技能伤害
+          if (skill.damage) {
+            validTargets.forEach(targetId => {
+              const targetUnit = state.battleUnits[targetId];
+              
+              // 计算基础伤害
+              let baseDamage;
+              if (skill.type === 'magical') {
+                baseDamage = sourceUnit.stats.magicAttack * skill.damage;
+              } else {
+                baseDamage = sourceUnit.stats.attack * skill.damage;
+              }
+              
+              // 获取目标的防御值
+              const defenseValue = calculateModifiedAttribute(targetUnit, 'defense');
+              
+              // 应用防御减免，防御现在默认抗挕15%的所有伤害
+              let damageReduction = 0.15;
+              
+              // 检查是否处于防御状态
+              if (targetUnit.isDefending) {
+                // 如果在防御状态，再减兆15%伤害
+                damageReduction += 0.15;
+                state.battleLog.push({ 
+                  message: `${targetUnit.name} 的防御姿态减少了额外的15%伤害`, 
+                  timestamp: Date.now(),
+                  unitId: targetId,
+                  effect: {
+                    type: 'shield',
+                    icon: 'fa-shield-alt',
+                    color: '#3498db',
+                    size: 'large',
+                    duration: 1000  // 特效持续1秒
+                  }
+                });
+              }
+              
+              let finalDamage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
+              
+              // 处理护盾吸收
+              const shieldResult = processShieldAbsorption(targetUnit, finalDamage);
+              if (shieldResult.absorbedDamage > 0) {
+                finalDamage = shieldResult.remainingDamage;
+                state.battleLog.push({ 
+                  message: shieldResult.message, 
+                  timestamp: Date.now(),
+                  unitId: targetId
+                });
+              }
+              
+              // 应用最终伤害
+              targetUnit.stats.currentHp = Math.max(0, targetUnit.stats.currentHp - finalDamage);
+              
+              state.battleLog.push({ 
+                message: `${sourceUnit.name} 对 ${targetUnit.name} 造成 ${finalDamage} 点${skill.element ? skill.element : ''}伤害`, 
+                timestamp: Date.now(),
+                unitId: unitId,
+                targetId: targetId,
+                damage: finalDamage
+              });
+              
+              // 触发目标的被动技能 - 受到伤害时
+              battleSlice.caseReducers.triggerPassiveSkills(state, {
+                payload: {
+                  unitId: targetId,
+                  triggerType: 'ON_MAGICAL_DAMAGE',
+                  sourceUnitId: unitId,
+                  damageAmount: finalDamage
+                }
+              });
+              
+              // 检查目标是否被击败
+              if (targetUnit.stats.currentHp <= 0) {
+                targetUnit.isDefeated = true;
+                state.battleLog.push({ 
+                  message: `${targetUnit.name} 被击败了！`, 
+                  timestamp: Date.now(),
+                  unitId: targetId
+                });
+              }
+            });
+          }
+          
+          // 处理治疗效果
+          if (skill.healAmount) {
+            validTargets.forEach(targetId => {
+              const targetUnit = state.battleUnits[targetId];
+              
+              // 计算治疗量
+              const healAmount = Math.round(sourceUnit.stats.magicAttack * skill.healAmount);
+              
+              // 应用治疗
+              const oldHp = targetUnit.stats.currentHp;
+              targetUnit.stats.currentHp = Math.min(
+                targetUnit.stats.currentHp + healAmount,
+                targetUnit.stats.maxHp
+              );
+              
+              const actualHeal = targetUnit.stats.currentHp - oldHp;
+              
+              state.battleLog.push({ 
+                message: `${sourceUnit.name} 为 ${targetUnit.name} 恢复了 ${actualHeal} 点生命值`, 
+                timestamp: Date.now(),
+                unitId: unitId,
+                targetId: targetId,
+                heal: actualHeal
+              });
+            });
+          }
+          
+          // 应用技能BUFF效果
+          if (skill.applyBuffs && skill.applyBuffs.length > 0) {
+            validTargets.forEach(targetId => {
+              const targetUnit = state.battleUnits[targetId];
+              
+              skill.applyBuffs.forEach(buffConfig => {
+                // 检查几率
+                if (buffConfig.chance && Math.random() > buffConfig.chance) {
+                  return; // 几率未触发，跳过
+                }
+                
+                // 应用BUFF
+                const result = applyBuffFunc(targetUnit, buffConfig.buffId, unitId, buffConfig.level || 1);
+                
+                if (result.success) {
+                  state.battleLog.push({ 
+                    message: result.message, 
+                    timestamp: Date.now(),
+                    unitId: unitId,
+                    targetId: targetId,
+                    buffId: buffConfig.buffId
+                  });
+                }
+              });
+            });
+          }
+          break;
+          
+        case 'item':
+          // 道具使用逻辑
+          state.battleLog.push({ 
+            message: `${sourceUnit.name} 使用了道具`, 
+            timestamp: Date.now(),
+            unitId: unitId
+          });
+          break;
+          
+        default:
+          state.battleLog.push({ 
+            message: `未知行动类型: ${actionType}`, 
+            timestamp: Date.now() 
+          });
+      }
+      
+      // 行动完成后进入下一阶段
+      state.currentPhase = 'action_resolution';
     },
     
     // 结束行动，计算下一个行动者
@@ -224,8 +617,22 @@ const battleSlice = createSlice({
       state.currentPhase = 'preparation';
       state.unitActions = {}; // 清空上一回合的行动
       
-      // 注意：敌方AI行动设置已移动到setEnemyAIActions异步thunk中
-      // 这里只添加战斗日志
+      // 处理回合开始时的BUFF效果
+      Object.values(state.battleUnits).forEach(unit => {
+        if (unit.isDefeated) return;
+        
+        // 处理回合开始时的BUFF效果
+        processBuffsAtRoundStart(unit, state);
+        
+        // 触发回合开始时的被动技能
+        battleSlice.caseReducers.triggerPassiveSkills(state, {
+          payload: {
+            unitId: unit.id,
+            triggerType: 'ON_ROUND_START'
+          }
+        });
+      });
+      
       state.battleLog.push({ 
         message: `【回合 ${state.currentRound}】准备阶段开始！请为所有玩家单位分配行动指令。`, 
         timestamp: Date.now(),
@@ -242,6 +649,25 @@ const battleSlice = createSlice({
       state.turnOrder = Object.keys(state.unitActions)
         .filter(id => !state.battleUnits[id].isDefeated)
         .sort((a, b) => state.battleUnits[b].stats.speed - state.battleUnits[a].stats.speed);
+      
+      // 在执行阶段开始时立即应用防御效果
+      Object.keys(state.unitActions).forEach(unitId => {
+        const unit = state.battleUnits[unitId];
+        const action = state.unitActions[unitId];
+        
+        if (!unit || unit.isDefeated) return;
+        
+        // 如果单位选择了防御动作
+        if (action.actionType === 'defend') {
+          unit.isDefending = true;
+          state.battleLog.push({
+            message: `${unit.name} 进入防御姿态，减少15%的所有伤害。`,
+            timestamp: Date.now(),
+            unitId,
+            actionType: 'defend'
+          });
+        }
+      });
       
       state.currentTurnUnitId = state.turnOrder[0] || null;
       
@@ -268,6 +694,8 @@ const battleSlice = createSlice({
           timestamp: Date.now(),
           unitId
         });
+        // 调用 nextTurn 函数进入下一个单位的回合
+        battleSlice.caseReducers.nextTurn(state);
         return;
       }
       
@@ -309,9 +737,109 @@ const battleSlice = createSlice({
             }
           }
           
+          // 使用 calculateBattleDamage 函数计算详细伤害
+          
+          // 计算默认百分比减伤
+          let percentReduction = 0.15; // 默认防御减免15%
+          
+          // 检查是否处于防御状态
+          if (target.isDefending) {
+            // 如果在防御状态，再减充15%伤害
+            percentReduction += 0.15;
+            state.battleLog.push({ 
+              message: `${target.name} 的防御姿态增加了额外的15%伤害减免`, 
+              timestamp: Date.now(),
+              unitId: targetId,
+              effect: {
+                type: 'shield',
+                icon: 'fa-shield-alt',
+                color: '#3498db',
+                size: 'large',
+                duration: 1000  // 特效持续1秒
+              }
+            });
+          }
+          
+          // 准备额外选项
+          const damageOptions = {
+            percentReduction,
+            isDefending: target.isDefending,
+            showDetailedLog: true // 启用详细日志
+          };
+          
           // 计算伤害
-          const baseDamage = unit.stats.attack - target.stats.defense * 0.5;
-          const damage = Math.max(Math.floor(baseDamage * (0.9 + Math.random() * 0.2)), 1);
+          const damageResult = calculateBattleDamage(unit, target, 'auto', 1, damageOptions);
+          const damage = damageResult.finalDamage;
+          
+          // 记录详细的伤害计算日志
+          if (damageResult.details) {
+            const details = damageResult.details;
+            const damageType = details.damageType === 'physical' ? '物理' : '魔法';
+            
+            // 记录详细的伤害计算过程
+            state.battleLog.push({
+              message: `伤害计算详情 (类型: ${damageType}):`,
+              timestamp: Date.now(),
+              isDetailLog: true,
+              unitId: unit.id,
+              targetId: target.id
+            });
+            
+            // 基础伤害
+            if (details.basePhysicalDamage !== undefined) {
+              state.battleLog.push({
+                message: `基础物理伤害: ${details.basePhysicalDamage} (攻击力: ${unit.stats.physicalAttack}, 防御力: ${target.stats.physicalDefense})`,
+                timestamp: Date.now(),
+                isDetailLog: true
+              });
+            } else if (details.baseMagicalDamage !== undefined) {
+              state.battleLog.push({
+                message: `基础魔法伤害: ${details.baseMagicalDamage} (魔法攻击: ${unit.stats.magicalAttack}, 魔法防御: ${target.stats.magicalDefense})`,
+                timestamp: Date.now(),
+                isDetailLog: true
+              });
+            }
+            
+            // 暴击
+            state.battleLog.push({
+              message: `暴击检定: ${details.isCritical ? '触发暴击!' : '未暴击'} (暴击率: ${(unit.stats.critRate * 100).toFixed(1)}%)`,
+              timestamp: Date.now(),
+              isDetailLog: true
+            });
+            
+            if (details.isCritical) {
+              state.battleLog.push({
+                message: `暴击伤害: ${details.criticalDamage} (暴击倍率: ${(unit.stats.critDamage * 100).toFixed(1)}%)`,
+                timestamp: Date.now(),
+                isDetailLog: true
+              });
+            }
+            
+            // 减伤
+            if (target.isDefending) {
+              state.battleLog.push({
+                message: `防御姿态减伤: ${Math.round(details.percentReducedDamage * 0.15)} (额外减免15%)`,
+                timestamp: Date.now(),
+                isDetailLog: true
+              });
+            }
+            
+            // 伤害浮动
+            const variationPercent = (details.damageVariation * 100).toFixed(1);
+            const variationSign = details.damageVariation >= 0 ? '+' : '';
+            state.battleLog.push({
+              message: `伤害浮动: ${variationSign}${variationPercent}%`,
+              timestamp: Date.now(),
+              isDetailLog: true
+            });
+            
+            // 最终伤害
+            state.battleLog.push({
+              message: `最终伤害: ${damage}`,
+              timestamp: Date.now(),
+              isDetailLog: true
+            });
+          }
           
           // 应用伤害
           target.stats.currentHp = Math.max(target.stats.currentHp - damage, 0);
@@ -337,25 +865,13 @@ const battleSlice = createSlice({
         }
         
         case 'defend': {
-          // 增加防御状态效果
-          const defenseBonus = Math.floor(unit.stats.defense * 0.3);
-          unit.stats.defense += defenseBonus;
-          
-          // 添加状态效果，在回合结束时移除
-          unit.statusEffects.push({
-            id: `defend-${Date.now()}`,
-            name: '防御姿态',
-            type: 'buff',
-            stat: 'defense',
-            value: defenseBonus,
-            duration: 1, // 持续1回合
-            description: `防御力提高 ${defenseBonus} 点`
-          });
-          
+          // 防御状态已在执行阶段开始时应用
+          // 这里只需要记录单位完成了防御动作
           state.battleLog.push({
-            message: `${unit.name} 进入防御姿态，防御力临时提高 ${defenseBonus} 点。`,
+            message: `${unit.name} 维持防御姿态。`,
             timestamp: Date.now(),
-            unitId
+            unitId,
+            actionType: 'defend'
           });
           break;
         }
@@ -466,92 +982,618 @@ const battleSlice = createSlice({
         });
       } else {
         // 所有单位都行动完毕，调用endRound函数结束回合
-        // 这样可以确保战斗结算逻辑在回合结束时触发
         battleSlice.caseReducers.endRound(state);
       }
     },
     
+    // 开始新回合
+    startNewRound: (state) => {
+      state.currentRound += 1;
+      state.currentPhase = 'preparation';
+      state.unitActions = {}; // 重置单位行动
+      
+      // 处理回合开始时的BUFF效果
+      Object.values(state.battleUnits).forEach(unit => {
+        if (unit.isDefeated) return;
+        
+        // 处理回合开始时的BUFF效果
+        processBuffsAtRoundStart(unit, state);
+        
+        // 触发回合开始时的被动技能
+        battleSlice.caseReducers.triggerPassiveSkills(state, {
+          payload: {
+            unitId: unit.id,
+            triggerType: 'ON_ROUND_START'
+          }
+        });
+      });
+      
+      state.battleLog.push({ 
+        message: `回合 ${state.currentRound} - 准备阶段开始！请为所有单位分配行动指令。`, 
+        timestamp: Date.now(),
+        round: state.currentRound,
+        phase: 'preparation'
+      });
+    },
+    
     // 结束当前回合
     endRound: (state) => {
-      // 处理状态效果
+      // 处理回合结束时的效果
+      state.battleLog.push({ 
+        message: `回合 ${state.currentRound} 结束`, 
+        timestamp: Date.now(),
+        round: state.currentRound
+      });
+      
+      // 处理所有单位的回合结束效果
       Object.values(state.battleUnits).forEach(unit => {
-        // 减少状态效果持续时间并移除过期效果
-        if (unit.statusEffects && unit.statusEffects.length > 0) {
-          const expiredEffects = [];
-          
-          unit.statusEffects = unit.statusEffects.filter(effect => {
-            if (effect.duration <= 1) {
-              expiredEffects.push(effect);
-              return false;
-            }
-            effect.duration -= 1;
-            return true;
-          });
-          
-          // 移除过期效果的影响
-          expiredEffects.forEach(effect => {
-            if (effect.stat && effect.value) {
-              unit.stats[effect.stat] -= effect.value;
-              state.battleLog.push({
-                message: `${unit.name} 的 ${effect.name} 效果已消失。`,
-                timestamp: Date.now(),
-                unitId: unit.id
-              });
-            }
+        if (unit.isDefeated) return;
+        
+        // 处理回合结束时的BUFF效果
+        processBuffsAtRoundEnd(unit, state);
+        
+        // 触发回合结束时的被动技能
+        battleSlice.caseReducers.triggerPassiveSkills(state, {
+          payload: {
+            unitId: unit.id,
+            triggerType: 'ON_ROUND_END'
+          }
+        });
+        
+        // 重置防御状态
+        if (unit.isDefending) {
+          unit.isDefending = false;
+          state.battleLog.push({
+            message: `${unit.name} 的防御姿态结束了`,
+            timestamp: Date.now(),
+            unitId: unit.id
           });
         }
       });
       
       // 检查战斗是否结束
-      const allPlayerUnitsDefeated = state.playerFormation.flat()
-        .filter(id => id)
-        .every(id => state.battleUnits[id].isDefeated);
+      const allPlayerUnitsDefeated = Object.values(state.battleUnits)
+        .filter(unit => unit.isPlayerUnit)
+        .every(unit => unit.isDefeated);
       
-      const allEnemyUnitsDefeated = state.enemyFormation.flat()
-        .filter(id => id)
-        .every(id => state.battleUnits[id].isDefeated);
+      const allEnemyUnitsDefeated = Object.values(state.battleUnits)
+        .filter(unit => !unit.isPlayerUnit)
+        .every(unit => unit.isDefeated);
       
-      if (allPlayerUnitsDefeated) {
-        state.battleResult = 'defeat';
-        state.currentPhase = 'battle_end';
-        state.battleLog.push({
-          message: `战斗结束！你的队伍被击败了。`,
+      if (allPlayerUnitsDefeated || allEnemyUnitsDefeated) {
+        // 战斗结束
+        state.isActive = false;
+        state.battleResult = allPlayerUnitsDefeated ? 'defeat' : 'victory';
+        
+        // 计算奖励
+        if (state.battleResult === 'victory') {
+          state.rewards = calculateRewards(state.battleUnits);
+        }
+        
+        state.battleLog.push({ 
+          message: `战斗${state.battleResult === 'victory' ? '胜利' : '失败'}！`, 
           timestamp: Date.now(),
-          phase: 'battle_end'
-        });
-      } else if (allEnemyUnitsDefeated) {
-        state.battleResult = 'victory';
-        state.currentPhase = 'battle_end';
-        state.battleLog.push({
-          message: `战斗结束！你的队伍获得了胜利！`,
-          timestamp: Date.now(),
-          phase: 'battle_end'
+          result: state.battleResult
         });
       } else {
-        // 战斗未结束，当前回合的执行阶段结束，进入下一回合
-        state.battleLog.push({ 
-          message: `【回合 ${state.currentRound}】执行阶段结束！`, 
-          timestamp: Date.now(),
-          round: state.currentRound,
-          phase: 'end'
+        // 开始新回合
+        state.currentRound += 1;
+        state.currentPhase = 'preparation';
+        state.unitActions = {}; // 重置单位行动
+        
+        // 处理回合开始时的BUFF效果
+        Object.values(state.battleUnits).forEach(unit => {
+          if (unit.isDefeated) return;
+          
+          // 处理回合开始时的BUFF效果
+          processBuffsAtRoundStart(unit, state);
+          
+          // 触发回合开始时的被动技能
+          battleSlice.caseReducers.triggerPassiveSkills(state, {
+            payload: {
+              unitId: unit.id,
+              triggerType: 'ON_ROUND_START'
+            }
+          });
         });
         
-        // 增加回合数，进入下一回合
-        state.currentRound += 1;
-        state.unitActions = {}; // 清空行动
-        
-        // 自动进入下一回合的准备阶段
-        state.currentPhase = 'preparation';
         state.battleLog.push({ 
-          message: `【回合 ${state.currentRound}】准备阶段开始！请为所有玩家单位分配行动指令。`, 
+          message: `回合 ${state.currentRound} - 准备阶段开始！请为所有单位分配行动指令。`, 
           timestamp: Date.now(),
           round: state.currentRound,
           phase: 'preparation'
         });
       }
+    },
+
+    // 触发被动技能
+    triggerPassiveSkills: (state, action) => {
+      // payload: { unitId, triggerType, sourceUnitId, damageAmount, healAmount, etc. }
+      const { unitId, triggerType, sourceUnitId } = action.payload;
+      const unit = state.battleUnits[unitId];
+      
+      if (!unit || unit.isDefeated || !unit.skillIds || unit.skillIds.length === 0) {
+        return;
+      }
+      
+      // 获取被动技能配置
+      
+      // 遍历单位的所有技能
+      unit.skillIds.forEach(skillId => {
+        // 获取被动技能配置
+        const passiveSkill = passiveSkillConfig.find(s => s.id === skillId && s.mode === 'passive');
+        if (!passiveSkill) return;
+        
+        // 检查是否是匹配的触发类型
+        if (passiveSkill.timing !== triggerType) return;
+        
+        // 检查触发几率
+        if (passiveSkill.probability && Math.random() > passiveSkill.probability) {
+          return; // 几率未触发
+        }
+        
+        // 触发被动技能效果
+        state.battleLog.push({ 
+          message: `${unit.name} 的被动技能 ${passiveSkill.name} 触发！`, 
+          timestamp: Date.now(),
+          unitId: unitId,
+          skillId: passiveSkill.id
+        });
+        
+        // 应用触发BUFF
+        if (passiveSkill.triggerBuffs && passiveSkill.triggerBuffs.length > 0) {
+          passiveSkill.triggerBuffs.forEach(buffConfig => {
+            // 检查几率
+            if (buffConfig.chance && Math.random() > buffConfig.chance) {
+              return; // 几率未触发
+            }
+            
+            let targetUnit;
+            
+            // 确定目标
+            if (buffConfig.target === 'self' || !buffConfig.target) {
+              targetUnit = unit;
+            } else if (buffConfig.target === 'attacker' && sourceUnitId) {
+              targetUnit = state.battleUnits[sourceUnitId];
+            } else if (buffConfig.target === 'ally') {
+              // 随机选择队友
+              const allyUnits = Object.values(state.battleUnits).filter(u => 
+                u.isPlayerUnit === unit.isPlayerUnit && u.id !== unit.id && !u.isDefeated
+              );
+              if (allyUnits.length > 0) {
+                targetUnit = allyUnits[Math.floor(Math.random() * allyUnits.length)];
+              }
+            } else if (buffConfig.target === 'enemy') {
+              // 随机选择敌人
+              const enemyUnits = Object.values(state.battleUnits).filter(u => 
+                u.isPlayerUnit !== unit.isPlayerUnit && !u.isDefeated
+              );
+              if (enemyUnits.length > 0) {
+                targetUnit = enemyUnits[Math.floor(Math.random() * enemyUnits.length)];
+              }
+            }
+            
+            if (targetUnit) {
+              // 应用BUFF
+              const result = applyBuffFunc(targetUnit, buffConfig.buffId, unit.id, buffConfig.level || 1);
+              
+              if (result.success) {
+                state.battleLog.push({ 
+                  message: result.message, 
+                  timestamp: Date.now(),
+                  unitId: unit.id,
+                  targetId: targetUnit.id,
+                  buffId: buffConfig.buffId
+                });
+              }
+            }
+          });
+        }
+        
+        // 处理特殊被动效果
+        switch (passiveSkill.id) {
+          case 'counter':
+            // 反震效果
+            if (sourceUnitId && action.payload.damageAmount) {
+              const sourceUnit = state.battleUnits[sourceUnitId];
+              if (sourceUnit && !sourceUnit.isDefeated) {
+                const reflectDamage = Math.round(action.payload.damageAmount * passiveSkill.reflectPercentage);
+                sourceUnit.stats.currentHp = Math.max(0, sourceUnit.stats.currentHp - reflectDamage);
+                
+                state.battleLog.push({ 
+                  message: `${unit.name} 的反震效果对 ${sourceUnit.name} 造成 ${reflectDamage} 点伤害`, 
+                  timestamp: Date.now(),
+                  unitId: unitId,
+                  targetId: sourceUnitId,
+                  damage: reflectDamage
+                });
+                
+                // 检查目标是否被击败
+                if (sourceUnit.stats.currentHp <= 0) {
+                  sourceUnit.isDefeated = true;
+                  state.battleLog.push({ 
+                    message: `${sourceUnit.name} 被击败了！`, 
+                    timestamp: Date.now(),
+                    unitId: sourceUnitId
+                  });
+                }
+              }
+            }
+            break;
+            
+          // 可以添加其他特殊被动效果的处理
+        }
+      });
+    },
+    
+    // BUFF相关的reducers
+    
+    // 应用BUFF到单位
+    applyBuffToUnit: (state, action) => {
+      // payload: { targetUnitId, buffId, sourceUnitId, level }
+      const { targetUnitId, buffId, sourceUnitId, level = 1 } = action.payload;
+      const targetUnit = state.battleUnits[targetUnitId];
+      
+      if (!targetUnit) {
+        state.battleLog.push({ 
+          message: `应用BUFF失败：目标单位 ${targetUnitId} 不存在`, 
+          timestamp: Date.now() 
+        });
+        return;
+      }
+      
+      const result = applyBuffFunc(targetUnit, buffId, sourceUnitId, level);
+      
+      state.battleLog.push({ 
+        message: result.message, 
+        timestamp: Date.now(),
+        unitId: targetUnitId,
+        buffId: buffId,
+        success: result.success
+      });
+    },
+
+    // 从单位移除BUFF
+    removeBuffFromUnit: (state, action) => {
+      // payload: { targetUnitId, buffId }
+      const { targetUnitId, buffId } = action.payload;
+      const targetUnit = state.battleUnits[targetUnitId];
+      
+      if (!targetUnit) {
+        state.battleLog.push({ 
+          message: `移除BUFF失败：目标单位 ${targetUnitId} 不存在`, 
+          timestamp: Date.now() 
+        });
+        return;
+      }
+      
+      const result = removeBuff(targetUnit, buffId);
+      
+      state.battleLog.push({ 
+        message: result.message, 
+        timestamp: Date.now(),
+        unitId: targetUnitId,
+        buffId: buffId,
+        success: result.success
+      });
+    },
+
+    // 清除单位的所有BUFF
+    clearAllBuffsFromUnit: (state, action) => {
+      // payload: { targetUnitId, buffType }
+      const { targetUnitId, buffType } = action.payload;
+      const targetUnit = state.battleUnits[targetUnitId];
+      
+      if (!targetUnit) {
+        state.battleLog.push({ 
+          message: `清除BUFF失败：目标单位 ${targetUnitId} 不存在`, 
+          timestamp: Date.now() 
+        });
+        return;
+      }
+      
+      const result = clearAllBuffs(targetUnit, buffType);
+      
+      state.battleLog.push({ 
+        message: result.message, 
+        timestamp: Date.now(),
+        unitId: targetUnitId,
+        success: result.success
+      });
     }
   },
 });
+
+// 辅助函数
+
+// 应用BUFF到单位的辅助函数
+function applyBuffFunc(unit, buffId, sourceUnitId, level = 1) {
+  // 使用已导入的模块
+  
+  // 获取BUFF定义
+  const buffDef = buffConfig.find(b => b.id === buffId);
+  if (!buffDef) {
+    return { success: false, message: `BUFF ${buffId} 不存在` };
+  }
+  
+  // 检查是否已经有相同的BUFF
+  if (!unit.buffs) {
+    unit.buffs = [];
+  }
+  
+  const existingBuff = unit.buffs.find(b => b.id === buffId);
+  
+  if (existingBuff) {
+    // 如果已存在，更新等级和持续时间
+    if (buffDef.stackable) {
+      // 如果可叠加，增加层数
+      existingBuff.stacks = Math.min((existingBuff.stacks || 1) + 1, buffDef.maxStacks || 5);
+      existingBuff.level = Math.max(existingBuff.level, level); // 使用更高的等级
+      
+      // 刷新持续时间
+      if (buffDef.duration > 0) {
+        existingBuff.duration = buffDef.duration;
+      }
+      
+      return { 
+        success: true, 
+        message: `${unit.name} 的 ${buffDef.name} 效果叠加至 ${existingBuff.stacks} 层` 
+      };
+    } else {
+      // 如果不可叠加，仅更新等级和持续时间
+      existingBuff.level = Math.max(existingBuff.level, level);
+      
+      // 刷新持续时间
+      if (buffDef.duration > 0) {
+        existingBuff.duration = buffDef.duration;
+      }
+      
+      return { 
+        success: true, 
+        message: `${unit.name} 的 ${buffDef.name} 效果已刷新` 
+      };
+    }
+  } else {
+    // 创建新的BUFF
+    const newBuff = {
+      id: buffId,
+      level: level,
+      sourceUnitId: sourceUnitId,
+      stacks: 1,
+      duration: buffDef.duration || -1 // -1表示永久
+    };
+    
+    // 添加BUFF
+    unit.buffs.push(newBuff);
+    
+    // 应用BUFF的立即效果
+    // 注意：buffManager模块中没有applyBuffEffect函数
+    // 这里我们直接返回成功结果
+    
+    return { 
+      success: true, 
+      message: `${unit.name} 获得了 ${buffDef.name} 效果` 
+    };
+  }
+}
+
+// 处理回合开始时的BUFF效果
+function processBuffsAtRoundStart(unit, state) {
+  if (!unit.buffs || unit.buffs.length === 0) return;
+  
+  // 使用已导入的模块
+  
+  // 处理每个BUFF
+  for (let i = unit.buffs.length - 1; i >= 0; i--) {
+    const buff = unit.buffs[i];
+    const buffDef = buffConfig.find(b => b.id === buff.id);
+    
+    if (!buffDef) continue;
+    
+    // 如果是回合开始时生效的BUFF
+    if (buffDef.timing === 'START_OF_ROUND') {
+      // 应用BUFF效果
+      // 注意：buffManager模块中没有applyBuffEffect函数
+      // 这里我们使用直接处理效果的方式
+      const result = { message: `${unit.name} 的 ${buffDef.name} 效果生效` };
+      
+      if (result.message) {
+        state.battleLog.push({
+          message: result.message,
+          timestamp: Date.now(),
+          unitId: unit.id,
+          buffId: buff.id
+        });
+      }
+      
+      // 如果有伤害或治疗效果
+      if (result.damage && result.targetId) {
+        const targetUnit = state.battleUnits[result.targetId];
+        if (targetUnit) {
+          state.battleLog.push({
+            message: `${unit.name} 的 ${buffDef.name} 对 ${targetUnit.name} 造成 ${result.damage} 点伤害`,
+            timestamp: Date.now(),
+            unitId: unit.id,
+            targetId: result.targetId,
+            damage: result.damage,
+            buffId: buff.id
+          });
+          
+          // 检查目标是否被击败
+          if (targetUnit.stats.currentHp <= 0) {
+            targetUnit.isDefeated = true;
+            state.battleLog.push({ 
+              message: `${targetUnit.name} 被击败了！`, 
+              timestamp: Date.now(),
+              unitId: result.targetId
+            });
+          }
+        }
+      } else if (result.heal && result.targetId) {
+        const targetUnit = state.battleUnits[result.targetId];
+        if (targetUnit) {
+          state.battleLog.push({
+            message: `${unit.name} 的 ${buffDef.name} 为 ${targetUnit.name} 恢复了 ${result.heal} 点生命值`,
+            timestamp: Date.now(),
+            unitId: unit.id,
+            targetId: result.targetId,
+            heal: result.heal,
+            buffId: buff.id
+          });
+        }
+      }
+    }
+    
+    // 减少BUFF持续回合
+    if (buff.duration > 0) {
+      buff.duration -= 1;
+      
+      // 如果BUFF到期了，移除它
+      if (buff.duration <= 0) {
+        // 移除BUFF效果
+        // 使用buffManager的removeBuff函数
+        const removeResult = buffManager.removeBuff(unit, buff.id);
+        
+        // 从列表中移除
+        unit.buffs.splice(i, 1);
+        
+        state.battleLog.push({
+          message: `${unit.name} 的 ${buffDef.name} 效果已结束`,
+          timestamp: Date.now(),
+          unitId: unit.id,
+          buffId: buff.id
+        });
+      }
+    }
+  }
+}
+
+// 处理回合结束时的BUFF效果
+function processBuffsAtRoundEnd(unit, state) {
+  if (!unit.buffs || unit.buffs.length === 0) return;
+  
+  // 使用已导入的模块
+  
+  // 处理每个BUFF
+  for (let i = unit.buffs.length - 1; i >= 0; i--) {
+    const buff = unit.buffs[i];
+    const buffDef = buffConfig.find(b => b.id === buff.id);
+    
+    if (!buffDef) continue;
+    
+    // 如果是回合结束时生效的BUFF
+    if (buffDef.timing === 'END_OF_ROUND') {
+      // 应用BUFF效果
+      // 注意：buffManager模块中没有applyBuffEffect函数
+      // 这里我们使用直接处理效果的方式
+      const result = { message: `${unit.name} 的 ${buffDef.name} 效果生效` };
+      
+      if (result.message) {
+        state.battleLog.push({
+          message: result.message,
+          timestamp: Date.now(),
+          unitId: unit.id,
+          buffId: buff.id
+        });
+      }
+      
+      // 如果有伤害或治疗效果
+      if (result.damage && result.targetId) {
+        const targetUnit = state.battleUnits[result.targetId];
+        if (targetUnit) {
+          state.battleLog.push({
+            message: `${unit.name} 的 ${buffDef.name} 对 ${targetUnit.name} 造成 ${result.damage} 点伤害`,
+            timestamp: Date.now(),
+            unitId: unit.id,
+            targetId: result.targetId,
+            damage: result.damage,
+            buffId: buff.id
+          });
+          
+          // 检查目标是否被击败
+          if (targetUnit.stats.currentHp <= 0) {
+            targetUnit.isDefeated = true;
+            state.battleLog.push({ 
+              message: `${targetUnit.name} 被击败了！`, 
+              timestamp: Date.now(),
+              unitId: result.targetId
+            });
+          }
+        }
+      } else if (result.heal && result.targetId) {
+        const targetUnit = state.battleUnits[result.targetId];
+        if (targetUnit) {
+          state.battleLog.push({
+            message: `${unit.name} 的 ${buffDef.name} 为 ${targetUnit.name} 恢复了 ${result.heal} 点生命值`,
+            timestamp: Date.now(),
+            unitId: unit.id,
+            targetId: result.targetId,
+            heal: result.heal,
+            buffId: buff.id
+          });
+        }
+      }
+    }
+  }
+}
+
+// 处理护盾吸收伤害
+// 返回: { remainingDamage, absorbedDamage, message }
+function processShieldAbsorption(unit, damage) {
+  if (!unit.buffs || unit.buffs.length === 0) {
+    return { remainingDamage: damage, absorbedDamage: 0, message: '' };
+  }
+  
+  // 使用已导入的模块
+  let remainingDamage = damage;
+  let totalAbsorbedDamage = 0;
+  let shieldMessages = [];
+  
+  // 遍历单位的所有护盾类型BUFF
+  unit.buffs.forEach(buff => {
+    if (remainingDamage <= 0) return; // 如果伤害已完全被吸收，跳过
+    
+    const buffDef = buffConfig.find(b => b.id === buff.id);
+    if (!buffDef || buffDef.type !== 'SHIELD') return; // 只处理护盾类型BUFF
+    
+    // 计算护盾吸收量
+    let shieldAmount = 0;
+    if (buffDef.shieldAmount) {
+      shieldAmount = buffDef.shieldAmount * buff.level;
+    } else if (buffDef.shieldPercentage) {
+      shieldAmount = Math.floor(unit.stats.maxHp * buffDef.shieldPercentage * buff.level);
+    }
+    
+    // 如果护盾已有剩余值字段
+    if (buff.remainingShield !== undefined) {
+      shieldAmount = buff.remainingShield;
+    }
+    
+    if (shieldAmount <= 0) return; // 护盾已耗尽
+    
+    // 计算实际吸收量
+    const absorbedDamage = Math.min(remainingDamage, shieldAmount);
+    remainingDamage -= absorbedDamage;
+    totalAbsorbedDamage += absorbedDamage;
+    
+    // 更新护盾剩余值
+    buff.remainingShield = shieldAmount - absorbedDamage;
+    
+    // 如果护盾耗尽，标记为到期
+    if (buff.remainingShield <= 0) {
+      buff.duration = 0;
+    }
+    
+    // 添加消息
+    shieldMessages.push(`${buffDef.name} 吸收了 ${absorbedDamage} 点伤害`);
+  });
+  
+  return {
+    remainingDamage,
+    absorbedDamage: totalAbsorbedDamage,
+    message: shieldMessages.length > 0 ? shieldMessages.join('\n') : ''
+  };
+}
 
 export const {
   setupBattle,
@@ -569,6 +1611,12 @@ export const {
   finalizeBattleResolution,
   nextTurn,
   endRound,
+  // 被动技能相关的action
+  triggerPassiveSkills,
+  // BUFF相关的action
+  applyBuffToUnit,
+  removeBuffFromUnit,
+  clearAllBuffsFromUnit
 } = battleSlice.actions;
 
 // Selectors
@@ -598,5 +1646,7 @@ export const selectAllUnitsHaveActions = (state) => {
     .filter(id => !battleUnits[id].isDefeated) // 排除已击败的单位
     .every(id => unitActions[id]); // 检查每个单位是否都有行动
 };
+
+// 选择器函数已在上方定义
 
 export default battleSlice.reducer;

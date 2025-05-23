@@ -151,20 +151,29 @@ const ActionContentSelector = ({
           </div>
           
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-900/30">
-            <div className="grid grid-cols-2 gap-1">
-              {targets.map(target => (
-                <button
-                  key={target.id}
-                  className={`p-3 rounded-lg transition-all duration-200 shadow-sm ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
-                  onClick={() => setSelectedTarget(target.id)}
-                >
-                  <div className="flex items-center text-xs">
-                    <span className="mr-2">👹</span>
-                    <span>{target.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {targets.length === 0 ? (
+              <div className="bg-red-900/20 rounded-lg border border-red-800/30 p-4 mb-2">
+                <div className="flex items-start">
+                  <span className="text-red-300 mr-2 mt-0.5">⚠️</span>
+                  <span className="text-sm text-red-200">没有可攻击的目标！所有敌人都超出了攻击范围。请考虑移动到更靠前的位置或选择其他行动。</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1">
+                {targets.map(target => (
+                  <button
+                    key={target.id}
+                    className={`p-3 rounded-lg transition-all duration-200 shadow-sm ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
+                    onClick={() => setSelectedTarget(target.id)}
+                  >
+                    <div className="flex items-center text-xs">
+                      <span className="mr-2">👹</span>
+                      <span>{target.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="mt-4">
@@ -212,31 +221,38 @@ const ActionContentSelector = ({
           </div>
           
           {selectedSkill && (
-            <>
+            <div className="mt-4">
               <div className="flex items-center mb-2 pb-1 border-b border-gray-600/50">
-                <div className="w-6 h-6 rounded-full bg-red-900/50 flex items-center justify-center mr-2">
+                <div className="w-5 h-5 rounded-full bg-red-900/50 flex items-center justify-center mr-2">
                   <span className="text-red-300 text-xs">🎯</span>
                 </div>
-                <div className="text-red-300 font-bold">选择目标</div>
+                <div className="text-red-300 font-bold text-sm">选择目标</div>
               </div>
               
-              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-900/30">
-                <div className="grid grid-cols-2 gap-1">
+              {getTargets().length === 0 ? (
+                <div className="bg-red-900/20 rounded-lg border border-red-800/30 p-3 mb-2">
+                  <div className="flex items-start">
+                    <span className="text-red-300 mr-2 mt-0.5">⚠️</span>
+                    <span className="text-xs text-red-200">没有可用技能的目标！所有敌人都超出了技能范围。请考虑移动到更靠前的位置或选择其他行动。</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-1 mb-2">
                   {getTargets().map(target => (
                     <button
                       key={target.id}
-                      className={`p-3 rounded-lg transition-all duration-200 shadow-sm ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
+                      className={`p-2 rounded-lg transition-all duration-200 shadow-sm text-xs ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
                       onClick={() => setSelectedTarget(target.id)}
                     >
-                      <div className="flex items-center text-xs">
-                        <span className="mr-2">👹</span>
+                      <div className="flex items-center">
+                        <span className="mr-1">👹</span>
                         <span>{target.name}</span>
                       </div>
                     </button>
                   ))}
                 </div>
-              </div>
-            </>
+              )}
+            </div>
           )}
           
           <div className="mt-4">

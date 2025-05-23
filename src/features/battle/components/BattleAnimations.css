@@ -49,7 +49,61 @@
     -1px 1px 0 #000,
     1px 1px 0 #000;
   animation: float-damage 1.5s ease-out forwards;
+}
+
+/* 战斗特效 */
+.battle-effect {
   pointer-events: none;
+  overflow: visible;
+}
+
+/* 盾牌特效 */
+.shield-effect {
+  animation: shield-pulse 1s ease-out;
+}
+
+.shield-effect i {
+  font-size: 64px; /* 大盾牌图标 */
+  color: #3498db; /* 蓝色盾牌 */
+  text-shadow: 
+    0 0 10px #3498db,
+    0 0 20px #3498db,
+    0 0 30px #3498db;
+  animation: shield-rotate 1s ease-out;
+}
+
+@keyframes shield-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes shield-rotate {
+  0% {
+    transform: rotate(-30deg) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: rotate(0deg) scale(1.2);
+    opacity: 1;
+  }
+  80% {
+    transform: rotate(0deg) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(30deg) scale(0.8);
+    opacity: 0;
+  }
 }
 
 @keyframes float-damage {
