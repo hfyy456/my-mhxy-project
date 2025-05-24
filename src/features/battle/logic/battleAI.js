@@ -7,7 +7,7 @@
  * @Description: 战斗AI逻辑系统
  */
 
-import { getValidTargetsForUnit, getValidTargetsForSkill, hasValidTargets } from './battleLogic';
+import { getValidTargetsForUnit, getValidTargetsForSkill, hasValidTargets } from './skillSystem';
 
 /**
  * 决定敌方单位的行动
@@ -39,9 +39,9 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   }
 
   // 如果有技能且MP足够，有30%的概率使用技能
-  if (unit.skillIds && unit.skillIds.length > 0 && unit.stats.currentMp >= 10 && Math.random() < 0.3) {
+  if (unit.skillSet && unit.skillSet.length > 0 && unit.stats.currentMp >= 10 && Math.random() < 0.3) {
     // 随机选择一个技能
-    const skillId = unit.skillIds[Math.floor(Math.random() * unit.skillIds.length)];
+    const skillId = unit.skillSet[Math.floor(Math.random() * unit.skillSet.length)];
     
     // 获取技能可以攻击的目标
     const validTargets = skillConfig ? 

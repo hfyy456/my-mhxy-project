@@ -54,7 +54,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {pet.skills.map((skillName) => {
+                  {pet.skillSet.map((skillName) => {
                     const skillInfo = skillConfig.find(
                       (s) => s.name === skillName
                     );

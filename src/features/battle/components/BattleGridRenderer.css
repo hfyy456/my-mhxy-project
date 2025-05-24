@@ -51,6 +51,59 @@
   border-color: rgba(255, 215, 0, 0.8) !important;
 }
 
+/* 技能影响范围高亮样式 - 根据选择的技能类型显示不同颜色 */
+@keyframes skill-effect-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(147, 51, 234, 0.5);
+    border-color: rgba(147, 51, 234, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(147, 51, 234, 0.7);
+    border-color: rgba(147, 51, 234, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(147, 51, 234, 0.5);
+    border-color: rgba(147, 51, 234, 0.7);
+  }
+}
+
+/* 技能影响范围单元格样式 */
+.skill-effect-cell {
+  position: relative;
+  animation: skill-effect-pulse 2s infinite;
+  box-shadow: 0 0 15px rgba(147, 51, 234, 0.6);
+  border-color: rgba(147, 51, 234, 0.8) !important;
+}
+
+.skill-effect-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(147, 51, 234, 0) 70%);
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 0.5rem;
+}
+
+/* 技能效果动画 */
+@keyframes attackable-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    border-color: rgba(255, 215, 0, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+    border-color: rgba(255, 215, 0, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    border-color: rgba(255, 215, 0, 0.7);
+  }
+}
+
 .attackable-cell::before {
   content: '';
   position: absolute;

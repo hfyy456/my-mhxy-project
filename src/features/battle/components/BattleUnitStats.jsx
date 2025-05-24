@@ -52,6 +52,25 @@ const UnitStatsCard = ({ unit }) => {
     return <div>无效单位</div>;
   }
   
+  // 获取状态效果图标和描述
+  const getStatusEffects = () => {
+    if (!unit.statusEffects || unit.statusEffects.length === 0) {
+      return [{ icon: '✓', name: '无状态效果', description: '该单位当前没有任何状态效果' }];
+    }
+    return unit.statusEffects;
+  };
+
+  // 计算HP和MP百分比
+  const hpPercent = (unit.stats.currentHp / unit.stats.maxHp) * 100;
+  const mpPercent = (unit.stats.currentMp / unit.stats.maxMp) * 100;
+
+  // 根据HP百分比确定颜色
+  const getHpColor = (percent) => {
+    if (percent <= 25) return 'bg-red-600';
+    if (percent <= 50) return 'bg-yellow-600';
+    return 'bg-green-600';
+  };
+
   return (
     <div className="mb-2 p-2 bg-gray-800 rounded">
       <div className="flex justify-between items-center mb-1">
@@ -59,15 +78,29 @@ const UnitStatsCard = ({ unit }) => {
         <span className="text-gray-400">Lv.{unitDetails.level}</span>
       </div>
       
-      {/* 生命和法力 */}
+      {/* 生命和法力条 */}
       <div className="mb-1">
-        <div className="flex justify-between">
-          <span className="text-green-400">HP:</span>
-          <span>{unitDetails.hp}</span>
+        {/* HP条 */}
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-green-400 w-8">HP:</span>
+          <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${getHpColor(hpPercent)}`}
+              style={{ width: `${hpPercent}%` }}
+            ></div>
+          </div>
+          <span className="text-xs font-mono">{unit.stats.currentHp}/{unit.stats.maxHp}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-blue-400">MP:</span>
-          <span>{unitDetails.mp}</span>
+        {/* MP条 */}
+        <div className="flex items-center gap-1">
+          <span className="text-blue-400 w-8">MP:</span>
+          <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600"
+              style={{ width: `${mpPercent}%` }}
+            ></div>
+          </div>
+          <span className="text-xs font-mono">{unit.stats.currentMp}/{unit.stats.maxMp}</span>
         </div>
       </div>
       
@@ -117,6 +150,23 @@ const UnitStatsCard = ({ unit }) => {
         <span className={unitDetails.preferredAttackType === 'physical' ? 'text-red-400' : 'text-blue-400'}>
           {unitDetails.preferredAttackType === 'physical' ? '物理' : '法术'}
         </span>
+      </div>
+      
+      {/* 状态效果 */}
+      <div className="mt-1 pt-1 border-t border-gray-700">
+        <div className="text-xs text-gray-400 mb-1">状态效果</div>
+        <div className="flex flex-wrap gap-1">
+          {getStatusEffects().map((effect, index) => (
+            <div 
+              key={index} 
+              className="bg-gray-700 rounded px-1.5 py-0.5 text-[10px] flex items-center"
+              title={effect.description}
+            >
+              <span className="mr-1">{effect.icon}</span>
+              <span>{effect.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -350,5 +350,5 @@ export const passiveSkillConfig = [
   }
 ];
 
-// Helper function for passive skills
+// Helper function for passive skillSet
 export const getPassiveSkillById = (id) => passiveSkillConfig.find(skill => skill.id === id);

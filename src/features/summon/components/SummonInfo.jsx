@@ -504,12 +504,12 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
           <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
               <i className="fa-solid fa-bolt text-purple-400 mr-2"></i>
-              {uiText.titles.skills}
+              {uiText.titles.skillSet}
               <span className="text-xs text-gray-400 ml-1">
                 {uiText.labels.skillCount}
               </span>
             </h3>
-            <ul id="skills" className="">
+            <ul id="skillSet" className="">
               <div className="grid grid-cols-4 gap-x-0 gap-y-0 items-center sm:w-[280px] mx-auto">
                 {Array.from({ length: 12 }).map((_, i) => {
                   const skillId = i < skillSet.length ? skillSet[i] : null;

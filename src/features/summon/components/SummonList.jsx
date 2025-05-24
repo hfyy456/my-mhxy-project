@@ -166,7 +166,7 @@ const SummonList = ({ isOpen, onClose }) => {
 
                       {/* 技能展示 */}
                       <div className="mt-3">
-                        <div className="text-xs text-gray-400 mb-1">{uiText.titles.skills}:</div>
+                        <div className="text-xs text-gray-400 mb-1">{uiText.titles.skillSet}:</div>
                         <div className="flex flex-wrap gap-1">
                           {(summon.skillSet || []).map((skillId, index) => (
                             <span

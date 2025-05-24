@@ -1,5 +1,11 @@
-import { SKILL_TYPES, SKILL_MODES, ELEMENT_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from './enumConfig';
-import { BUFF_TYPES } from './buffConfig';
+import {
+  SKILL_TYPES,
+  SKILL_MODES,
+  ELEMENT_TYPES,
+  SKILL_TARGET_TYPES,
+  SKILL_AREA_TYPES,
+} from "./enumConfig";
+import { BUFF_TYPES } from "./buffConfig";
 
 // 主动技能配置
 export const activeSkillConfig = [
@@ -11,10 +17,11 @@ export const activeSkillConfig = [
     icon: "fa-moon",
     mode: SKILL_MODES.ACTIVE,
     targetType: SKILL_TARGET_TYPES.SELF,
-    cooldownRounds: 5,     // 冷却5回合
+    cooldownRounds: 5, // 冷却5回合
+    mpCost: 15, // 法力消耗15点
     applyBuffs: [
-      { buffId: "stealth", level: 1 }  // 应用隐身BUFF
-    ]
+      { buffId: "stealth", level: 1 }, // 应用隐身BUFF
+    ],
   },
   {
     id: "water_mountain",
@@ -25,13 +32,14 @@ export const activeSkillConfig = [
     mode: SKILL_MODES.ACTIVE,
     targetType: SKILL_TARGET_TYPES.GROUP,
     attackDistance: 3,
-    areaType: SKILL_AREA_TYPES.ROW,
+    areaType: SKILL_AREA_TYPES.CROSS,
     damage: 1.2,
     element: ELEMENT_TYPES.WATER,
-    cooldownRounds: 3,     // 冷却3回合
+    cooldownRounds: 3, // 冷却3回合
+    mpCost: 20, // 法力消耗20点
     applyBuffs: [
-      { buffId: "speed_down", level: 1, chance: 0.3 }  // 30%几率降低目标速度
-    ]
+      { buffId: "speed_down", level: 1, chance: 0.3 }, // 30%几率降低目标速度
+    ],
   },
   {
     id: "fire_spell",
@@ -44,10 +52,11 @@ export const activeSkillConfig = [
     attackDistance: 2,
     damage: 1.8,
     element: ELEMENT_TYPES.FIRE,
-    cooldownRounds: 2,       // 冷却2回合
+    cooldownRounds: 2, // 冷却2回合
+    mpCost: 25, // 法力消耗25点
     applyBuffs: [
-      { buffId: "burn", level: 1 }  // 应用灼烧BUFF
-    ]
+      { buffId: "burn", level: 1 }, // 应用灼烧BUFF
+    ],
   },
   {
     id: "thunder_strike",
@@ -60,10 +69,26 @@ export const activeSkillConfig = [
     attackDistance: 3,
     damage: 2.0,
     element: ELEMENT_TYPES.THUNDER,
-    cooldownRounds: 3,       // 冷却3回合
+    cooldownRounds: 3, // 冷却3回合
+    mpCost: 30, // 法力消耗30点
     applyBuffs: [
-      { buffId: "stun", level: 1, chance: 0.3 }  // 30%几率眩晕目标
-    ]
+      { buffId: "stun", level: 1, chance: 0.3 }, // 30%几率眩晕目标
+    ],
+  },
+  {
+    id: "thunder_spell",
+    name: "奔雷咒",
+    description: "召唤雷电群体攻击敌人",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-bolt",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.GROUP,
+    attackDistance: 3,
+    damage: 1.5,
+    element: ELEMENT_TYPES.THUNDER,
+    cooldownRounds: 3, // 冷却3回合
+    mpCost: 30, // 法力消耗30点
+    applyBuffs: [],
   },
   {
     id: "healing_light",
@@ -75,10 +100,11 @@ export const activeSkillConfig = [
     targetType: SKILL_TARGET_TYPES.SINGLE,
     attackDistance: 2,
     healAmount: 1.5,
-    cooldownRounds: 2,       // 冷却2回合
+    cooldownRounds: 2, // 冷却2回合
+    mpCost: 20, // 法力消耗20点
     applyBuffs: [
-      { buffId: "regeneration", level: 1 }  // 应用生命恢复BUFF
-    ]
+      { buffId: "regeneration", level: 1 }, // 应用生命恢复BUFF
+    ],
   },
   {
     id: "earth_shield",
@@ -89,11 +115,12 @@ export const activeSkillConfig = [
     mode: SKILL_MODES.ACTIVE,
     targetType: SKILL_TARGET_TYPES.SINGLE,
     attackDistance: 1,
-    cooldownRounds: 3,       // 冷却3回合
+    cooldownRounds: 3, // 冷却3回合
+    mpCost: 25, // 法力消耗25点
     applyBuffs: [
-      { buffId: "shield", level: 1 },  // 应用护盾BUFF
-      { buffId: "defense_up", level: 1 }  // 同时提高防御
-    ]
+      { buffId: "shield", level: 1 }, // 应用护盾BUFF
+      { buffId: "defense_up", level: 1 }, // 同时提高防御
+    ],
   },
   {
     id: "wind_slash",
@@ -106,10 +133,11 @@ export const activeSkillConfig = [
     attackDistance: 2,
     damage: 1.6,
     element: ELEMENT_TYPES.WIND,
-    cooldownRounds: 2,       // 冷却2回合
+    cooldownRounds: 2, // 冷却2回合
+    mpCost: 18, // 法力消耗18点
     applyBuffs: [
-      { buffId: "defense_down", level: 1 }  // 降低目标防御
-    ]
+      { buffId: "defense_down", level: 1 }, // 降低目标防御
+    ],
   },
   {
     id: "poison_cloud",
@@ -123,10 +151,10 @@ export const activeSkillConfig = [
     areaType: SKILL_AREA_TYPES.SQUARE,
     damage: 0.8,
     element: ELEMENT_TYPES.POISON,
-    cooldownRounds: 4,       // 冷却4回合
+    cooldownRounds: 4, // 冷却4回合
     applyBuffs: [
-      { buffId: "poison", level: 1 }  // 应用中毒BUFF
-    ]
+      { buffId: "poison", level: 1 }, // 应用中毒BUFF
+    ],
   },
   {
     id: "rock_smash",
@@ -139,10 +167,10 @@ export const activeSkillConfig = [
     attackDistance: 1,
     damage: 2.2,
     element: ELEMENT_TYPES.EARTH,
-    cooldownRounds: 2,       // 冷却2回合
+    cooldownRounds: 2, // 冷却2回合
     applyBuffs: [
-      { buffId: "silence", level: 1, chance: 0.25 }  // 25%几率使目标沉默
-    ]
+      { buffId: "silence", level: 1, chance: 0.25 }, // 25%几率使目标沉默
+    ],
   },
   {
     id: "ice_prison",
@@ -155,15 +183,16 @@ export const activeSkillConfig = [
     attackDistance: 2,
     damage: 1.0,
     element: ELEMENT_TYPES.WATER,
-    cooldownRounds: 4,       // 冷却4回合
+    cooldownRounds: 4, // 冷却4回合
     applyBuffs: [
-      { buffId: "freeze", level: 1 }  // 应用冻结BUFF
-    ]
+      { buffId: "freeze", level: 1 }, // 应用冻结BUFF
+    ],
   },
   {
     id: "storm_judgment",
     name: "风雷天威",
-    description: "召唤风暴与雷霆之力，对敌方全体造成伤害，并有几率附加麻痹或禁锢效果。",
+    description:
+      "召唤风暴与雷霆之力，对敌方全体造成伤害，并有几率附加麻痹或禁锢效果。",
     type: SKILL_TYPES.MAGICAL,
     icon: "fa-cloud-bolt",
     mode: SKILL_MODES.ACTIVE,
@@ -172,13 +201,15 @@ export const activeSkillConfig = [
     areaType: SKILL_AREA_TYPES.SQUARE,
     damage: 1.8,
     element: ELEMENT_TYPES.THUNDER,
-    cooldownRounds: 5,       // 冷却5回合
+    cooldownRounds: 5, // 冷却5回合
+    mpCost: 40, // 法力消耗40点
     applyBuffs: [
-      { buffId: "stun", level: 2, chance: 0.4 },  // 40%几率眩晕目标，更高等级
-      { buffId: "speed_down", level: 1, chance: 0.6 }  // 60%几率降低速度
-    ]
-  }
+      { buffId: "stun", level: 2, chance: 0.4 }, // 40%几率眩晕目标，更高等级
+      { buffId: "speed_down", level: 1, chance: 0.6 }, // 60%几率降低速度
+    ],
+  },
 ];
 
-// Helper function for active skills
-export const getActiveSkillById = (id) => activeSkillConfig.find(skill => skill.id === id);
+// Helper function for active skillSet
+export const getActiveSkillById = (id) =>
+  activeSkillConfig.find((skill) => skill.id === id);

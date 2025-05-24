@@ -15,7 +15,7 @@ import { passiveSkillConfig } from '@/config/passiveSkillConfig';
 import { activeSkillConfig } from '@/config/activeSkillConfig';
 import { buffConfig } from '@/config/buffConfig';
 import * as buffManager from '@/features/battle/logic/buffManager';
-import { calculateBattleDamage } from '@/features/battle/logic/battleLogic';
+import { calculateBattleDamage } from '@/features/battle/logic/damageCalculation';
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;
@@ -59,7 +59,7 @@ const initialState = {
   // 战斗单元存储 (key: battleUnitId, value: BattleUnit object)
   // BattleUnit 对象将包含: id, sourceId (原始召唤兽ID或敌人模板ID), isPlayerUnit, name, level,
   // stats (包含 currentHp, maxHp, currentMp, maxMp, attack, defense, speed 等), 
-  // skillIds, statusEffects (存储BUFF实例),
+  // skillSet, statusEffects (存储BUFF实例),
   // gridPosition ({ team: 'player'|'enemy', row, col }), spriteAssetKey, isDefeated
   battleUnits: {}, 
 
@@ -116,16 +116,53 @@ const battleSlice = createSlice({
         message: '战斗开始！', 
         timestamp: Date.now() 
       }];
+      
+      // 添加技能导入日志
+      Object.values(state.battleUnits).forEach(unit => {
+        // 记录基本单位信息
+        state.battleLog.push({
+          message: `单位信息 - ID: ${unit.id}, 名称: ${unit.name}, 类型: ${unit.type}`,
+          timestamp: Date.now(),
+          isDebugLog: true,
+          unitId: unit.id
+        });
+        
+        // 记录技能列表
+        state.battleLog.push({
+          message: `单位 ${unit.name} 的技能列表 (skillSet): ${JSON.stringify(unit.skillSet || [])}`,
+          timestamp: Date.now() + 1,
+          isDebugLog: true,
+          unitId: unit.id
+        });
+        
+        // 记录技能导入信息（如果存在）
+        if (unit._debug_skillImport) {
+          state.battleLog.push({
+            message: `技能导入信息: ${JSON.stringify(unit._debug_skillImport)}`,
+            timestamp: Date.now() + 2,
+            isDebugLog: true,
+            unitId: unit.id
+          });
+        }
+        
+        // 记录单位属性信息
+        state.battleLog.push({
+          message: `单位属性 - HP: ${unit.stats.currentHp}/${unit.stats.maxHp}, MP: ${unit.stats.currentMp}/${unit.stats.maxMp}, 攻击: ${unit.stats.attack}, 防御: ${unit.stats.defense}`,
+          timestamp: Date.now() + 3,
+          isDebugLog: true,
+          unitId: unit.id
+        });
+      });
       state.rewards = null;
       
       // 应用所有单位的被动技能BUFF
       
       // 遍历所有战斗单位
       Object.values(state.battleUnits).forEach(unit => {
-        if (!unit.skillIds || unit.skillIds.length === 0) return;
+        if (!unit.skillSet || unit.skillSet.length === 0) return;
         
         // 遍历单位的所有技能
-        unit.skillIds.forEach(skillId => {
+        unit.skillSet.forEach(skillId => {
           // 获取被动技能配置
           const passiveSkill = passiveSkillConfig.find(s => s.id === skillId && s.mode === 'passive');
           if (!passiveSkill) return;
@@ -351,11 +388,33 @@ const battleSlice = createSlice({
           }
           
           // 记录技能使用
+          console.log(`技能使用 - 单位: ${sourceUnit.name}, 技能: ${skill.name}, ID: ${skillId}`);
+          console.log(`技能详情 - 类型: ${skill.type}, MP消耗: ${skill.mpCost}, 目标数量: ${validTargets.length}`);
+          
+          // 消耗MP
+          sourceUnit.stats.currentMp = Math.max(0, sourceUnit.stats.currentMp - (skill.mpCost || 0));
+          
+          // 设置技能冷却
+          if (skill.cooldown) {
+            if (!sourceUnit.skillCooldowns) sourceUnit.skillCooldowns = {};
+            sourceUnit.skillCooldowns[skillId] = skill.cooldown;
+            console.log(`设置技能冷却 - 技能: ${skill.name}, 冷却回合: ${skill.cooldown}`);
+          }
+          
           state.battleLog.push({ 
-            message: `${sourceUnit.name} 使用了技能 ${skill.name}`, 
+            message: `${sourceUnit.name} 使用了技能 ${skill.name} [消耗MP: ${skill.mpCost || 0}]`, 
             timestamp: Date.now(),
             unitId: unitId,
-            skillId: skillId
+            skillId: skillId,
+            details: {
+              skillType: skill.type,
+              mpCost: skill.mpCost || 0,
+              cooldown: skill.cooldown || 0,
+              targets: validTargets.map(id => state.battleUnits[id]?.name || id),
+              element: skill.element || '无',
+              damage: skill.damage || 0,
+              heal: skill.healAmount || 0
+            }
           });
           
           // 处理技能伤害
@@ -365,11 +424,26 @@ const battleSlice = createSlice({
               
               // 计算基础伤害
               let baseDamage;
+              let attackStat;
+              let defenseStat;
+              
               if (skill.type === 'magical') {
-                baseDamage = sourceUnit.stats.magicAttack * skill.damage;
+                attackStat = sourceUnit.stats.magicAttack;
+                defenseStat = targetUnit.stats.magicDefense || targetUnit.stats.defense;
+                baseDamage = attackStat * skill.damage;
+                console.log(`魔法伤害计算 - 魔法攻击: ${attackStat}, 技能系数: ${skill.damage}, 基础伤害: ${baseDamage}`);
               } else {
-                baseDamage = sourceUnit.stats.attack * skill.damage;
+                attackStat = sourceUnit.stats.attack;
+                defenseStat = targetUnit.stats.defense;
+                baseDamage = attackStat * skill.damage;
+                console.log(`物理伤害计算 - 物理攻击: ${attackStat}, 技能系数: ${skill.damage}, 基础伤害: ${baseDamage}`);
               }
+              
+              // 记录伤害计算过程
+              console.log(`伤害计算 - 单位: ${sourceUnit.name}, 目标: ${targetUnit.name}, 技能: ${skill.name}`);
+              console.log(`属性详情 - 攻击方: ${attackStat}, 防御方: ${defenseStat}`);
+              console.log(`基础伤害: ${baseDamage}`);
+              
               
               // 获取目标的防御值
               const defenseValue = calculateModifiedAttribute(targetUnit, 'defense');
@@ -879,44 +953,34 @@ const battleSlice = createSlice({
         case 'skill': {
           if (!action.targetIds || action.targetIds.length === 0 || !action.skillId) break;
           
-          let targetId = action.targetIds[0];
-          let target = state.battleUnits[targetId];
+          // 获取技能信息
+          const skillId = action.skillId;
+          const skillInfo = activeSkillConfig.find(skill => skill.id === skillId);
           
-          // 如果目标已经死亡，尝试自动选择新目标
-          if (!target || target.isDefeated) {
-            // 确定目标队伍（玩家或敌人）
-            const isTargetingPlayer = state.playerFormation.flat().filter(id => id).includes(targetId);
-            const targetFormation = isTargetingPlayer ? state.playerFormation : state.enemyFormation;
-            
-            // 尝试找到一个活着的目标
-            const aliveTargets = targetFormation.flat()
-              .filter(id => id && state.battleUnits[id] && !state.battleUnits[id].isDefeated);
-            
-            if (aliveTargets.length > 0) {
-              // 随机选择一个新目标
-              targetId = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
-              target = state.battleUnits[targetId];
-              
-              state.battleLog.push({
-                message: `${unit.name} 的原目标已经被击败，自动切换技能目标为 ${target.name}。`,
-                timestamp: Date.now(),
-                unitId
-              });
-            } else {
-              state.battleLog.push({
-                message: `${unit.name} 的目标已经被击败，且找不到新目标，技能使用无效。`,
-                timestamp: Date.now(),
-                unitId
-              });
-              break;
-            }
+          if (!skillInfo) {
+            state.battleLog.push({
+              message: `${unit.name} 尝试使用未知技能 ${skillId}。`,
+              timestamp: Date.now(),
+              unitId
+            });
+            break;
           }
           
-          // 简单技能逻辑 - 消耗MP并造成更高伤害
-          const mpCost = 10;
+          // 检查技能冷却
+          if (unit.skillCooldowns && unit.skillCooldowns[skillId] > 0) {
+            state.battleLog.push({
+              message: `${unit.name} 的技能 ${skillInfo.name} 还在冷却中（剩余 ${unit.skillCooldowns[skillId]} 回合）。`,
+              timestamp: Date.now(),
+              unitId
+            });
+            break;
+          }
+          
+          // 检查MP消耗
+          const mpCost = skillInfo.mpCost || 10; // 默认消耗10点MP
           if (unit.stats.currentMp < mpCost) {
             state.battleLog.push({
-              message: `${unit.name} 法力不足，无法使用技能。`,
+              message: `${unit.name} 法力不足，无法使用技能 ${skillInfo.name}（需要 ${mpCost} 点法力）。`,
               timestamp: Date.now(),
               unitId
             });
@@ -926,29 +990,331 @@ const battleSlice = createSlice({
           // 消耗MP
           unit.stats.currentMp -= mpCost;
           
-          // 计算技能伤害
-          const baseDamage = (unit.stats.attack * 1.5) - (target.stats.defense * 0.3);
-          const damage = Math.max(Math.floor(baseDamage * (0.9 + Math.random() * 0.2)), 1);
+          // 初始化技能冷却
+          if (!unit.skillCooldowns) unit.skillCooldowns = {};
+          if (skillInfo.cooldownRounds) {
+            unit.skillCooldowns[skillId] = skillInfo.cooldownRounds;
+          }
           
-          // 应用伤害
-          target.stats.currentHp = Math.max(target.stats.currentHp - damage, 0);
-          
-          // 检查目标是否被击败
-          if (target.stats.currentHp <= 0) {
-            target.isDefeated = true;
-            state.battleLog.push({
-              message: `${unit.name} 对 ${target.name} 使用了技能，消耗 ${mpCost} 点法力，造成 ${damage} 点伤害，${target.name} 被击败！`,
-              timestamp: Date.now(),
-              unitId,
-              targetId
-            });
-          } else {
-            state.battleLog.push({
-              message: `${unit.name} 对 ${target.name} 使用了技能，消耗 ${mpCost} 点法力，造成 ${damage} 点伤害。`,
-              timestamp: Date.now(),
-              unitId,
-              targetId
-            });
+          // 根据技能类型处理不同效果
+          switch (skillInfo.type) {
+            case 'ATTACK': // 攻击型技能
+            case 'MAGICAL': // 魔法攻击技能
+              // 处理多目标或单目标
+              const targets = action.targetIds.map(id => state.battleUnits[id]).filter(t => t && !t.isDefeated);
+              
+              if (targets.length === 0) {
+                state.battleLog.push({
+                  message: `${unit.name} 使用了 ${skillInfo.name}，但没有有效目标。`,
+                  timestamp: Date.now(),
+                  unitId
+                });
+                break;
+              }
+              
+              state.battleLog.push({
+                message: `${unit.name} 使用了 ${skillInfo.name}，消耗 ${mpCost} 点法力。`,
+                timestamp: Date.now(),
+                unitId,
+                effect: {
+                  type: 'skill',
+                  icon: skillInfo.icon || 'fa-magic',
+                  color: skillInfo.element === 'FIRE' ? '#ff4500' : 
+                         skillInfo.element === 'WATER' ? '#1e90ff' : 
+                         skillInfo.element === 'EARTH' ? '#8b4513' : 
+                         skillInfo.element === 'WIND' ? '#7fffd4' : 
+                         skillInfo.element === 'THUNDER' ? '#ffd700' : '#ffffff',
+                  size: 'large',
+                  duration: 1500
+                }
+              });
+              
+              // 处理每个目标
+              targets.forEach(target => {
+                // 计算技能伤害
+                const damageOptions = {
+                  percentReduction: target.isDefending ? 0.3 : 0.15, // 防御姿态减伤30%，否则15%
+                  isDefending: target.isDefending,
+                  showDetailedLog: true // 启用详细日志
+                };
+                
+                // 使用技能伤害倍率
+                const skillBonus = skillInfo.damage || 1.5; // 默认1.5倍伤害
+                
+                // 根据技能类型选择伤害类型
+                const damageType = skillInfo.type === 'MAGICAL' ? 'magical' : 'physical';
+                
+                // 计算伤害
+                const damageResult = calculateBattleDamage(unit, target, damageType, skillBonus, damageOptions);
+                const damage = damageResult.finalDamage;
+                
+                // 记录详细的伤害计算日志
+                if (damageResult.details) {
+                  const details = damageResult.details;
+                  const damageTypeDisplay = details.damageType === 'physical' ? '物理' : '魔法';
+                  
+                  // 记录详细的伤害计算过程
+                  state.battleLog.push({
+                    message: `${skillInfo.name} 伤害计算详情 (类型: ${damageTypeDisplay}):`,
+                    timestamp: Date.now(),
+                    isDetailLog: true,
+                    unitId: unit.id,
+                    targetId: target.id
+                  });
+                  
+                  // 基础伤害
+                  if (details.basePhysicalDamage !== undefined) {
+                    state.battleLog.push({
+                      message: `基础物理伤害: ${details.basePhysicalDamage} (攻击力: ${unit.stats.physicalAttack}, 防御力: ${target.stats.physicalDefense})`,
+                      timestamp: Date.now(),
+                      isDetailLog: true
+                    });
+                  } else if (details.baseMagicalDamage !== undefined) {
+                    state.battleLog.push({
+                      message: `基础魔法伤害: ${details.baseMagicalDamage} (魔法攻击: ${unit.stats.magicalAttack}, 魔法防御: ${target.stats.magicalDefense})`,
+                      timestamp: Date.now(),
+                      isDetailLog: true
+                    });
+                  }
+                  
+                  // 技能加成
+                  state.battleLog.push({
+                    message: `技能加成: ${skillBonus}倍 (${skillInfo.name})`,
+                    timestamp: Date.now(),
+                    isDetailLog: true
+                  });
+                  
+                  // 暴击
+                  state.battleLog.push({
+                    message: `暴击检定: ${details.isCritical ? '触发暴击!' : '未暴击'} (暴击率: ${(unit.stats.critRate * 100).toFixed(1)}%)`,
+                    timestamp: Date.now(),
+                    isDetailLog: true
+                  });
+                  
+                  if (details.isCritical) {
+                    state.battleLog.push({
+                      message: `暴击伤害: ${details.criticalDamage} (暴击倍率: ${(unit.stats.critDamage * 100).toFixed(1)}%)`,
+                      timestamp: Date.now(),
+                      isDetailLog: true
+                    });
+                  }
+                  
+                  // 减伤
+                  if (target.isDefending) {
+                    state.battleLog.push({
+                      message: `防御姿态减伤: ${Math.round(details.percentReducedDamage * 0.15)} (额外减免15%)`,
+                      timestamp: Date.now(),
+                      isDetailLog: true
+                    });
+                  }
+                  
+                  // 伤害浮动
+                  const variationPercent = (details.damageVariation * 100).toFixed(1);
+                  const variationSign = details.damageVariation >= 0 ? '+' : '';
+                  state.battleLog.push({
+                    message: `伤害浮动: ${variationSign}${variationPercent}%`,
+                    timestamp: Date.now(),
+                    isDetailLog: true
+                  });
+                  
+                  // 最终伤害
+                  state.battleLog.push({
+                    message: `最终伤害: ${damage}`,
+                    timestamp: Date.now(),
+                    isDetailLog: true
+                  });
+                }
+                
+                // 应用伤害
+                target.stats.currentHp = Math.max(target.stats.currentHp - damage, 0);
+                
+                // 检查目标是否被击败
+                if (target.stats.currentHp <= 0) {
+                  target.isDefeated = true;
+                  state.battleLog.push({
+                    message: `${unit.name} 的 ${skillInfo.name} 对 ${target.name} 造成 ${damage} 点伤害，${target.name} 被击败！`,
+                    timestamp: Date.now(),
+                    unitId,
+                    targetId: target.id
+                  });
+                } else {
+                  state.battleLog.push({
+                    message: `${unit.name} 的 ${skillInfo.name} 对 ${target.name} 造成 ${damage} 点伤害。`,
+                    timestamp: Date.now(),
+                    unitId,
+                    targetId: target.id
+                  });
+                }
+                
+                // 应用技能附带的BUFF效果
+                if (skillInfo.applyBuffs && skillInfo.applyBuffs.length > 0) {
+                  skillInfo.applyBuffs.forEach(buffInfo => {
+                    // 确定BUFF目标
+                    let buffTarget = target;
+                    if (buffInfo.targetType === 'self') {
+                      buffTarget = unit;
+                    }
+                    
+                    // 应用BUFF
+                    if (!buffTarget.buffs) buffTarget.buffs = [];
+                    
+                    // 查找BUFF定义
+                    const buffDef = buffConfig.find(b => b.id === buffInfo.buffId);
+                    if (!buffDef) return;
+                    
+                    // 创建BUFF实例
+                    const newBuff = {
+                      id: buffInfo.buffId,
+                      level: buffInfo.level || 1,
+                      duration: buffDef.duration || 3, // 默认持续3回合
+                      sourceUnitId: unit.id
+                    };
+                    
+                    // 添加到目标的BUFF列表
+                    buffTarget.buffs.push(newBuff);
+                    
+                    state.battleLog.push({
+                      message: `${buffTarget.name} 获得了 ${buffDef.name} 效果，持续 ${newBuff.duration} 回合。`,
+                      timestamp: Date.now(),
+                      unitId: buffTarget.id,
+                      buffId: buffInfo.buffId
+                    });
+                  });
+                }
+              });
+              break;
+              
+            case 'SUPPORT': // 辅助型技能
+              // 处理辅助技能逻辑
+              state.battleLog.push({
+                message: `${unit.name} 使用了辅助技能 ${skillInfo.name}，消耗 ${mpCost} 点法力。`,
+                timestamp: Date.now(),
+                unitId,
+                effect: {
+                  type: 'buff',
+                  icon: skillInfo.icon || 'fa-shield-alt',
+                  color: '#32cd32',
+                  size: 'large',
+                  duration: 1500
+                }
+              });
+              
+              // 应用BUFF效果
+              if (skillInfo.applyBuffs && skillInfo.applyBuffs.length > 0) {
+                // 确定目标
+                let targets = [];
+                if (skillInfo.targetType === SKILL_TARGET_TYPES.SELF) {
+                  targets = [unit];
+                } else if (skillInfo.targetType === SKILL_TARGET_TYPES.ALLY) {
+                  // 获取友方单位
+                  const formation = unit.isPlayerUnit ? state.playerFormation : state.enemyFormation;
+                  targets = formation.flat()
+                    .filter(id => id && state.battleUnits[id] && !state.battleUnits[id].isDefeated)
+                    .map(id => state.battleUnits[id]);
+                } else if (skillInfo.targetType === SKILL_TARGET_TYPES.ENEMY) {
+                  // 获取敌方单位
+                  const formation = unit.isPlayerUnit ? state.enemyFormation : state.playerFormation;
+                  targets = formation.flat()
+                    .filter(id => id && state.battleUnits[id] && !state.battleUnits[id].isDefeated)
+                    .map(id => state.battleUnits[id]);
+                } else {
+                  // 使用指定的目标
+                  targets = action.targetIds
+                    .map(id => state.battleUnits[id])
+                    .filter(t => t && !t.isDefeated);
+                }
+                
+                // 应用BUFF到每个目标
+                targets.forEach(target => {
+                  skillInfo.applyBuffs.forEach(buffInfo => {
+                    // 应用BUFF
+                    if (!target.buffs) target.buffs = [];
+                    
+                    // 查找BUFF定义
+                    const buffDef = buffConfig.find(b => b.id === buffInfo.buffId);
+                    if (!buffDef) return;
+                    
+                    // 创建BUFF实例
+                    const newBuff = {
+                      id: buffInfo.buffId,
+                      level: buffInfo.level || 1,
+                      duration: buffDef.duration || 3, // 默认持续3回合
+                      sourceUnitId: unit.id
+                    };
+                    
+                    // 添加到目标的BUFF列表
+                    target.buffs.push(newBuff);
+                    
+                    state.battleLog.push({
+                      message: `${target.name} 获得了 ${buffDef.name} 效果，持续 ${newBuff.duration} 回合。`,
+                      timestamp: Date.now(),
+                      unitId: target.id,
+                      buffId: buffInfo.buffId
+                    });
+                  });
+                });
+              }
+              break;
+              
+            case 'HEALING': // 治疗型技能
+              // 处理治疗技能逻辑
+              const healTargets = action.targetIds
+                .map(id => state.battleUnits[id])
+                .filter(t => t && !t.isDefeated);
+              
+              if (healTargets.length === 0) {
+                state.battleLog.push({
+                  message: `${unit.name} 使用了 ${skillInfo.name}，但没有有效目标。`,
+                  timestamp: Date.now(),
+                  unitId
+                });
+                break;
+              }
+              
+              state.battleLog.push({
+                message: `${unit.name} 使用了治疗技能 ${skillInfo.name}，消耗 ${mpCost} 点法力。`,
+                timestamp: Date.now(),
+                unitId,
+                effect: {
+                  type: 'heal',
+                  icon: skillInfo.icon || 'fa-heart',
+                  color: '#ff69b4',
+                  size: 'large',
+                  duration: 1500
+                }
+              });
+              
+              // 计算治疗量
+              const baseHealAmount = skillInfo.healAmount || (unit.stats.magicalAttack * 0.8);
+              
+              // 处理每个目标
+              healTargets.forEach(target => {
+                // 计算实际治疗量（加入随机浮动）
+                const healVariation = -0.1 + Math.random() * 0.2; // -10% 到 +10% 的随机浮动
+                const healAmount = Math.floor(baseHealAmount * (1 + healVariation));
+                
+                // 应用治疗
+                const oldHp = target.stats.currentHp;
+                target.stats.currentHp = Math.min(target.stats.currentHp + healAmount, target.stats.maxHp);
+                const actualHeal = target.stats.currentHp - oldHp;
+                
+                state.battleLog.push({
+                  message: `${unit.name} 的 ${skillInfo.name} 为 ${target.name} 恢复了 ${actualHeal} 点生命值。`,
+                  timestamp: Date.now(),
+                  unitId,
+                  targetId: target.id,
+                  heal: actualHeal
+                });
+              });
+              break;
+              
+            default:
+              state.battleLog.push({
+                message: `${unit.name} 使用了未知类型的技能 ${skillInfo.name}。`,
+                timestamp: Date.now(),
+                unitId
+              });
+              break;
           }
           break;
         }
@@ -1112,14 +1478,14 @@ const battleSlice = createSlice({
       const { unitId, triggerType, sourceUnitId } = action.payload;
       const unit = state.battleUnits[unitId];
       
-      if (!unit || unit.isDefeated || !unit.skillIds || unit.skillIds.length === 0) {
+      if (!unit || unit.isDefeated || !unit.skillSet || unit.skillSet.length === 0) {
         return;
       }
       
       // 获取被动技能配置
       
       // 遍历单位的所有技能
-      unit.skillIds.forEach(skillId => {
+      unit.skillSet.forEach(skillId => {
         // 获取被动技能配置
         const passiveSkill = passiveSkillConfig.find(s => s.id === skillId && s.mode === 'passive');
         if (!passiveSkill) return;

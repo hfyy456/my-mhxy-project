@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import BattleGridRenderer from './BattleGridRenderer';
-import BattleInfoPanel from './BattleInfoPanel';
 import ActionTypeSelector from './ActionTypeSelector';
 import ActionContentSelector from './ActionContentSelector';
 import ActionOrderTimeline from './ActionOrderTimeline';
@@ -9,8 +8,9 @@ import BattleLogPanel from './BattleLogPanel';
 import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
-import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/battleLogic';
+import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
 import { petConfig } from '@/config/petConfig';
+import { activeSkillConfig } from '@/config/activeSkillConfig';
 
 import {
   selectIsBattleActive,
@@ -107,10 +107,179 @@ const BattleScreen = () => {
     return [];
   };
   
-  // 获取单位可用技能
-  const getSkills = () => {
-    if (!selectedUnit || !selectedUnit.skills) return [];
-    return selectedUnit.skills;
+  // 获取单位可用的主动技能
+  const getActiveSkills = () => {
+    console.log('获取主动技能 - 当前选中单位:', selectedUnit?.name);
+    
+    if (!selectedUnit) {
+      console.log('未选中单位');
+      return [];
+    }
+    
+    if (!selectedUnit.skillSet) {
+      console.log('单位没有 skillSet 属性:', selectedUnit.id);
+      return [];
+    }
+    
+    console.log('单位技能列表 (skillSet):', selectedUnit.skillSet);
+    
+    // 从 activeSkillConfig 中获取技能详细信息
+    const activeSkills = selectedUnit.skillSet
+      .filter(skillId => skillId) // 过滤掉空值
+      .map(skillId => {
+        const skillInfo = activeSkillConfig.find(skill => skill.id === skillId);
+        return skillInfo || null;
+      })
+      .filter(skill => skill !== null) // 过滤掉未找到的技能
+      .filter(skill => skill.type !== 'passive'); // 只保留非被动技能
+    
+    console.log('获取到的主动技能列表:', activeSkills.map(s => s.name));
+    return activeSkills;
+  };
+  
+  // 获取技能影响范围
+  const getSkillAffectedArea = (skillId, targetId) => {
+    if (!skillId || !selectedUnit || !targetId) return [];
+    
+    const skill = activeSkillConfig.find(s => s.id === skillId);
+    if (!skill) return [];
+    
+    console.log('获取技能影响范围:', skill.name, '目标ID:', targetId);
+    
+    // 获取目标单位
+    const targetUnit = battleUnits[targetId];
+    if (!targetUnit) return [];
+    
+    // 目标位置
+    const targetPos = targetUnit.gridPosition;
+    const targetTeam = targetPos.team;
+    
+    // 存储受影响的格子位置
+    const affectedPositions = [];
+    
+    // 根据技能的 targetType 和 areaType 属性确定影响范围
+    const targetType = skill.targetType;
+    const areaType = skill.areaType;
+    
+    // 单体技能
+    if (targetType === 'single' || !targetType) {
+      // 添加目标格子
+      affectedPositions.push({
+        team: targetTeam,
+        row: targetPos.row,
+        col: targetPos.col
+      });
+    }
+    // 群体技能
+    else if (targetType === 'group') {
+      // 添加目标格子
+      affectedPositions.push({
+        team: targetTeam,
+        row: targetPos.row,
+        col: targetPos.col
+      });
+      
+      // 根据不同的范围类型计算影响的格子
+      if (areaType === 'cross') { // 十字范围
+        // 定义上下左右四个相邻格子
+        const crossPositions = [
+          { row: targetPos.row - 1, col: targetPos.col }, // 上
+          { row: targetPos.row + 1, col: targetPos.col }, // 下
+          { row: targetPos.row, col: targetPos.col - 1 }, // 左
+          { row: targetPos.row, col: targetPos.col + 1 }  // 右
+        ];
+        
+        // 过滤掉超出范围的格子
+        crossPositions.forEach(pos => {
+          if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: pos.row,
+              col: pos.col
+            });
+          }
+        });
+        
+        console.log('十字范围格子:', affectedPositions);
+      }
+      else if (areaType === 'row') { // 整行范围
+        // 添加同一行的所有格子
+        for (let col = 0; col < 3; col++) {
+          affectedPositions.push({
+            team: targetTeam,
+            row: targetPos.row,
+            col: col
+          });
+        }
+      }
+      else if (areaType === 'column') { // 整列范围
+        // 添加同一列的所有格子
+        for (let row = 0; row < 3; row++) {
+          affectedPositions.push({
+            team: targetTeam,
+            row: row,
+            col: targetPos.col
+          });
+        }
+      }
+      else if (areaType === 'square') { // 方形范围
+        // 添加 3x3 方形范围内的所有格子
+        for (let row = Math.max(0, targetPos.row - 1); row <= Math.min(2, targetPos.row + 1); row++) {
+          for (let col = Math.max(0, targetPos.col - 1); col <= Math.min(2, targetPos.col + 1); col++) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: row,
+              col: col
+            });
+          }
+        }
+      }
+      else { // 默认情况，目标及其相邻格子
+        // 上下左右四个相邻格子
+        const adjacentPositions = [
+          { row: targetPos.row - 1, col: targetPos.col }, // 上
+          { row: targetPos.row + 1, col: targetPos.col }, // 下
+          { row: targetPos.row, col: targetPos.col - 1 }, // 左
+          { row: targetPos.row, col: targetPos.col + 1 }  // 右
+        ];
+        
+        // 过滤掉超出范围的格子
+        adjacentPositions.forEach(pos => {
+          if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: pos.row,
+              col: pos.col
+            });
+          }
+        });
+      }
+    }
+    // 无目标技能（如自身增益）
+    else if (targetType === 'none') {
+      // 添加施法者格子
+      const casterPos = selectedUnit.gridPosition;
+      affectedPositions.push({
+        team: casterPos.team,
+        row: casterPos.row,
+        col: casterPos.col
+      });
+    }
+    
+    // 去除重复格子
+    const uniquePositions = [];
+    const positionMap = new Map();
+    
+    affectedPositions.forEach(pos => {
+      const key = `${pos.team}-${pos.row}-${pos.col}`;
+      if (!positionMap.has(key)) {
+        positionMap.set(key, true);
+        uniquePositions.push(pos);
+      }
+    });
+    
+    console.log('技能实际影响范围位置:', uniquePositions);
+    return uniquePositions;
   };
   
   // 确认行动
@@ -167,7 +336,7 @@ const BattleScreen = () => {
         return '防御';
       case 'skill':
         const skillTarget = action.targetIds[0] ? battleUnits[action.targetIds[0]].name : '未知目标';
-        const skill = selectedUnit?.skills?.find(s => s.id === action.skillId);
+        const skill = selectedUnit?.skillSet?.find(s => s.id === action.skillId);
         return `使用技能 ${skill ? skill.name : action.skillId} 对 ${skillTarget}`;
       default:
         return action.actionType;
@@ -355,9 +524,12 @@ const BattleScreen = () => {
         {/* 战斗网格 - 占据大部分屏幕空间 */}
         <div className="absolute inset-0 flex items-center justify-center">
           <BattleGridRenderer 
-            onUnitClick={handleUnitClick} 
+            onUnitClick={handleUnitClick}
             selectedUnitId={selectedUnitId}
             selectedAction={selectedAction}
+            selectedSkill={selectedSkill}
+            selectedTarget={selectedTarget}
+            skillAffectedArea={selectedSkill && selectedAction === 'skill' && selectedTarget ? getSkillAffectedArea(selectedSkill, selectedTarget) : []}
           />
         </div>
       </div>
@@ -394,7 +566,7 @@ const BattleScreen = () => {
               selectedTarget={selectedTarget}
               setSelectedTarget={setSelectedTarget}
               getTargets={getTargets}
-              getSkills={getSkills}
+              getActiveSkills={getActiveSkills}
               confirmAction={confirmAction}
               hasAction={unitActions[selectedUnitId]}
               getActionDescription={getActionDescription}

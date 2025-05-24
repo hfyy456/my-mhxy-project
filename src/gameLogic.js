@@ -125,7 +125,7 @@ export const refineMonster = (playerLevel) => {
     level: newSummon.level,
     basicAttributes: { ...newSummon.basicAttributes },
     derivedAttributes: {},
-    skills: [...newSummon.skillSet],
+    skillSet: [...newSummon.skillSet],
     equipment: newSummon.equippedItemIds,
     race: petDetails.race,
   };

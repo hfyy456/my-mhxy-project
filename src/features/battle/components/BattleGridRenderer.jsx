@@ -12,10 +12,10 @@ import {
   selectAllUnitsHaveActions,
   startExecutionPhase
 } from '@/store/slices/battleSlice';
-import { getValidTargetsForUnit } from '@/features/battle/logic/battleLogic';
+import { getValidTargetsForUnit } from '@/features/battle/logic/skillSystem';
 import { petConfig } from '@/config/petConfig';
 
-const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction }) => {
+const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selectedSkill, selectedTarget, skillAffectedArea }) => {
   const dispatch = useDispatch();
   const playerFormation = useSelector(selectPlayerFormation);
   const enemyFormation = useSelector(selectEnemyFormation);
@@ -66,8 +66,16 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction }) => 
     }
   }, [selectedUnitId, battleUnits, currentPhase, selectedAction]);
   
-  // 检查一个格子是否可攻击
+  // 检查一个格子是否可攻击或在技能影响范围内
   const isGridCellAttackable = (team, row, col) => {
+    // 如果选择了技能并且有影响范围，则检查范围
+    if (selectedAction === 'skill' && skillAffectedArea && skillAffectedArea.length > 0) {
+      return skillAffectedArea.some(pos => 
+        pos.team === team && pos.row === row && pos.col === col
+      );
+    }
+    
+    // 否则检查普通攻击范围
     return attackableGridPositions.some(pos => 
       pos.team === team && pos.row === row && pos.col === col
     );
@@ -127,7 +135,7 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction }) => 
               return (
                 <div 
                   key={cellKey} 
-                  className={`border border-blue-400/20 bg-blue-900/10 rounded-lg flex justify-center items-center relative min-h-[80px] shadow-inner grid-cell backdrop-blur-sm ${isGridCellAttackable('player', rowIndex, colIndex) ? 'attackable-cell' : ''}`}
+                  className={`border border-blue-400/20 bg-blue-900/10 rounded-lg flex justify-center items-center relative min-h-[80px] shadow-inner grid-cell backdrop-blur-sm ${isGridCellAttackable('player', rowIndex, colIndex) ? (selectedAction === 'skill' ? 'skill-effect-cell' : 'attackable-cell') : ''}`}
                   style={{ 
                     zIndex: 10 - rowIndex * -colIndex, // 第一行z-index最低，最后一行最高
                     overflow: 'visible', // 确保内容不会被裁剪
@@ -169,7 +177,7 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction }) => 
               return (
                 <div 
                   key={cellKey} 
-                  className={`border border-red-400/20 bg-red-900/10 rounded-lg flex justify-center items-center relative min-h-[80px] shadow-inner grid-cell backdrop-blur-sm ${isGridCellAttackable('enemy', rowIndex, colIndex) ? 'attackable-cell' : ''}`}
+                  className={`border border-red-400/20 bg-red-900/10 rounded-lg flex justify-center items-center relative min-h-[80px] shadow-inner grid-cell backdrop-blur-sm ${isGridCellAttackable('enemy', rowIndex, colIndex) ? (selectedAction === 'skill' ? 'skill-effect-cell' : 'attackable-cell') : ''}`}
                   style={{ 
                     zIndex: 10 - rowIndex * -colIndex, // 第一行z-index最低，最后一行最高
                     overflow: 'visible', // 确保内容不会被裁剪

@@ -38,7 +38,7 @@ export const uiText = {
     coreAttributes: "核心属性",
     equipmentBar: "装备栏",
     basicAttributes: "基础属性",
-    skills: "技能",
+    skillSet: "技能",
     petList: "召唤兽列表",
     petDetails: "召唤兽详情",
     skillEditor: "技能编辑",

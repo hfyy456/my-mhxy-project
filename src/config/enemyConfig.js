@@ -28,7 +28,7 @@ export const enemyConfig = {
       critRate: 0.03,
       critDamageMultiplier: 1.5,
     },
-    skills: ["basic_attack"], // Placeholder, needs actual skill ID from skillConfig
+    skillSet: ["basic_attack"], // Placeholder, needs actual skill ID from skillConfig
     rewards: {
       experience: 10,
       gold: 5,
@@ -51,7 +51,7 @@ export const enemyConfig = {
       critRate: 0.05,
       critDamageMultiplier: 1.6,
     },
-    skills: ["basic_attack", "howl"], // Placeholder, "howl" could be a self-buff or debuff
+    skillSet: ["basic_attack", "howl"], // Placeholder, "howl" could be a self-buff or debuff
     rewards: {
       experience: 15,
       gold: 8,
@@ -77,7 +77,8 @@ export const enemyConfig = {
       critRate: 0.07,
       critDamageMultiplier: 1.7,
     },
-    skills: ["basic_attack", "power_strike", "war_cry"], // Placeholders
+    attackRange: 3,
+    skillSet: ["basic_attack", "power_strike", "war_cry"], // Placeholders
     rewards: {
       experience: 50,
       gold: 25,
@@ -93,6 +94,7 @@ export const enemyConfig = {
     name: "测试木桩",
     level: 1,
     spriteAssetKey: "goblin_grunt_sprite", // 使用哥布林的精灵图
+    attackRange: 5,
     stats: {
       maxHp: 500,
       maxMp: 0,
@@ -104,7 +106,7 @@ export const enemyConfig = {
       critRate: 0,
       critDamageMultiplier: 1.0,
     },
-    skills: ["basic_attack"], // 只有基础攻击
+    skillSet: ["basic_attack"], // 只有基础攻击
     rewards: {
       experience: 0,
       gold: 0,

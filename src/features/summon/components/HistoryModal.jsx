@@ -48,7 +48,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                   <div>
                     <h4 className="text-sm font-medium text-gray-300 mb-2">技能</h4>
                     <div className="flex flex-wrap gap-1">
-                      {record.skills.map((skillName, skillIndex) => {
+                      {record.skillSet.map((skillName, skillIndex) => {
                         const skillInfo = skillConfig.find(s => s.name === skillName);
                         const typeConfig = skillInfo?.type ? skillTypeConfig[skillInfo.type] : null;
                         return (

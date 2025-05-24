@@ -48,7 +48,10 @@ export const SKILL_TYPES = {
   DEFENSIVE: "defensive",
   SUPPORT: "support",
   SURVIVAL: "survival",
-  SPEED: "speed"
+  SPEED: "speed",
+  ATTACK: "attack",      // 攻击型技能
+  HEALING: "healing",    // 治疗型技能
+  PASSIVE: "passive"     // 被动技能
 };
 
 // 技能模式

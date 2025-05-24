@@ -32,7 +32,7 @@ import { UNIQUE_ID_PREFIXES, ID_GENERATION_CONSTANTS } from "@/config/enumConfig
  * 6.  **Prefix Examples**:
  *     -   `item`: For individual items in inventory or equipped.
  *     -   `summon`: For individual summon creatures.
- *     -   `skill`: For individual skills (if they need unique instance IDs).
+ *     -   `skill`: For individual skillSet (if they need unique instance IDs).
  *     -   `save`: For game save slots.
  *     -   `log`: For log entries, if applicable.
  *     -   `notification`: For UI notifications.

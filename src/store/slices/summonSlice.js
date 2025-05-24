@@ -341,7 +341,7 @@ const summonSlice = createSlice({
       while(summon.skillSet.length < MAX_SKILLS) summon.skillSet.push(null); 
       const skillDetails = skillConfig.find(s => s.name === skillName);
       if (summon.skillSet.filter(s => s !== null).length >= ACTIVE_SKILL_LIMIT && skillDetails?.mode === SKILL_MODES.ACTIVE && !summon.skillSet[slotIndex]) {
-        console.warn("Cannot learn more active skills.");
+        console.warn("Cannot learn more active skillSet.");
         return; 
       }
       summon.skillSet[slotIndex] = skillName;
