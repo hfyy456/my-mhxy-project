@@ -1,8 +1,8 @@
 /*
  * @Author: Cascade AI
  * @Date: 2025-05-25
- * @LastEditors: Cascade AI
- * @LastEditTime: 2025-05-25 05:36:55
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-25 06:38:11
  * @Description: 战斗系统伤害结算逻辑
  */
 import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/combatConfig';
@@ -90,7 +90,9 @@ export const calculateMagicalDamage = (
 ) => {
   // 从配置中获取平衡常数
   const k = DAMAGE_CONSTANTS.MAGICAL.BALANCE_CONSTANT;
-  
+  console.log(`法术平衡常数: ${k}`);
+  console.log(`法术攻击力: ${attackerMAtk}`);
+  console.log(`法术防御力: ${defenderMDef}`);
   // 计算基础法术伤害
   // 防止除数为0或者计算结果为NaN
   if (!attackerMAtk || attackerMAtk <= 0) {
@@ -172,7 +174,12 @@ export const calculateBattleDamage = (
 ) => {
   // 如果自动选择伤害类型，根据攻击者的物理攻击和法术攻击值决定
   if (damageType === 'auto') {
-    damageType = attacker.stats.pAtk > attacker.stats.mAtk ? 'physical' : 'magical';
+    // 获取物理攻击和法术攻击值，支持简写和完整属性名
+    const physicalAttack = attacker.stats.pAtk || attacker.stats.physicalAttack || 0;
+    const magicalAttack = attacker.stats.mAtk || attacker.stats.magicalAttack || 0;
+    
+    damageType = physicalAttack > magicalAttack ? 'physical' : 'magical';
+    console.log(`自动选择伤害类型: ${damageType} (物理攻击: ${physicalAttack}, 法术攻击: ${magicalAttack})`);
   }
   
   // 获取攻击者和防御者的相关属性
@@ -191,9 +198,15 @@ export const calculateBattleDamage = (
   let damageResult;
   
   if (damageType === 'physical') {
+    // 获取物理攻击和防御值，支持简写和完整属性名
+    const physicalAttack = attackerStats.pAtk || attackerStats.physicalAttack || 0;
+    const physicalDefense = defenderStats.pDef || defenderStats.physicalDefense || 0;
+    
+    console.log(`物理伤害计算: 攻击=${physicalAttack}, 防御=${physicalDefense}`);
+    
     damageResult = calculatePhysicalDamage(
-      attackerStats.pAtk,
-      defenderStats.pDef,
+      physicalAttack,
+      physicalDefense,
       critRate,
       critDamage,
       skillBonus,
@@ -201,9 +214,15 @@ export const calculateBattleDamage = (
       percentReduction
     );
   } else if (damageType === 'magical') {
+    // 获取法术攻击和防御值，支持简写和完整属性名
+    const magicalAttack = attackerStats.mAtk || attackerStats.magicalAttack || 0;
+    const magicalDefense = defenderStats.mDef || defenderStats.magicalDefense || 0;
+    
+    console.log(`法术伤害计算: 攻击=${magicalAttack}, 防御=${magicalDefense}`);
+    
     damageResult = calculateMagicalDamage(
-      attackerStats.mAtk,
-      defenderStats.mDef,
+      magicalAttack,
+      magicalDefense,
       critRate,
       critDamage,
       skillBonus,
@@ -262,12 +281,21 @@ export const simulateBattleDamage = (attacker, defender) => {
   const attackerStats = attacker.stats;
   const defenderStats = defender.stats;
   
+  // 统一属性名，支持简写和完整属性名
+  const physicalAttack = attackerStats.pAtk || attackerStats.physicalAttack || 0;
+  const magicalAttack = attackerStats.mAtk || attackerStats.magicalAttack || 0;
+  const physicalDefense = defenderStats.pDef || defenderStats.physicalDefense || 0;
+  const magicalDefense = defenderStats.mDef || defenderStats.magicalDefense || 0;
+  
   // 返回详细的模拟结果
   return {
     attacker: {
       id: attacker.id,
       name: attacker.name,
       stats: {
+        // 使用统一的属性名
+        physicalAttack,
+        magicalAttack,
         pAtk: attackerStats.pAtk,
         mAtk: attackerStats.mAtk,
         critRate: attackerStats.critRate || COMBAT_CONSTANTS.DEFAULT_CRIT_RATE,
@@ -278,6 +306,9 @@ export const simulateBattleDamage = (attacker, defender) => {
       id: defender.id,
       name: defender.name,
       stats: {
+        // 使用统一的属性名
+        physicalDefense,
+        magicalDefense,
         pDef: defenderStats.pDef,
         mDef: defenderStats.mDef,
         fixedReduction: defenderStats.fixedReduction || 0,

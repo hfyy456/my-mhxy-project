@@ -76,6 +76,72 @@ export const ITEM_BASE_CONFIG = {
         type: "experience",
         value: 20000
       }
+    },
+    // 魔兽要诀 - 用于给召唤兽添加技能的消耗品
+    monsterManualFire: {
+      id: "monsterManualFire",
+      name: "火系魔兽要诀",
+      type: ITEM_TYPES.CONSUMABLE,
+      quality: QUALITY_TYPES.RARE,
+      description: "使用后可以为召唤兽学习一个火系技能",
+      icon: "fa-book-flame",
+      effect: {
+        type: "learn_skill",
+        skillElement: "FIRE",
+        skillPool: ["烈火", "三味真火", "烈焰护体"]
+      }
+    },
+    monsterManualWater: {
+      id: "monsterManualWater",
+      name: "水系魔兽要诀",
+      type: ITEM_TYPES.CONSUMABLE,
+      quality: QUALITY_TYPES.RARE,
+      description: "使用后可以为召唤兽学习一个水系技能",
+      icon: "fa-book-sparkles",
+      effect: {
+        type: "learn_skill",
+        skillElement: "WATER",
+        skillPool: ["水漫金山", "冰牢", "水盾"]
+      }
+    },
+    monsterManualThunder: {
+      id: "monsterManualThunder",
+      name: "雷系魔兽要诀",
+      type: ITEM_TYPES.CONSUMABLE,
+      quality: QUALITY_TYPES.RARE,
+      description: "使用后可以为召唤兽学习一个雷系技能",
+      icon: "fa-book-bolt",
+      effect: {
+        type: "learn_skill",
+        skillElement: "THUNDER",
+        skillPool: ["雷击", "奔雷咒", "风雷天威"]
+      }
+    },
+    monsterManualSupport: {
+      id: "monsterManualSupport",
+      name: "辅助魔兽要诀",
+      type: ITEM_TYPES.CONSUMABLE,
+      quality: QUALITY_TYPES.RARE,
+      description: "使用后可以为召唤兽学习一个辅助技能",
+      icon: "fa-book-medical",
+      effect: {
+        type: "learn_skill",
+        skillType: "SUPPORT",
+        skillPool: ["治愈之光", "隐身", "大地护盾"]
+      }
+    },
+    monsterManualPassive: {
+      id: "monsterManualPassive",
+      name: "被动魔兽要诀",
+      type: ITEM_TYPES.CONSUMABLE,
+      quality: QUALITY_TYPES.EPIC,
+      description: "使用后可以为召唤兽学习一个被动技能",
+      icon: "fa-book-open",
+      effect: {
+        type: "learn_skill",
+        skillMode: "PASSIVE",
+        skillPool: ["法术暴击", "连击", "反震", "感知", "魔之心", "敏捷", "幸运", "强力", "法术连击", "夜战", "法术波动", "防御", "必杀", "神佑复生", "闪避"]
+      }
     }
   },
 

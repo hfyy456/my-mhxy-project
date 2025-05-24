@@ -29,6 +29,7 @@ import {
 import { generateNewSummon } from '@/utils/summonUtils';
 import { experienceConfig, playerBaseConfig } from '@/config/playerConfig';
 import { generateUniqueId } from '@/utils/idUtils';
+import { ITEM_BASE_CONFIG } from '@/config/inventoryConfig';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -86,12 +87,50 @@ export const getRandomEquipment = () => {
   return newEquipmentData;
 };
 
+// 生成随机魔兽要诀
+export const getRandomMonsterManual = () => {
+  // 魔兽要诀类型数组
+  const monsterManualTypes = [
+    'monsterManualFire',
+    'monsterManualWater',
+    'monsterManualThunder',
+    'monsterManualSupport',
+    'monsterManualPassive'
+  ];
+  
+  // 随机选择一种魔兽要诀类型
+  const randomType = monsterManualTypes[Math.floor(Math.random() * monsterManualTypes.length)];
+  
+  // 获取选中类型的魔兽要诀配置
+  const manualConfig = ITEM_BASE_CONFIG.consumables[randomType];
+  
+  // 创建魔兽要诀数据对象
+  const monsterManualData = {
+    id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
+    name: manualConfig.name,
+    quality: manualConfig.quality,
+    itemType: 'consumable',
+    type: manualConfig.type,
+    description: manualConfig.description,
+    icon: manualConfig.icon,
+    effect: manualConfig.effect,
+    stackable: true,
+    amount: 1
+  };
+  
+  return monsterManualData;
+};
+
 // 生成初始装备
 export const generateInitialEquipment = (count = 5) => {
   const equipmentDataArray = [];
   for (let i = 0; i < count; i++) {
     equipmentDataArray.push(getRandomEquipment()); // getRandomEquipment() 现在返回纯数据对象
   }
+  
+  // 添加一个随机魔兽要诀
+  equipmentDataArray.push(getRandomMonsterManual());
+  
   return equipmentDataArray; // 返回纯数据对象数组
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { INVENTORY_CONFIG } from "@/config/inventoryConfig";
+import { INVENTORY_CONFIG, ITEM_BASE_CONFIG } from "@/config/inventoryConfig";
 import { useInventory /* useItems is no longer directly needed here as items are derived with full info */ } from "@/store/reduxSetup";
 import {
   moveInInventory,
@@ -10,8 +10,10 @@ import {
 } from "@/store/slices/inventorySlice";
 import { selectAllItemsArray, selectItemWithSummonInfo, selectEquippedItemsWithSummonInfo } from "@/store/slices/itemSlice";
 import { manageEquipItemThunk, manageUnequipItemThunk } from "@/store/thunks/equipmentThunks";
-import { STANDARD_EQUIPMENT_SLOTS } from "@/config/config";
+import { STANDARD_EQUIPMENT_SLOTS, skillConfig } from "@/config/config";
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from "@/config/uiTextConfig";
+import { selectAllSummons, learnSkill } from "@/store/slices/summonSlice";
+import { ELEMENT_TYPES, SKILL_TYPES, SKILL_MODES } from "@/config/enumConfig";
 
 // 新的 Tooltip 组件
 const ItemTooltip = ({ item, position }) => {
@@ -184,6 +186,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
   const [tooltipItem, setTooltipItem] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [modalContent, setModalContent] = useState(null);
   let tooltipTimeoutRef = React.useRef(null); // Using ref for timeout
 
   // Summon Selection Modal state
@@ -294,11 +297,102 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
       dispatch(removeFromInventory(slotIndex));
       showToast(`使用了 ${item.name}`, "info");
     } else if (item.itemType === "consumable") {
-      // 这里应该添加消耗品使用的逻辑
-      // 为简单起见，这里只移除物品
-      dispatch(removeFromInventory(slotIndex));
-      showToast(`使用了 ${item.name}`, "info");
+      // 处理消耗品使用逻辑
+      if (item.effect?.type === "learn_skill") {
+        // 处理魔兽要诀类物品
+        handleMonsterManualUse(item, slotIndex);
+      } else {
+        // 处理其他消耗品
+        dispatch(removeFromInventory(slotIndex));
+        showToast(`使用了 ${item.name}`, "info");
+      }
     }
+  };
+
+  // 处理魔兽要诀使用
+  const handleMonsterManualUse = (item, slotIndex) => {
+    // 获取所有召唤兽 - 直接使用已经存在的allSummonsMap
+    const allSummons = allSummonsMap || {};
+    
+    if (!allSummons || Object.keys(allSummons).length === 0) {
+      showToast("你没有召唤兽可以学习技能", "warning");
+      return;
+    }
+    
+    // 打开选择召唤兽的模态框
+    setModalContent({
+      type: "select_summon",
+      title: "选择召唤兽",
+      summons: Object.values(allSummons),
+      onSelect: (summonId) => {
+        // 选择召唤兽后，打开选择技能槽位的模态框
+        const summon = allSummons[summonId];
+        if (!summon) return;
+        
+        // 确保技能集合是数组
+        const skillSet = Array.isArray(summon.skillSet) ? summon.skillSet : [];
+        
+        // 打开选择技能槽位的模态框
+        setModalContent({
+          type: "select_skill_slot",
+          title: "选择技能槽位",
+          summon,
+          skillSet,
+          onSelect: (slotIndex) => {
+            // 根据物品效果筛选可学习的技能
+            let availableSkills = [];
+            
+            if (item.effect.skillPool) {
+              // 如果物品直接指定了技能池
+              availableSkills = item.effect.skillPool;
+            } else {
+              // 根据元素或类型筛选技能
+              availableSkills = skillConfig.filter(skill => {
+                if (item.effect.skillElement && skill.element === item.effect.skillElement) {
+                  return true;
+                }
+                if (item.effect.skillType && skill.type === item.effect.skillType) {
+                  return true;
+                }
+                if (item.effect.skillMode && skill.mode === item.effect.skillMode) {
+                  return true;
+                }
+                return false;
+              }).map(skill => skill.name);
+            }
+            
+            if (availableSkills.length === 0) {
+              showToast("没有可学习的技能", "warning");
+              setModalContent(null);
+              return;
+            }
+            
+            // 打开选择技能的模态框
+            setModalContent({
+              type: "select_skill",
+              title: "选择技能",
+              skills: availableSkills,
+              onSelect: (skillName) => {
+                // 学习技能
+                dispatch(learnSkill({
+                  summonId: summon.id,
+                  skillName,
+                  slotIndex
+                }));
+                
+                // 移除物品
+                dispatch(removeFromInventory(slotIndex));
+                showToast(`${summon.nickname || summon.petId} 学会了 ${skillName}`, "success");
+                setModalContent(null);
+              },
+              onCancel: () => setModalContent(null)
+            });
+          },
+          onCancel: () => setModalContent(null)
+        });
+      },
+      onCancel: () => setModalContent(null)
+    });
   };
 
   // 处理物品分割
@@ -878,7 +972,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                     onClick={() => handleUseItem(selectedSlot)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded"
                   >
-                    使用
+                    {filteredSlots[selectedSlot].effect?.type === "learn_skill" ? "学习技能" : "使用"}
                   </button>
                 )}
 
@@ -932,6 +1026,105 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
             showToast("装备替换已取消", "info");
           }}
         />
+        
+        {/* 魔兽要诀相关模态框 */}
+        {modalContent && modalContent.type === "select_summon" && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-white mb-4">{modalContent.title}</h2>
+              <div className="space-y-2">
+                {modalContent.summons.map(summon => (
+                  <div 
+                    key={summon.id}
+                    className="p-3 bg-slate-700 rounded-md hover:bg-slate-600 cursor-pointer flex items-center"
+                    onClick={() => modalContent.onSelect(summon.id)}
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{summon.nickname || summon.petId}</div>
+                      <div className="text-sm text-gray-300">等级: {summon.level}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600"
+                  onClick={modalContent.onCancel}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalContent && modalContent.type === "select_skill_slot" && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-white mb-4">{modalContent.title}</h2>
+              <p className="text-gray-300 mb-4">
+                为 {modalContent.summon.nickname || modalContent.summon.petId} 选择要替换或添加的技能槽位
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 8 }).map((_, index) => {
+                  const skillName = modalContent.skillSet[index] || null;
+                  return (
+                    <div 
+                      key={index}
+                      className="p-3 bg-slate-700 rounded-md hover:bg-slate-600 cursor-pointer"
+                      onClick={() => modalContent.onSelect(index)}
+                    >
+                      <div className="font-medium text-white text-center">
+                        {skillName || "空槽位"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600"
+                  onClick={modalContent.onCancel}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalContent && modalContent.type === "select_skill" && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-white mb-4">{modalContent.title}</h2>
+              <div className="space-y-2">
+                {modalContent.skills.map(skillName => {
+                  const skillInfo = skillConfig.find(s => s.name === skillName);
+                  return (
+                    <div 
+                      key={skillName}
+                      className="p-3 bg-slate-700 rounded-md hover:bg-slate-600 cursor-pointer"
+                      onClick={() => modalContent.onSelect(skillName)}
+                    >
+                      <div className="font-medium text-white">{skillName}</div>
+                      {skillInfo && (
+                        <div className="text-sm text-gray-300 mt-1">{skillInfo.description}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600"
+                  onClick={modalContent.onCancel}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex justify-end mt-4">
