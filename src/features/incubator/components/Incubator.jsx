@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { eggConfig } from "@/config/eggConfig";
-import { getQualityDisplayName } from "@/config/uiTextConfig";
+import { eggConfig } from "@/config/pet/eggConfig";
+import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { QUALITY_TYPES } from "@/config/enumConfig";
 import {
   startIncubation,
@@ -13,8 +13,8 @@ import {
 } from "@/store/slices/incubatorSlice";
 import { addSummon, selectAllSummons } from "@/store/slices/summonSlice";
 import { generateNewSummon } from "@/utils/summonUtils";
-import { petConfig } from "../../../config/petConfig";
-import { playerBaseConfig } from "@/config/playerConfig";
+import { petConfig } from "@/config/pet/petConfig";
+import { playerBaseConfig } from "@/config/character/playerConfig";
 import { useToast } from "@/hooks/useToast";
 import { unlockPet } from '@/store/slices/petCatalogSlice';
 

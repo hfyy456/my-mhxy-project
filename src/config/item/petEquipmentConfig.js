@@ -4,8 +4,8 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-21 04:28:37
  */
-import { BASE_CONFIG } from './baseConfig';
-import { EQUIPMENT_SLOT_TYPES, EQUIPMENT_EFFECT_TYPES, QUALITY_TYPES } from './enumConfig';
+import { qualityConfig } from '@/config/config';
+import { EQUIPMENT_SLOT_TYPES, EQUIPMENT_EFFECT_TYPES, QUALITY_TYPES } from '../enumConfig';
 
 export const petEquipmentConfig = {
   [EQUIPMENT_SLOT_TYPES.ACCESSORY]: [
@@ -174,8 +174,8 @@ export const petEquipmentConfig = {
 // 装备品质配置
 export const equipmentQualityConfig = {
   names: Object.values(QUALITY_TYPES),
-  colors: BASE_CONFIG.QUALITY.colors,
-  effectMultiplier: BASE_CONFIG.QUALITY.attributeMultipliers
+  colors: qualityConfig.colors,
+  effectMultiplier: qualityConfig.attributeMultipliers
 };
 
 // 根据品质调整装备效果

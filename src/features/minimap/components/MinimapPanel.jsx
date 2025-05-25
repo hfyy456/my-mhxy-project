@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import CommonModal from '@/features/ui/components/CommonModal';
-import { initialMapData, CELL_TYPES } from '@/config/mapConfig';
+import { initialMapData, CELL_TYPES } from '@/config/map/mapConfig';
 import { selectPlayerPosition } from '@/store/slices/mapSlice';
 
 const MINIMAP_CELL_SIZE_PX = 8;

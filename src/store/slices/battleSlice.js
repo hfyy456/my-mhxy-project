@@ -11,9 +11,9 @@ import {
   calculateModifiedAttribute,
   processReflectDamage
 } from '@/features/battle/logic/buffManager';
-import { passiveSkillConfig } from '@/config/passiveSkillConfig';
-import { activeSkillConfig } from '@/config/activeSkillConfig';
-import { buffConfig } from '@/config/buffConfig';
+import { passiveSkillConfig } from '@/config/skill/passiveSkillConfig';
+import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
+import { buffConfig } from '@/config/skill/buffConfig';
 import * as buffManager from '@/features/battle/logic/buffManager';
 import { calculateBattleDamage } from '@/features/battle/logic/damageCalculation';
 

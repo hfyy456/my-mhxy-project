@@ -9,8 +9,8 @@ import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
-import { petConfig } from '@/config/petConfig';
-import { activeSkillConfig } from '@/config/activeSkillConfig';
+import { petConfig } from '@/config/pet/petConfig';
+import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 
 import {
   selectIsBattleActive,
@@ -138,6 +138,12 @@ const BattleScreen = () => {
   };
   
   // 获取技能影响范围
+  /**
+   * 获取技能影响范围
+   * @param {string} skillId - 技能ID
+   * @param {string} targetId - 目标单位ID
+   * @returns {Array} - 影响范围内的格子位置数组
+   */
   const getSkillAffectedArea = (skillId, targetId) => {
     if (!skillId || !selectedUnit || !targetId) return [];
     

@@ -1,5 +1,5 @@
 import React from 'react';
-import { uiText } from '@/config/uiTextConfig';
+import { uiText } from '@/config/ui/uiTextConfig';
 
 const CrossSummonEquipConfirmModal = ({ isOpen, onConfirm, onCancel, details }) => {
   if (!isOpen || !details) return null;

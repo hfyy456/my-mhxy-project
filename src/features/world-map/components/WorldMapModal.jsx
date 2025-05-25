@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import CommonModal from '@/features/ui/components/CommonModal';
 import { changeRegionAction, setWorldMapOpenAction } from '@/store/slices/mapSlice';
 import { selectCurrentRegionId, selectRegionsDiscovered } from '@/store/slices/mapSlice';
-import { WORLD_REGIONS, REGION_TYPES, WORLD_MAP_CONFIG } from '@/config/worldMapConfig';
+import { WORLD_REGIONS, REGION_TYPES, WORLD_MAP_CONFIG } from '@/config/map/worldMapConfig';
 
 const WorldMapModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();

@@ -4,7 +4,7 @@ import {
   ELEMENT_TYPES,
   SKILL_TARGET_TYPES,
   SKILL_AREA_TYPES,
-} from "./enumConfig";
+} from "../enumConfig";
 import { BUFF_TYPES } from "./buffConfig";
 
 // 主动技能配置

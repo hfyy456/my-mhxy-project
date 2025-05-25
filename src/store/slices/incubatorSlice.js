@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { eggConfig, eggQualityConfig } from '@/config/eggConfig';
-import { petConfig } from '@/config/petConfig';
-import { playerBaseConfig } from '@/config/playerConfig';
+import { eggConfig, eggQualityConfig } from '@/config/pet/eggConfig';
+import { petConfig } from '@/config/pet/petConfig';
+import { playerBaseConfig } from '@/config/character/playerConfig';
 
 const initialState = {
   incubatingEggs: {}, // Map<eggId, {eggType, startTime, remainingTime, quality, progress}>

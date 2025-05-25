@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-19 04:20:10
  */
 import React, { useState } from "react";
-import CommonModal from "../../ui/components/CommonModal";
+import CommonModal from "@/features/ui/components/CommonModal";
 
 const NicknameModal = ({ isOpen, onClose, onConfirm, petName }) => {
   const [nickname, setNickname] = useState("");

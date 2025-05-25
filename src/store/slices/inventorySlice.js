@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { INITIAL_INVENTORY_CAPACITY, INITIAL_GOLD } from "@/config/config";
-import { uiText } from "@/config/uiTextConfig";
+import { uiText } from "@/config/ui/uiTextConfig";
 import { SORT_ORDERS } from "@/config/enumConfig";
 
 const inventorySlice = createSlice({

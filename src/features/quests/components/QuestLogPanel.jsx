@@ -6,8 +6,8 @@ import {
   selectPlayerQuests, // For the 'ALL' filter
   selectAllQuestDefinitions,
 } from '@/store/slices/questSlice';
-import { QUEST_STATUS, OBJECTIVE_TYPES } from '@/config/questConfig';
-import { uiText } from '@/config/uiTextConfig'; // Import uiText
+import { QUEST_STATUS, OBJECTIVE_TYPES } from '@/config/system/questConfig';
+import { uiText } from '@/config/ui/uiTextConfig'; // Import uiText
 import CommonModal from '@/features/ui/components/CommonModal';
 
 const FILTER_TYPES = {

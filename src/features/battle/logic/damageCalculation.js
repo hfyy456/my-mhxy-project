@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-25 06:38:11
  * @Description: 战斗系统伤害结算逻辑
  */
-import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/combatConfig';
+import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
 import { calculateDamageModifiers, processShieldAbsorption, processReflectDamage } from './buffManager';
 
 /**

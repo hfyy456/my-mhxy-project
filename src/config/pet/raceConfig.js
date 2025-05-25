@@ -1,5 +1,4 @@
-import { BASE_CONFIG } from './baseConfig';
-import { RACE_TYPES, RACE_TRAIT_TYPES, ELEMENT_TYPES } from './enumConfig';
+import { RACE_TYPES, RACE_TRAIT_TYPES, ELEMENT_TYPES } from '../enumConfig';
 
 // 种族配置
 export const raceConfig = {

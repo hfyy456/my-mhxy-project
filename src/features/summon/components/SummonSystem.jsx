@@ -12,6 +12,7 @@ import SummonList from "./SummonList";
 import HistoryModal from "../../history/components/HistoryModal";
 import EquippableItemsModal from "./EquippableItemsModal";
 import CrossSummonEquipConfirmModal from "./CrossSummonEquipConfirmModal";
+import SummonFusionModal from "./SummonFusionModal";
 import { useSummonSystem } from "../hooks/useSummonSystem";
 import { 
   setCurrentSummon,
@@ -21,13 +22,14 @@ import {
   addRefinementHistoryItem,
   selectCurrentSummonFullData,
   selectAllSummons,
-  updateSummonNickname
+  updateSummonNickname,
+  fuseSummons
 } from "../../../store/slices/summonSlice";
 import { addItems, selectAllItemsArray, selectItemEquipInfo } from "../../../store/slices/itemSlice";
 import { addToInventory } from "../../../store/slices/inventorySlice";
-import { uiText } from "@/config/uiTextConfig";
+import { uiText } from "@/config/ui/uiTextConfig";
 import { petConfig } from "@/config/config";
-import { playerBaseConfig } from "@/config/playerConfig";
+import { playerBaseConfig } from "@/config/character/playerConfig";
 import NicknameModal from "./NicknameModal";
 import { generateUniqueId } from "@/utils/idUtils";
 import { manageEquipItemThunk, manageUnequipItemThunk } from "../../../store/thunks/equipmentThunks";
@@ -62,6 +64,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
 
   const [showCrossEquipConfirm, setShowCrossEquipConfirm] = useState(false);
   const [crossEquipDetails, setCrossEquipDetails] = useState(null);
+  const [isFusionModalOpen, setIsFusionModalOpen] = useState(false);
 
   const handleOpenEquipmentSelector = useCallback((slotType) => {
     if (!currentSummon) {
@@ -163,6 +166,34 @@ const SummonSystem = ({ toasts, setToasts }) => {
       }]);
     }
   }, [dispatch, setToasts, summonsList.length, maxSummons, playerLevel]);
+  
+  const handleFusion = useCallback((newSummon, summonId1, summonId2) => {
+    try {
+      // 执行召唤兽合成
+      dispatch(fuseSummons({
+        newSummon,
+        summonId1,
+        summonId2
+      }));
+      
+      // 设置当前选中的召唤兽为新合成的召唤兽
+      dispatch(setCurrentSummon(newSummon.id));
+      
+      // 显示成功提示
+      setToasts(prev => [...prev, {
+        id: generateUniqueId('toast'),
+        message: `合成成功！获得了新的召唤兽「${petConfig[newSummon.petId]?.name || '未知召唤兽'}」`,
+        type: 'success'
+      }]);
+    } catch (error) {
+      console.error("[SummonSystem] 合成失败:", error);
+      setToasts(prev => [...prev, {
+        id: generateUniqueId('toast'),
+        message: `合成失败: ${error.message || '未知错误'}`,
+        type: 'error'
+      }]);
+    }
+  }, [dispatch, setToasts]);
 
   useEffect(() => {
     if (summonsList && summonsList.length > 0) {
@@ -306,6 +337,15 @@ const SummonSystem = ({ toasts, setToasts }) => {
             炼妖 (洗宠)
           </button>
           
+          <button 
+            onClick={() => setIsFusionModalOpen(true)}
+            className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+            disabled={summonsList.length < 2}
+            title={summonsList.length < 2 ? "需要至少两个召唤兽才能合成" : "合成两个召唤兽"}
+          >
+            合成
+          </button>
+          
           {currentSummon && (
             <button 
               onClick={() => setIsHistoryModalOpen(true)} 
@@ -420,6 +460,13 @@ const SummonSystem = ({ toasts, setToasts }) => {
           setSelectedSlotForEquipping(null); 
           setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "已取消为其他召唤兽装备物品。", type: 'info' }]);
         }}
+      />
+      
+      {/* 召唤兽合成模态框 */}
+      <SummonFusionModal
+        isOpen={isFusionModalOpen}
+        onClose={() => setIsFusionModalOpen(false)}
+        onFusion={handleFusion}
       />
     </div>
   );

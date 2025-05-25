@@ -5,8 +5,8 @@ import {
   selectUnlockProgress,
   selectQualityCounts,
 } from "@/store/slices/petCatalogSlice";
-import { playerBaseConfig } from "@/config/playerConfig";
-import { getQualityDisplayName } from "@/config/uiTextConfig";
+import { playerBaseConfig } from "@/config/character/playerConfig";
+import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { qualityConfig } from "@/config/config";
 
 export const PlayerInfo = () => {

@@ -13,10 +13,10 @@ import {
   // skillTypeConfig // Not directly used in reducers here, but could be for UI selectors
 } from '@/config/config'; // Assuming a merged config
 // import { equipmentConfig } from '@/config/equipmentConfig'; // Not directly used in this slice's reducers after items are pure data
-import { getRaceBonus } from '@/config/raceConfig'; // 引入种族加成函数
+import { getRaceBonus } from '@/config/pet/raceConfig'; // 引入种族加成函数
 import { SKILL_MODES } from "@/config/enumConfig";
 // REMOVED: import { setItemStatus } from './itemSlice';
-import { playerBaseConfig } from '@/config/playerConfig';
+import { playerBaseConfig } from '@/config/character/playerConfig';
 import { calculateDerivedAttributes, getExperienceForLevel } from '@/utils/summonUtils';
 import { selectAllItemsMap } from './itemSlice'; // Make sure to import this selector from itemSlice
 
@@ -369,8 +369,9 @@ const summonSlice = createSlice({
         state.currentSummonFullData = { ...state.allSummons[summonId], equippedItems: state.currentSummonFullData?.equippedItems || {} };
       }
     },
-    
+
     resetSummonState: () => initialState,
+    
     addRefinementHistoryItem: (state, action) => {
       const historyItem = action.payload;
       if (historyItem) {
@@ -412,10 +413,89 @@ const summonSlice = createSlice({
       state.error = null;
     },
 
+    fuseSummons: (state, action) => {
+      const { newSummon, summonId1, summonId2 } = action.payload;
+      
+      // 验证两个父召唤兽是否存在
+      if (!summonId1 || !summonId2 || !state.allSummons[summonId1] || !state.allSummons[summonId2]) {
+        state.error = '合成失败：选择的召唤兽不存在';
+        return;
+      }
+
+      // 验证新召唤兽数据是否有效
+      if (!newSummon || !newSummon.id || !petConfig[newSummon.petId]) {
+        state.error = '合成失败：新召唤兽数据无效';
+        return;
+      }
+
+      const currentSummonCount = Object.keys(state.allSummons).length;
+      const maxSummons = state.maxSummons;
+
+      // 合成会消耗两个召唤兽，但会产生一个新的，所以净减少1个
+      if (currentSummonCount - 1 >= maxSummons) {
+        state.error = `无法合成：已达到召唤兽上限 (${maxSummons}个)。请先释放一些召唤兽或提升玩家等级。`;
+        return;
+      }
+
+      // 获取父召唤兽的配置
+      const petBaseConf = petConfig[newSummon.petId];
+      
+      // 创建新的召唤兽
+      const fusedSummon = {
+        ...newSummon,
+        experience: 0,
+        potentialPoints: newSummon.potentialPoints !== undefined ? newSummon.potentialPoints : (newSummon.level - 1) * (petBaseConf?.potentialPointsPerLevel || 5),
+        allocatedPoints: newSummon.allocatedPoints || { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
+        derivedAttributes: {},
+        equipmentContributions: {},
+        equipmentBonusesToBasic: {},
+        experienceToNextLevel: getExperienceForLevel(newSummon.level),
+        equippedItemIds: STANDARD_EQUIPMENT_SLOTS.reduce((acc, slot) => {
+          acc[slot] = newSummon.equippedItemIds?.[slot] || null;
+          return acc;
+        }, {}),
+        // 确保技能集是一个数组
+        skillSet: Array.isArray(newSummon.skillSet) ? newSummon.skillSet : (newSummon.inheritedSkills || [])
+      };
+
+      // 添加新召唤兽
+      state.allSummons[fusedSummon.id] = fusedSummon;
+      
+      // 删除两个父召唤兽
+      delete state.allSummons[summonId1];
+      delete state.allSummons[summonId2];
+      
+      // 如果当前选中的召唤兽是要删除的召唤兽之一，将新召唤兽设为当前选中
+      if (state.currentSummonId === summonId1 || state.currentSummonId === summonId2) {
+        state.currentSummonId = fusedSummon.id;
+        // 全数据更新将由recalculateSummonStats thunk完成
+      }
+      
+      state.error = null;
+
+      // 计算初始属性
+      const initialBasicWithAllocated = { ...fusedSummon.basicAttributes };
+      for(const attr in fusedSummon.allocatedPoints) {
+        initialBasicWithAllocated[attr] = (initialBasicWithAllocated[attr] || 0) + fusedSummon.allocatedPoints[attr];
+      }
+      
+      const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
+        initialBasicWithAllocated,
+        {}, // 初始时传入空装备映射
+        fusedSummon.level,
+        fusedSummon.race
+      );
+      
+      state.allSummons[fusedSummon.id].derivedAttributes = derivedAttributes;
+      state.allSummons[fusedSummon.id].equipmentContributions = equipmentContributions;
+      state.allSummons[fusedSummon.id].equipmentBonusesToBasic = equipmentBonusesToBasic;
+    },
+    
     setState: (state, action) => {
       // 完全替换状态
       return action.payload;
     },
+
   },
   extraReducers: (builder) => {
     builder
@@ -471,11 +551,12 @@ export const {
   removeItemFromAllSummons,
   learnSkill,
   replaceSkill,
-  addRefinementHistoryItem,
   resetSummonState,
+  addRefinementHistoryItem,
   updateSummonNickname,
   releaseSummon,
-  setState
+  fuseSummons,
+  setState,
 } = summonSlice.actions;
 
 // Selectors

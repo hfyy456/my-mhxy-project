@@ -2,9 +2,9 @@
  * @Author: Cascade
  * @Date: 2025-05-24 02:46:07
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-24 03:55:00
+ * @LastEditTime: 2025-05-26 04:31:02
  */
-import { ELEMENT_TYPES } from './enumConfig';
+import { ELEMENT_TYPES } from '../enumConfig';
 
 // BUFF类型
 export const BUFF_TYPES = {

@@ -1,4 +1,4 @@
-import { SKILL_TYPES, SKILL_MODES, SKILL_TARGET_TYPES, PASSIVE_SKILL_TIMING } from './enumConfig';
+import { SKILL_TYPES, SKILL_MODES, SKILL_TARGET_TYPES, PASSIVE_SKILL_TIMING } from '@/config/enumConfig';
 import { BUFF_TYPES } from './buffConfig';
 
 // 被动技能配置

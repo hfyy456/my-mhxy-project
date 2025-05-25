@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useApplication, extend } from '@pixi/react';
 import * as PIXI from 'pixi.js';
 import { Container as PixiContainer, Sprite as PixiSprite, Graphics as PixiGraphics, Text as PixiText } from 'pixi.js';
-import { CELL_TYPES, TILE_CONTENT_TYPES } from '@/config/mapConfig'; // Assuming CELL_TYPES includes EMPTY and has .color property
+import { CELL_TYPES, TILE_CONTENT_TYPES } from '@/config/map/mapConfig'; // Assuming CELL_TYPES includes EMPTY and has .color property
 
 // Modified extend to include Text: PixiText
 extend({ Container: PixiContainer, Sprite: PixiSprite, Graphics: PixiGraphics, Text: PixiText });

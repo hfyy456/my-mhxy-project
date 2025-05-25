@@ -4,7 +4,7 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-20 00:59:55
  */
-import { QUALITY_TYPES } from './enumConfig';
+import { QUALITY_TYPES } from '../enumConfig';
 
 // 蛋的配置
 export const eggQualityConfig = {

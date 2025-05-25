@@ -1,6 +1,6 @@
 // src/config/mapConfig.js
 import { createNoise2D } from 'simplex-noise'; // 更新导入方式
-import { npcs } from './npcConfig.js'; // <--- 添加导入
+import { npcs } from '../character/npcConfig.js'; // <--- 添加导入
 
 // 定义地图单元格类型
 export const CELL_TYPES = {

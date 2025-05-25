@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { endBattle } from '@/store/slices/battleSlice';
-import { activeSkillConfig } from '@/config/activeSkillConfig';
+import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 import { SKILL_TYPES } from '@/config/enumConfig';
 
 // 获取技能图标

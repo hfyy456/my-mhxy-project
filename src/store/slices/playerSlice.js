@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { playerBaseConfig, playerLevelConfig, achievementConfig } from '@/config/playerConfig';
+import { playerBaseConfig, playerLevelConfig, achievementConfig } from '@/config/character/playerConfig';
 
 const initialState = {
   level: playerBaseConfig.initialLevel,

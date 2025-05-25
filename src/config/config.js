@@ -2,10 +2,10 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:44:31
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 16:05:22
+ * @LastEditTime: 2025-05-26 04:14:26
  */
-import { petConfig } from "@/config/petConfig";
-import { skillConfig } from "@/config/skillConfig";
+import { petConfig } from "@/config/pet/petConfig";
+import { skillConfig } from "@/config/skill/skillConfig";
 import { SKILL_TYPES, EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
 // 此处可继续导入其他拆分的配置文件
 

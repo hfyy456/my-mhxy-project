@@ -45,7 +45,7 @@ import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import CommonModal from "@/features/ui/components/CommonModal";
 import LoadingScreen from "@/features/ui/components/LoadingScreen";
 import { useAppModals } from "@/hooks/useAppModals";
-import { uiText } from "@/config/uiTextConfig";
+import { uiText } from "@/config/ui/uiTextConfig";
 import { LOADER_WRAPPER_ID } from "@/config/config";
 import FormationSetup from "@/features/formation/components/FormationSetup";
 import BattleScreen from "@/features/battle/components/BattleScreen";
@@ -207,8 +207,8 @@ const App = () => {
                   onClick={() => {
                     // 导入并准备战斗数据
                     import('@/features/battle/logic/battleLogic').then(({ prepareBattleSetupData }) => {
-                      import('@/config/enemyConfig').then(({ getEnemyTemplateById }) => {
-                        import('@/config/petConfig').then(({ petConfig }) => {
+                      import('@/config/character/enemyConfig').then(({ getEnemyTemplateById }) => {
+                        import('@/config/pet/petConfig').then(({ petConfig }) => {
                           // 获取玩家的召唤兽和阵型
                           const playerSummons = Object.values(summonsListObject || {}).reduce((acc, summon) => {
                             acc[summon.id] = summon;

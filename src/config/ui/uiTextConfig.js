@@ -4,7 +4,7 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-22 02:56:33
  */
-import { EQUIPMENT_SLOT_TYPES, SKILL_TYPES, ELEMENT_TYPES, RACE_TYPES, PET_TYPES, QUALITY_TYPES, SKILL_MODES, FIVE_ELEMENTS } from './enumConfig';
+import { EQUIPMENT_SLOT_TYPES, SKILL_TYPES, ELEMENT_TYPES, RACE_TYPES, PET_TYPES, QUALITY_TYPES, SKILL_MODES, FIVE_ELEMENTS } from '../enumConfig';
 
 export const uiText = {
   // 通用文本

@@ -23,8 +23,8 @@ import {
   CELL_TYPES,
   MAP_VIEW_CONFIG,
   TILE_CONTENT_TYPES,
-} from "@/config/mapConfig"; // 导入地图数据和类型
-import { WORLD_REGIONS } from "@/config/worldMapConfig"; // 导入世界地图配置
+} from "@/config/map/mapConfig"; // 导入地图数据和类型
+import { WORLD_REGIONS } from "@/config/map/worldMapConfig"; // 导入世界地图配置
 import { findPathAStar } from "@/utils/pathfinding"; // 导入 A* 寻路算法
 import {
   setPlayerPositionAction,

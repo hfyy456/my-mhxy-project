@@ -1,6 +1,5 @@
-import { BASE_CONFIG } from "./baseConfig";
 import { raceConfig } from "./raceConfig";
-import { skillConfig } from "./skillConfig";
+import { skillConfig } from "../skill/skillConfig";
 import {
   PET_TYPES,
   RACE_TYPES,
@@ -8,7 +7,7 @@ import {
   COLOR_TYPES,
   ATTRIBUTE_TYPES,
   FIVE_ELEMENTS,
-} from "./enumConfig";
+} from "../enumConfig";
 
 // 攻击距离说明：
 // 最小攻击距离为2，表示从左到右，第3排可以打到第5排，第2排可以打到第4排

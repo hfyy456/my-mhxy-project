@@ -2,12 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 00:02:10
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 01:13:48
+ * @LastEditTime: 2025-05-26 04:21:16
  */
 import { selectDialogueOption as npcSelectDialogueOption } from '../slices/npcSlice'; // Renamed for clarity
 import { acceptQuest as questAcceptQuest } from '../slices/questSlice'; // Renamed for clarity
 import { addToInventory as inventoryAddToInventory } from '../slices/inventorySlice'; // Renamed for clarity
-import { dialogues as dialogueConfig } from '../../config/dialogueConfig';
+import { dialogues as dialogueConfig } from '../../config/ui/dialogueConfig';
 // npcConfig is not directly used in this thunk, but good to keep if future logic needs it.
 // import { npcs as npcConfig } from '../../config/npcConfig'; 
 

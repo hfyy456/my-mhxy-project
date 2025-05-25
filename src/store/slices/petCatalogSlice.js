@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-20 01:03:45
  */
 import { createSlice, createSelector } from '@reduxjs/toolkit';
-import { petConfig } from '@/config/petConfig';
+import { petConfig } from '@/config/pet/petConfig';
 
 const initialState = {
   // 已解锁的召唤兽类型

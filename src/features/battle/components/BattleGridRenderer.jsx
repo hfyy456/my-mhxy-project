@@ -13,7 +13,7 @@ import {
   startExecutionPhase
 } from '@/store/slices/battleSlice';
 import { getValidTargetsForUnit } from '@/features/battle/logic/skillSystem';
-import { petConfig } from '@/config/petConfig';
+import { petConfig } from '@/config/pet/petConfig';
 
 const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selectedSkill, selectedTarget, skillAffectedArea }) => {
   const dispatch = useDispatch();

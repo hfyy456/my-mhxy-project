@@ -13,23 +13,23 @@ import {
   STANDARD_EQUIPMENT_SLOTS,
   // levelExperienceRequirements // Not directly used here, summonSlice will handle
 } from "@/config/config";
-import { petEquipmentConfig } from "@/config/petEquipmentConfig";
+import { petEquipmentConfig } from "@/config/item/petEquipmentConfig";
 import { 
   SKILL_MODES,
   UNIQUE_ID_PREFIXES,
   REFINEMENT_SOURCES,
   SKILL_OPERATION_OUTCOMES,
   QUALITY_TYPES
-} from './config/enumConfig';
+} from '@/config/enumConfig';
 import { 
   uiText, 
   getRaceTypeDisplayName,
   getQualityDisplayName
-} from "@/config/uiTextConfig";
+} from "@/config/ui/uiTextConfig";
 import { generateNewSummon } from '@/utils/summonUtils';
-import { experienceConfig, playerBaseConfig } from '@/config/playerConfig';
+import { experienceConfig, playerBaseConfig } from '@/config/character/playerConfig';
 import { generateUniqueId } from '@/utils/idUtils';
-import { ITEM_BASE_CONFIG } from '@/config/inventoryConfig';
+import { ITEM_BASE_CONFIG } from '@/config/item/inventoryConfig';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed

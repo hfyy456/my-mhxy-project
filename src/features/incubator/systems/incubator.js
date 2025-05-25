@@ -4,8 +4,8 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-19 03:45:26
  */
-import { eggConfig, eggQualityConfig } from '@/config/eggConfig';
-import { petConfig } from '@/config/petConfig';
+import { eggConfig, eggQualityConfig } from '@/config/pet/eggConfig';
+import { petConfig } from '@/config/pet/petConfig';
 
 export class Incubator {
   constructor() {

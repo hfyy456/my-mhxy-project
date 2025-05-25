@@ -4,7 +4,7 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-19 04:25:51
  */
-import { QUALITY_TYPES, ITEM_TYPES } from './enumConfig';
+import { QUALITY_TYPES, ITEM_TYPES } from '../enumConfig';
 
 // 背包系统配置
 export const INVENTORY_CONFIG = {

@@ -5,7 +5,7 @@ import { setSelectedTileCoordinatesAction, changeRegionAction } from '@/store/sl
 import { startInteraction } from '@/store/slices/npcSlice';
 import { useSelector } from 'react-redux';
 import { selectPlayerPosition } from '@/store/slices/mapSlice';
-import { TILE_CONTENT_TYPES } from '@/config/mapConfig';
+import { TILE_CONTENT_TYPES } from '@/config/map/mapConfig';
 
 const DOUBLE_TAP_TIMEOUT = 300; // ms
 const DRAG_START_THRESHOLD = 5; // pixels

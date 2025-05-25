@@ -1,7 +1,7 @@
 import React from "react";
-import { qualityConfig, skillConfig, skillTypeConfig } from "../../../config/config";
-import CommonModal from "../../../components/CommonModal";
-import { petConfig } from '../../../config/petConfig';
+import { qualityConfig, skillConfig, skillTypeConfig } from "@/config/config";
+import CommonModal from "@/features/ui/components/CommonModal";
+import { petConfig } from '@/config/pet/petConfig';
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (

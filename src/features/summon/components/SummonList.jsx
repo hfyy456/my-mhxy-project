@@ -8,7 +8,7 @@ import {
   getRaceTypeDisplayName,
   getQualityDisplayName,
   getPetTypeDisplayName 
-} from "@/config/uiTextConfig";
+} from "@/config/ui/uiTextConfig";
 
 const SummonList = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();

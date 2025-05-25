@@ -10,7 +10,7 @@ import {
 import {
   petEquipmentConfig,
   equipmentQualityConfig,
-} from "@/config/petEquipmentConfig";
+} from "@/config/item/petEquipmentConfig";
 import { 
   uiText, 
   getAttributeDisplayName, 
@@ -19,7 +19,7 @@ import {
   getQualityDisplayName,
   getSkillModeDisplayName,
   getFiveElementDisplayName
-} from "@/config/uiTextConfig";
+} from "@/config/ui/uiTextConfig";
 import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 import {
   selectCurrentSummonFullData,
@@ -576,15 +576,49 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                           {skillInfo.name}
                         </span>
                       </div>
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none group-hover:pointer-events-auto">
-                        <p className={`font-bold text-${colorForSkill}`}>
-                          {skillInfo.name} (
-                          {getSkillTypeDisplayName(skillInfo.type) || uiText.general.unknown})
-                        </p>
-                        <p>{skillInfo.description}</p>
-                        {skillInfo.mode && (
-                          <p className="text-xs text-slate-400">
-                            {uiText.labels.type} {getSkillModeDisplayName(skillInfo.mode)}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs bg-slate-800 text-white text-xs rounded-md py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none group-hover:pointer-events-auto shadow-lg border border-${colorForSkill} border-opacity-50">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <i className={`fa-solid ${iconToDisplay} text-${colorForSkill} text-lg`}></i>
+                          <p className={`font-bold text-${colorForSkill} text-sm`}>
+                            {skillInfo.name}
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-${colorForSkill} bg-opacity-20 text-${colorForSkill}`}>
+                            {getSkillTypeDisplayName(skillInfo.type) || uiText.general.unknown}
+                          </span>
+                          {skillInfo.mode && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300">
+                              {getSkillModeDisplayName(skillInfo.mode)}
+                            </span>
+                          )}
+                          {skillInfo.cooldownRounds && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-blue-900/50 text-blue-300">
+                              <i className="fas fa-clock mr-1 text-xs"></i>
+                              冷却: {skillInfo.cooldownRounds}回合
+                            </span>
+                          )}
+                          {skillInfo.mpCost && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-indigo-900/50 text-indigo-300">
+                              <i className="fas fa-tint mr-1 text-xs"></i>
+                              法力: {skillInfo.mpCost}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <p className="text-gray-300 mb-1.5 leading-relaxed">{skillInfo.description}</p>
+                        
+                        {skillInfo.damage && (
+                          <p className="text-xs text-gray-400 flex items-center">
+                            <i className="fas fa-fire-alt mr-1"></i>
+                            伤害: {typeof skillInfo.damage === 'function' ? '基于属性计算' : skillInfo.damage}
+                          </p>
+                        )}
+                        {skillInfo.probability && (
+                          <p className="text-xs text-gray-400 flex items-center">
+                            <i className="fas fa-dice mr-1"></i>
+                            触发概率: {skillInfo.probability * 100}%
                           </p>
                         )}
                       </div>

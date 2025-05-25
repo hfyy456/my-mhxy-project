@@ -2,11 +2,11 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-21 23:57:32
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 00:02:17
+ * @LastEditTime: 2025-05-26 04:17:12
  */
 import { createSlice } from '@reduxjs/toolkit';
-import { npcs as npcConfig } from '../../config/npcConfig';
-import { dialogues as dialogueConfig } from '../../config/dialogueConfig';
+import { npcs as npcConfig } from '@/config/character/npcConfig';
+import { dialogues as dialogueConfig } from '@/config/ui/dialogueConfig';
 
 // 初始状态，可以考虑将配置中的NPC数据转换为运行时状态
 // 例如，每个NPC实例可以有自己的动态数据，如当前对话、任务状态等

@@ -7,8 +7,8 @@ import {
   changeRegionAction 
 } from '@/store/slices/mapSlice';
 // import { startInteraction } from '@/store/slices/npcSlice'; // 不再需要
-import { CELL_TYPES, TILE_CONTENT_TYPES } from '@/config/mapConfig';
-import { npcs as npcConfig } from '@/config/npcConfig'; 
+import { CELL_TYPES, TILE_CONTENT_TYPES } from '@/config/map/mapConfig';
+import { npcs as npcConfig } from '@/config/character/npcConfig'; 
 
 const TileInfoPanel = ({ showToast, onOpenNpcPanel }) => {
   const dispatch = useDispatch();

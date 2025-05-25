@@ -2,25 +2,25 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:08:02
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 05:08:45
+ * @LastEditTime: 2025-05-26 04:26:20
  */
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { petConfig } from "../../../config/petConfig";
-import CommonModal from "../../ui/components/CommonModal";
+import { petConfig } from "@/config/pet/petConfig";
+import CommonModal from "@/features/ui/components/CommonModal";
 import {
   selectAllSummons,
   setCurrentSummon,
-} from "../../../store/slices/summonSlice";
-import { getAllRaces } from "@/config/raceConfig";
+} from "@/store/slices/summonSlice";
+import { getAllRaces } from "@/config/pet/raceConfig";
 import {
   getPetTypeDisplayName,
   getRaceTypeDisplayName,
   getAttributeDisplayName,
   getFiveElementDisplayName
-} from "@/config/uiTextConfig";
-import { skillConfig } from "../../../config/skillConfig";
-import { ATTRIBUTE_TYPES, FIVE_ELEMENT_COLORS } from "../../../config/enumConfig";
+} from "@/config/ui/uiTextConfig";
+import { skillConfig } from "@/config/skill/skillConfig";
+import { ATTRIBUTE_TYPES, FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 
 // 加载召唤兽图片
 const images = import.meta.glob("@/assets/summons/*.png", {

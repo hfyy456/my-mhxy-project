@@ -4,9 +4,9 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-19 05:32:21
  */
-import { petConfig } from '@/config/petConfig';
+import { petConfig } from '@/config/pet/petConfig';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '@/config/config';
-import { getRaceBonus } from '@/config/raceConfig';
+import { getRaceBonus } from '@/config/pet/raceConfig';
 import { unlockPet } from '@/store/slices/petCatalogSlice';
 import { generateUniqueId } from '@/utils/idUtils';
 import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from "@/config/enumConfig";

@@ -10,8 +10,8 @@ import {
   TILE_CONTENT_TYPES,
   monsters as monsterData,
   resources as resourceData,
-} from '@/config/mapConfig';
-import { npcs as npcData } from '@/config/npcConfig';
+} from '@/config/map/mapConfig';
+import { npcs as npcData } from '@/config/character/npcConfig';
 
 const TileInfoPanel = () => {
   const dispatch = useDispatch();

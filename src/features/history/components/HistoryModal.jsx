@@ -7,7 +7,7 @@
 import React from "react";
 import { qualityConfig, skillConfig, skillTypeConfig, petConfig } from "@/config/config";
 import CommonModal from "@/features/ui/components/CommonModal";
-import { getQualityDisplayName, getSkillTypeDisplayName } from "@/config/uiTextConfig";
+import { getQualityDisplayName, getSkillTypeDisplayName } from "@/config/ui/uiTextConfig";
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (

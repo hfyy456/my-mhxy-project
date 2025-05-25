@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { INVENTORY_CONFIG, ITEM_BASE_CONFIG } from "@/config/inventoryConfig";
+import { INVENTORY_CONFIG, ITEM_BASE_CONFIG } from "@/config/item/inventoryConfig";
 import { useInventory /* useItems is no longer directly needed here as items are derived with full info */ } from "@/store/reduxSetup";
 import {
   moveInInventory,
@@ -11,7 +11,7 @@ import {
 import { selectAllItemsArray, selectItemWithSummonInfo, selectEquippedItemsWithSummonInfo } from "@/store/slices/itemSlice";
 import { manageEquipItemThunk, manageUnequipItemThunk } from "@/store/thunks/equipmentThunks";
 import { STANDARD_EQUIPMENT_SLOTS, skillConfig } from "@/config/config";
-import { uiText, getQualityDisplayName, getAttributeDisplayName } from "@/config/uiTextConfig";
+import { uiText, getQualityDisplayName, getAttributeDisplayName } from "@/config/ui/uiTextConfig";
 import { selectAllSummons, learnSkill } from "@/store/slices/summonSlice";
 import { ELEMENT_TYPES, SKILL_TYPES, SKILL_MODES } from "@/config/enumConfig";
 

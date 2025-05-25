@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { initialMapData } from '@/config/mapConfig'; // 导入默认地图数据
-import { WORLD_REGIONS, DEFAULT_REGION_ID } from '@/config/worldMapConfig'; // 导入世界地图配置
+import { initialMapData } from '@/config/map/mapConfig'; // 导入默认地图数据
+import { WORLD_REGIONS, DEFAULT_REGION_ID } from '@/config/map/worldMapConfig'; // 导入世界地图配置
 
 // Helper function to get initial player position from mapConfig
 const getInitialPlayerPosition = () => {

@@ -1,14 +1,14 @@
 /*
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 19:27:30
- * @LastEditors: Cascade AI
- * @LastEditTime: 2025-05-25 05:21:02
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-05-26 04:29:10
  */
 import { generateUniqueId } from '@/utils/idUtils';
 import { BATTLE_UNIT_TYPES, BATTLE_PHASES, UNIQUE_ID_PREFIXES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
-import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/combatConfig';
+import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
 // import { skillConfig } from '@/config/config'; // 稍后用于技能效果处理
-import { petConfig } from '@/config/petConfig'; // 用于获取召唤兽基础信息
+import { petConfig } from '@/config/pet/petConfig'; // 用于获取召唤兽基础信息
 
 /**
  * @typedef {Object} BattleUnitStat

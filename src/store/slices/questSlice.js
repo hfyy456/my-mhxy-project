@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { quests as allQuestDefinitions, QUEST_STATUS, OBJECTIVE_TYPES } from '@/config/questConfig';
+import { quests as allQuestDefinitions, QUEST_STATUS, OBJECTIVE_TYPES } from '@/config/system/questConfig';
 import { nanoid } from 'nanoid'; // 用于生成唯一的运行时任务实例ID，如果需要的话
 
 // Helper function to deep clone quest definitions for active quests

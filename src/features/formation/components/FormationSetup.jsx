@@ -3,8 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectFormationGrid, setSummonInSlot, selectTotalSummonsInFormation } from '@/store/slices/formationSlice';
 import { useSummons, useSummonById } from '@/store/reduxSetup'; // Assuming useSummons provides array of summon objects
 import { FORMATION_ROWS, FORMATION_COLS } from '@/config/config';
-import { petConfig } from '@/config/petConfig'; // To get summon names or images
-import { uiText } from '@/config/uiTextConfig'; // <-- Import uiText
+import { petConfig } from '@/config/pet/petConfig'; // To get summon names or images
+import { uiText } from '@/config/ui/uiTextConfig'; // <-- Import uiText
 import { TOAST_TYPES } from '@/config/enumConfig'; // Import TOAST_TYPES
 
 const MAX_SUMMONS_IN_FORMATION = 5;

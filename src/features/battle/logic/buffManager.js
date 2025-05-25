@@ -10,7 +10,7 @@ import {
   BUFF_TYPES, 
   BUFF_EFFECT_TYPES,
   BUFF_APPLY_TYPES
-} from '@/config/buffConfig';
+} from '@/config/skill/buffConfig';
 
 /**
  * 应用BUFF到目标单位

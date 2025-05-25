@@ -2,11 +2,11 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-25 06:33:50
+ * @LastEditTime: 2025-05-26 04:32:46
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
-import { activeSkillConfig } from '@/config/activeSkillConfig';
+import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 import { calculateBattleDamage, applyDamageToTarget, calculateHealing, applyHealingToTarget } from './damageCalculation';
 import { 
   applyBuff, 
