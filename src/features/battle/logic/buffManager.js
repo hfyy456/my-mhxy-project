@@ -18,9 +18,10 @@ import {
  * @param {string} buffId - BUFF ID
  * @param {string} sourceUnitId - 施加BUFF的单位ID
  * @param {number} level - BUFF等级，影响效果强度
+ * @param {boolean} isActive - BUFF是否生效，默认为true
  * @returns {Object} - 包含应用结果的对象 { success, message, appliedBuff }
  */
-export const applyBuff = (targetUnit, buffId, sourceUnitId, level = 1) => {
+export const applyBuff = (targetUnit, buffId, sourceUnitId, level = 1, isActive = true) => {
   if (!targetUnit) {
     return { success: false, message: '目标单位不存在' };
   }
@@ -105,8 +106,10 @@ export const applyBuff = (targetUnit, buffId, sourceUnitId, level = 1) => {
   } else {
     // 目标没有该BUFF，直接添加
     const newBuff = createBuffInstance(buffId, sourceUnitId, level);
+    // 设置BUFF是否生效
+    newBuff.isActive = isActive;
     targetUnit.statusEffects.push(newBuff);
-    message = `${targetUnit.name} 获得了 ${buffConfig.name} 效果`;
+    message = `${targetUnit.name} 获得了 ${buffConfig.name} 效果${isActive ? '' : '（未生效）'}`;
     appliedBuff = newBuff;
   }
 
@@ -295,54 +298,58 @@ export const processBuffsOnTurnEnd = (targetUnit) => {
 };
 
 /**
- * 获取BUFF对单位属性的修饰值
+ * 检查BUFF是否生效
  * @param {Object} targetUnit - 目标战斗单位
- * @param {string} attributeName - 属性名称
- * @returns {Object} - 包含固定值修改和倍率修改的对象 { flatModifier, percentModifier }
+ * @param {string} buffId - BUFF ID
+ * @returns {boolean} - 如果BUFF生效返回true，否则返回false
  */
-export const getBuffModifiersForAttribute = (targetUnit, attributeName) => {
-  if (!targetUnit) {
-    return { flatModifier: 0, percentModifier: 0 };
+export const isBuffActive = (targetUnit, buffId) => {
+  if (!targetUnit || !targetUnit.statusEffects) {
+    return false;
   }
 
-  let flatModifier = 0;
-  let percentModifier = 0;
+  const buff = targetUnit.statusEffects.find(effect => effect.buffId === buffId);
+  if (!buff) {
+    return false;
+  }
 
-  // 遍历所有影响该属性的BUFF
-  targetUnit.statusEffects.forEach(buff => {
-    if (buff.targetAttribute === attributeName) {
-      if (buff.effectType === BUFF_EFFECT_TYPES.STAT_MODIFIER) {
-        // 固定值修改
-        flatModifier += buff.value * buff.stacks;
-      } else if (buff.effectType === BUFF_EFFECT_TYPES.STAT_MULTIPLIER) {
-        // 倍率修改
-        percentModifier += buff.valueMultiplier * buff.stacks;
-      }
-    }
-  });
-
-  return { flatModifier, percentModifier };
+  // 如果isActive属性未定义或为true，则认为是生效的
+  return buff.isActive !== false;
 };
 
 /**
- * 计算受BUFF影响后的属性值
+ * 设置BUFF的生效状态
  * @param {Object} targetUnit - 目标战斗单位
- * @param {string} attributeName - 属性名称
- * @returns {number} - 计算后的属性值
+ * @param {string} buffId - BUFF ID
+ * @param {boolean} isActive - 是否生效
+ * @returns {Object} - 包含设置结果的对象 { success, message }
  */
-export const calculateModifiedAttribute = (targetUnit, attributeName) => {
-  if (!targetUnit || !targetUnit.stats[attributeName]) {
-    return 0;
+export const setBuffActiveState = (targetUnit, buffId, isActive) => {
+  if (!targetUnit) {
+    return { success: false, message: '目标单位不存在' };
   }
 
-  const baseValue = targetUnit.stats[attributeName];
-  const { flatModifier, percentModifier } = getBuffModifiersForAttribute(targetUnit, attributeName);
+  const buffIndex = targetUnit.statusEffects.findIndex(
+    effect => effect.buffId === buffId
+  );
 
-  // 先应用固定值修改，再应用倍率修改
-  const modifiedValue = (baseValue + flatModifier) * (1 + percentModifier);
-  
-  // 确保属性值不会小于0
-  return Math.max(modifiedValue, 0);
+  if (buffIndex >= 0) {
+    const buff = targetUnit.statusEffects[buffIndex];
+    const oldState = buff.isActive !== false;
+    buff.isActive = isActive;
+    
+    const buffConfig = getBuffById(buffId);
+    const buffName = buffConfig ? buffConfig.name : buffId;
+    
+    return { 
+      success: true, 
+      message: `${targetUnit.name} 的 ${buffName} 效果已${isActive ? '生效' : '失效'}`,
+      oldState,
+      newState: isActive
+    };
+  }
+
+  return { success: false, message: `${targetUnit.name} 没有 ${buffId} 效果` };
 };
 
 /**
@@ -352,11 +359,14 @@ export const calculateModifiedAttribute = (targetUnit, attributeName) => {
  * @returns {boolean} - 如果受到影响返回true，否则返回false
  */
 export const isUnitAffectedByEffect = (targetUnit, effectType) => {
-  if (!targetUnit) {
+  if (!targetUnit || !targetUnit.statusEffects) {
     return false;
   }
 
-  return targetUnit.statusEffects.some(buff => buff.effectType === effectType);
+  // 只考虑已生效的BUFF
+  return targetUnit.statusEffects.some(effect => 
+    effect.effectType === effectType && effect.isActive !== false
+  );
 };
 
 /**
@@ -374,16 +384,21 @@ export const canUnitAct = (targetUnit) => {
   }
 
   // 检查眩晕效果
-  if (isUnitAffectedByEffect(targetUnit, BUFF_EFFECT_TYPES.STUN)) {
+  if (isUnitAffectedByEffect(targetUnit, 'stun')) {
     return { canAct: false, reason: '单位被眩晕' };
   }
 
   // 检查冻结效果
-  if (isUnitAffectedByEffect(targetUnit, BUFF_EFFECT_TYPES.FREEZE)) {
+  if (isUnitAffectedByEffect(targetUnit, 'freeze')) {
     return { canAct: false, reason: '单位被冻结' };
   }
 
-  return { canAct: true };
+  // 检查睡眠效果
+  if (isUnitAffectedByEffect(targetUnit, 'sleep')) {
+    return { canAct: false, reason: '单位处于睡眠状态' };
+  }
+
+  return { canAct: true, reason: '' };
 };
 
 /**
@@ -398,11 +413,16 @@ export const canUnitUseSkill = (targetUnit) => {
   }
 
   // 检查沉默效果
-  if (isUnitAffectedByEffect(targetUnit, BUFF_EFFECT_TYPES.SILENCE)) {
+  if (isUnitAffectedByEffect(targetUnit, 'silence')) {
     return { canUseSkill: false, reason: '单位被沉默' };
   }
 
-  return { canUseSkill: true };
+  // 检查法术封印效果
+  if (isUnitAffectedByEffect(targetUnit, 'spell_lock')) {
+    return { canUseSkill: false, reason: '单位被法术封印' };
+  }
+
+  return { canUseSkill: true, reason: '' };
 };
 
 /**
@@ -420,19 +440,92 @@ export const canUnitBeTargeted = (targetUnit, sourceUnit) => {
     return { canBeTargeted: false, reason: '目标单位已被击败' };
   }
 
-  // 检查隐身效果
-  if (isUnitAffectedByEffect(targetUnit, BUFF_EFFECT_TYPES.STEALTH)) {
-    // 如果源单位有感知能力，仍然可以看到隐身单位
-    const hasPerception = sourceUnit && 
-      sourceUnit.statusEffects.some(buff => buff.buffId === 'perception');
-    
-    if (!hasPerception) {
-      return { canBeTargeted: false, reason: '目标单位处于隐身状态' };
+  // 检查是否有隐身效果
+  if (isUnitAffectedByEffect(targetUnit, 'invisible')) {
+    // 检查源单位是否有真视效果
+    const hasTrueSight = sourceUnit && isUnitAffectedByEffect(sourceUnit, 'true_sight');
+    if (!hasTrueSight) {
+      return { canBeTargeted: false, reason: `${targetUnit.name} 处于隐身状态，无法被选中` };
     }
   }
 
-  return { canBeTargeted: true };
+  // 检查是否有强制目标效果
+  const hasForcedTarget = sourceUnit && isUnitAffectedByEffect(sourceUnit, 'forced_target');
+  if (hasForcedTarget) {
+    // 获取强制目标的ID
+    const forcedTargetBuff = sourceUnit.statusEffects.find(buff => 
+      buff.effectType === 'forced_target' && buff.isActive !== false
+    );
+    if (forcedTargetBuff && forcedTargetBuff.targetId !== targetUnit.id) {
+      return { canBeTargeted: false, reason: `${sourceUnit.name} 被强制选择其他目标` };
+    }
+  }
+
+  // 检查是否有无法被选中效果
+  if (isUnitAffectedByEffect(targetUnit, 'untargetable')) {
+    return { canBeTargeted: false, reason: `${targetUnit.name} 无法被选中` };
+  }
+
+  return { canBeTargeted: true, reason: '' };
 };
+
+/**
+ * 获取BUFF对单位属性的修饰值
+ * @param {Object} targetUnit - 目标战斗单位
+ * @param {string} attributeName - 属性名称
+ * @returns {Object} - 包含固定值修改和倍率修改的对象 { flatModifier, percentModifier }
+ */
+export const getBuffModifiersForAttribute = (targetUnit, attributeName) => {
+  if (!targetUnit || !targetUnit.statusEffects) {
+    return { flatModifier: 0, percentModifier: 0 };
+  }
+
+  let flatModifier = 0;
+  let percentModifier = 0;
+
+  // 遍历所有状态效果
+  targetUnit.statusEffects.forEach(buff => {
+    // 只考虑已生效的BUFF
+    if (buff.isActive === false) {
+      return;
+    }
+    
+    // 固定值修改
+    if (buff.effectType === BUFF_EFFECT_TYPES.STAT_MODIFIER && buff.targetStat === attributeName) {
+      flatModifier += buff.value * (buff.stacks || 1);
+    }
+    
+    // 百分比修改
+    if (buff.effectType === BUFF_EFFECT_TYPES.STAT_MULTIPLIER && buff.targetStat === attributeName) {
+      percentModifier += buff.valueMultiplier * (buff.stacks || 1);
+    }
+  });
+
+  return { flatModifier, percentModifier };
+};
+
+/**
+ * 计算受BUFF影响后的属性值
+ * @param {Object} targetUnit - 目标战斗单位
+ * @param {string} attributeName - 属性名称
+ * @returns {number} - 计算后的属性值
+ */
+export const calculateModifiedAttribute = (targetUnit, attributeName) => {
+  if (!targetUnit || !targetUnit.stats || targetUnit.stats[attributeName] === undefined) {
+    return 0;
+  }
+
+  const baseValue = targetUnit.stats[attributeName];
+  const { flatModifier, percentModifier } = getBuffModifiersForAttribute(targetUnit, attributeName);
+
+  // 先应用固定值修改，再应用倍率修改
+  const modifiedValue = (baseValue + flatModifier) * (1 + percentModifier);
+  
+  // 确保属性值不会小于0
+  return Math.max(modifiedValue, 0);
+};
+
+
 
 /**
  * 计算伤害修正（考虑BUFF效果）
@@ -476,7 +569,7 @@ export const processReflectDamage = (sourceUnit, targetUnit, damage) => {
 
   // 检查目标是否有反弹效果
   const reflectEffect = targetUnit.statusEffects.find(
-    buff => buff.effectType === BUFF_EFFECT_TYPES.REFLECT
+    buff => buff.effectType === BUFF_EFFECT_TYPES.REFLECT && buff.isActive !== false
   );
   
   if (!reflectEffect) {
@@ -522,9 +615,9 @@ export const processShieldAbsorption = (targetUnit, damage) => {
   let totalAbsorbed = 0;
   const shieldMessages = [];
 
-  // 找出所有护盾效果
+  // 获取所有护盾效果
   const shieldEffects = targetUnit.statusEffects.filter(
-    buff => buff.effectType === BUFF_EFFECT_TYPES.SHIELD && buff.shieldValue > 0
+    buff => buff.effectType === BUFF_EFFECT_TYPES.SHIELD && buff.isActive !== false && buff.shieldValue > 0
   );
 
   // 按护盾值从小到大排序，优先消耗小护盾

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 19:39:40
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-23 04:00:50
+ * @LastEditTime: 2025-05-29 03:34:24
  * @FilePath: \my-mhxy-project\src\config\enemyConfig.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -96,7 +96,7 @@ export const enemyConfig = {
     spriteAssetKey: "goblin_grunt_sprite", // 使用哥布林的精灵图
     attackRange: 5,
     stats: {
-      maxHp: 500,
+      maxHp: 50000,
       maxMp: 0,
       attack: 0,
       defense: 0,

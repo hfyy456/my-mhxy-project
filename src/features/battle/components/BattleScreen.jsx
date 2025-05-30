@@ -8,6 +8,7 @@ import BattleLogPanel from './BattleLogPanel';
 import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
+import BattleUnitDetailPanel from './BattleUnitDetailPanel';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
 import { petConfig } from '@/config/pet/petConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
@@ -516,6 +517,13 @@ const BattleScreen = () => {
       
       {/* 战斗单位属性面板 - 右侧悬浮 */}
       <BattleUnitStats />
+      
+      {/* 选中单位详情面板 - 左侧悬浮 */}
+      {selectedUnitId && battleUnits[selectedUnitId] && (
+        <div className="absolute top-32 left-4 z-20">
+          <BattleUnitDetailPanel unit={battleUnits[selectedUnitId]} />
+        </div>
+      )}
       
       {/* 战斗结算界面 - 绝对定位在最上层 */}
       {currentPhase === 'battle_end' && battleResult && (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { useSelector } from 'react-redux';
 import { selectCurrentPhase, selectUnitActions } from '@/store/slices/battleSlice';
+import { getBuffById } from '@/config/skill/buffConfig';
 import './BattleUnitSprite.css';
 
 // 动态导入所有精灵图
@@ -11,6 +12,10 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   const [isAttacking, setIsAttacking] = useState(false);
   const [isReceivingDamage, setIsReceivingDamage] = useState(false);
   const [showDefendEffect, setShowDefendEffect] = useState(false);
+  // 添加伤害数字显示状态
+  const [showDamageNumber, setShowDamageNumber] = useState(false);
+  const [damageValue, setDamageValue] = useState(0);
+  const [isCritical, setIsCritical] = useState(false);
   
   // 获取当前战斗阶段和单位行动
   const currentPhase = useSelector(selectCurrentPhase);
@@ -35,9 +40,12 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   // }, [unit, unitAction, allUnitActions, currentPhase, hasAction]);
   
   // 使用全局变量跟踪动画状态
-  const isAnimationInProgressRef = useRef(false);
+  const attackAnimInProgressRef = useRef(false); // 单独跟踪攻击动画状态
+  const hitAnimInProgressRef = useRef(false);   // 单独跟踪受击动画状态
+  const isAnimationInProgressRef = useRef(false); // 总体动画状态标记
   const processedLogsRef = useRef(new Set());
-  const lastProcessedDamageRef = useRef(null);
+  const latestDamageRef = useRef(null); // Stores the most recent damage amount for the floater
+  const latestCritFlagRef = useRef(false); // Stores if the most recent hit was a crit
   const defendEffectAnimFrameRef = useRef(null);
   
   // 限制缓存大小，防止内存泄漏
@@ -45,14 +53,16 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
     // 组件挂载时重置状态
     processedLogsRef.current.clear();
     isAnimationInProgressRef.current = false;
-    lastProcessedDamageRef.current = null;
+    attackAnimInProgressRef.current = false;
+    hitAnimInProgressRef.current = false;
     
     return () => {
       // 组件卸载时清理
       processedLogsRef.current.clear();
       isAnimationInProgressRef.current = false;
-      lastProcessedDamageRef.current = null;
-      
+      attackAnimInProgressRef.current = false;
+      hitAnimInProgressRef.current = false;
+        
       // 清理防御特效的动画帧
       if (defendEffectAnimFrameRef.current) {
         cancelAnimationFrame(defendEffectAnimFrameRef.current);
@@ -83,155 +93,209 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
     defendEffectAnimFrameRef.current = requestAnimationFrame(hideDefendEffect);
   };
   
-  // 监听战斗日志变化，触发攻击动画
+  // 监听战斗日志变化，触发攻击或受击动画
   useEffect(() => {
+    if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_INPUTS - battleLogLen: ${battleLog.length}, isAnimInProgress: ${isAnimationInProgressRef.current}, processedLogs:`, Array.from(processedLogsRef.current));
     if (!unit || !battleLog.length) return;
-    
-    // 如果有动画正在进行，则不触发新的动画
-    if (isAnimationInProgressRef.current) return;
-    
-    // 获取最新的战斗日志
-    const latestLog = battleLog[battleLog.length - 1];
-    
-    // 如果没有日志ID或时间戳，则不处理
-    if (!latestLog || (!latestLog.id && !latestLog.timestamp)) return;
-    
-    // 生成稳定的日志ID，确保即使相同事件重复触发也只处理一次
-    const timestamp = latestLog.timestamp || Date.now();
-    const logId = `${latestLog.unitId || ''}-${latestLog.targetId || ''}-${timestamp}`;
-    
-    // 如果这个日志已经处理过，则跳过
-    if (processedLogsRef.current.has(logId)) {
+
+    // 先创建变量，然后再检查动画状态
+
+    let logToAnimate = null;
+    let animationRole = null; // 'attacker' or 'receiver'
+    let uniqueLogIdForProcessing = null;
+
+    // 从后向前遍历战斗日志，查找最近的、未处理的、与攻击相关的日志
+    if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_START - Searching for animatable log.`);
+    for (let i = battleLog.length - 1; i >= 0; i--) {
+      const currentLog = battleLog[i];
+
+      if (!currentLog || (!currentLog.id && !currentLog.timestamp) || !currentLog.message) {
+        if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_SKIP_INVALID_LOG - Index: ${i}, Log:`, currentLog);
+        continue;
+      }
+      
+      // 动画只由包含“攻击”的日志触发
+      if (!currentLog.message.includes('攻击')) {
+        if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_SKIP_NO_ATTACK_KEYWORD - Index: ${i}, Log:`, JSON.parse(JSON.stringify(currentLog)));
+        continue;
+      }
+
+      const timestamp = currentLog.timestamp || Date.now(); // Ensure timestamp for ID generation
+      const baseLogIdentifier = `${currentLog.unitId || 'unknownUnit'}-${currentLog.targetId || 'unknownTarget'}-${timestamp}`;
+
+      // 检查当前单位是否是此日志中的攻击者
+      if (currentLog.unitId === unit.id && currentLog.targetId) {
+        const potentialLogId = `attack-${baseLogIdentifier}`;
+        if (!processedLogsRef.current.has(potentialLogId)) {
+          if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_FOUND_ATTACKER - Index: ${i}, Log:`, JSON.parse(JSON.stringify(currentLog)), `ID: ${potentialLogId}`);
+          logToAnimate = currentLog;
+          animationRole = 'attacker';
+          uniqueLogIdForProcessing = potentialLogId;
+          break; 
+        }
+        if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_ATTACKER_PROCESSED - Index: ${i}, ID: ${potentialLogId}`);
+      }
+
+      // 检查当前单位是否是此日志中的受击者
+      if (currentLog.targetId === unit.id && currentLog.unitId) {
+        const potentialLogId = `hit-${baseLogIdentifier}`;
+        // 如果这条日志已经被当前单位作为攻击者选中了，就不要再作为受击者重复处理
+        if (logToAnimate === currentLog && animationRole === 'attacker' && unit.id === currentLog.unitId) {
+            if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_RECEIVER_SKIP_SELF_ATTACK_PROCESSED - Index: ${i}, ID: ${potentialLogId}`);
+            continue;
+        }
+        if (!processedLogsRef.current.has(potentialLogId)) {
+          if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_FOUND_RECEIVER - Index: ${i}, Log:`, JSON.parse(JSON.stringify(currentLog)), `ID: ${potentialLogId}`);
+          logToAnimate = currentLog;
+          animationRole = 'receiver';
+          uniqueLogIdForProcessing = potentialLogId;
+          break; 
+        }
+        if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_RECEIVER_PROCESSED - Index: ${i}, ID: ${potentialLogId}`);
+      }
+    }
+
+    if (!logToAnimate || !animationRole || !uniqueLogIdForProcessing) {
+      if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_NO_ANIMATABLE_LOG_FOUND`);
       return;
     }
     
-    // 如果是当前单位发起的攻击
-    if (latestLog.unitId === unit.id && latestLog.message && latestLog.message.includes('攻击') && latestLog.targetId) {
-      // 标记动画正在进行
-      isAnimationInProgressRef.current = true;
-      
-      // 添加到已处理日志集合
-      processedLogsRef.current.add(logId);
-      
-      // 获取目标单位的DOM元素
-      const targetElement = document.querySelector(`[data-unit-id="${latestLog.targetId}"]`);
+    // 检查动画状态，允许不同类型的动画并行运行
+    // 如果是攻击者角色但已经有攻击动画在运行，则跳过
+    // 如果是受击者角色但已经有受击动画在运行，则跳过
+    if ((animationRole === 'attacker' && attackAnimInProgressRef.current) || 
+        (animationRole === 'receiver' && hitAnimInProgressRef.current)) {
+      if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SKIP - ${animationRole} animation already in progress.`);
+      return;
+    }
+
+    if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_WILL_ANIMATE - Role: ${animationRole}, Log:`, JSON.parse(JSON.stringify(logToAnimate)), `ProcessedID: ${uniqueLogIdForProcessing}`);
+    
+    // 根据动画角色设置相应的动画状态
+    if (animationRole === 'attacker') {
+      attackAnimInProgressRef.current = true;
+    } else if (animationRole === 'receiver') {
+      hitAnimInProgressRef.current = true;
+    }
+    
+    isAnimationInProgressRef.current = true;
+    processedLogsRef.current.add(uniqueLogIdForProcessing);
+
+    if (animationRole === 'attacker') {
+      const targetElement = document.querySelector(`[data-unit-id="${logToAnimate.targetId}"]`);
       if (targetElement) {
-        // 计算攻击者到目标的距离和方向
         const attackerElement = document.querySelector(`[data-unit-id="${unit.id}"]`);
         if (attackerElement) {
           const attackerRect = attackerElement.getBoundingClientRect();
           const targetRect = targetElement.getBoundingClientRect();
-          
-          // 计算从攻击者到目标的移动距离
           let moveX = targetRect.left - attackerRect.left;
           const moveY = targetRect.top - attackerRect.top;
-          
-          // 考虑单位的朝向和目标位置关系
-          // 玩家单位默认水平翻转，所以实际上是朝右的，而敵人单位朝左
-          // 因此当目标在右侧时，玩家单位应该正向移动，敵人单位应该反向移动
-          // 当目标在左侧时，玩家单位应该反向移动，敵人单位应该正向移动
           const isTargetOnRight = moveX > 0;
-          
+
           if (unit.isPlayerUnit) {
-            // 玩家单位如果目标在右侧，正向移动；如果目标在左侧，反向移动
             document.documentElement.style.setProperty('--move-direction', isTargetOnRight ? '1' : '-1');
           } else {
-            // 敵人单位如果目标在右侧，反向移动；如果目标在左侧，正向移动
             document.documentElement.style.setProperty('--move-direction', isTargetOnRight ? '-1' : '1');
           }
-          
-          // 设置自定义CSS变量传递移动距离
           document.documentElement.style.setProperty('--move-x', `${moveX}px`);
           document.documentElement.style.setProperty('--move-y', `${moveY}px`);
-          
-          // 触发攻击动画
+
           setIsAttacking(true);
-          
-          // 动画结束后恢复原状态
           const startTime = performance.now();
-          const duration = 800; // 与 CSS 中的动画时间保持一致（从 1200ms 减少到 800ms）
-          
+          const duration = 800; 
           const resetAttackAnimation = (timestamp) => {
             const elapsed = timestamp - startTime;
             if (elapsed >= duration) {
               setIsAttacking(false);
-              // 标记动画完成
-              isAnimationInProgressRef.current = false;
+              attackAnimInProgressRef.current = false;
+              isAnimationInProgressRef.current = attackAnimInProgressRef.current || hitAnimInProgressRef.current;
+              if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_ATTACK_END - isAnimInProgress: ${isAnimationInProgressRef.current}`);
               return;
             }
             requestAnimationFrame(resetAttackAnimation);
           };
-          
           requestAnimationFrame(resetAttackAnimation);
+        } else {
+          attackAnimInProgressRef.current = false;
+          isAnimationInProgressRef.current = attackAnimInProgressRef.current || hitAnimInProgressRef.current; // Attacker element not found
+          if (unit) console.error(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_ERROR_ATTACKER_ELEMENT_NOT_FOUND`);
         }
+      } else {
+        attackAnimInProgressRef.current = false;
+        isAnimationInProgressRef.current = attackAnimInProgressRef.current || hitAnimInProgressRef.current; // Target element not found
+        if (unit) console.error(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_ERROR_TARGET_ELEMENT_NOT_FOUND_FOR_ATTACK - TargetID: ${logToAnimate.targetId}`);
       }
-    }
-    
-    // 如果当前单位是被攻击的目标
-    if (latestLog.targetId === unit.id && latestLog.message && latestLog.message.includes('攻击')) {
-      // 提取伤害数值
-      const damageMatch = latestLog.message.match(/造成 (\d+) 点伤害/);
-      const damage = damageMatch ? parseInt(damageMatch[1]) : 0;
-      
-      // 检查是否已经处理过这个伤害值，避免同一个伤害多次显示
-      // 使用logId+damage作为唯一标识
-      const damageId = `${logId}-${damage}`;
-      if (lastProcessedDamageRef.current === damageId) {
-        return;
+    } else if (animationRole === 'receiver') {
+      // Parse damage and critical hit status from the log message
+      const damageRegex = /造成了? (\d+) 点伤害/;
+      const damageMatch = logToAnimate.message.match(damageRegex);
+      if (damageMatch && damageMatch[1]) {
+        latestDamageRef.current = parseInt(damageMatch[1], 10);
+        // 设置伤害值到状态
+        setDamageValue(parseInt(damageMatch[1], 10));
+      } else {
+        latestDamageRef.current = 0; // Default to 0 if no damage found in log
+        setDamageValue(0);
       }
       
-      // 标记动画正在进行
-      isAnimationInProgressRef.current = true;
-      // 记录已处理的伤害
-      lastProcessedDamageRef.current = damageId;
-      // 添加到已处理日志集合
-      processedLogsRef.current.add(logId);
-      
-      // 缩短等待时间，加快动画衔接
+      // Check for critical hit (assuming "暴击" indicates a critical hit)
+      if (logToAnimate.message.includes('暴击')) {
+        latestCritFlagRef.current = true;
+        setIsCritical(true);
+      } else {
+        latestCritFlagRef.current = false;
+        setIsCritical(false);
+      }
+      if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_RECEIVER_DAMAGE_PARSED - Damage: ${latestDamageRef.current}, Crit: ${latestCritFlagRef.current}, Log:`, JSON.parse(JSON.stringify(logToAnimate)));
+
+      // For receiver, we might want a slight delay if the attacker is also animating
+      // This part can be refined based on desired animation timing
       const startWaitTime = performance.now();
-      const waitDuration = 300; // 缩短等待时间
-      
+      const waitDuration = 100; // Short delay to allow attacker animation to potentially start
+
       const startDamageAnimation = (timestamp) => {
-        const elapsed = timestamp - startWaitTime;
-        if (elapsed < waitDuration) {
+        const elapsedSinceWaitStart = timestamp - startWaitTime;
+        if (elapsedSinceWaitStart < waitDuration) {
           requestAnimationFrame(startDamageAnimation);
           return;
         }
-        
-        // 触发受伤动画
+
         setIsReceivingDamage(true);
-        
-        // 如果单位处于防御状态，显示防御特效
-        if (unit.isDefending) {
-          setShowDefendEffect(true);
-          // 清除之前的防御特效
-          clearDefendEffect();
-        } else {
-          // 确保非防御状态下不显示防御特效
-          setShowDefendEffect(false);
+        // 显示伤害数字
+        if (latestDamageRef.current > 0) {
+          setShowDamageNumber(true);
+          if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SHOW_DAMAGE_NUMBER - Value: ${latestDamageRef.current}, Crit: ${latestCritFlagRef.current}`);
         }
         
-        // 设置受击动画结束的动画帧
-        const startDamageTime = performance.now();
-        const damageAnimDuration = 800; // 受击动画时间
-        
-        const resetDamageAnimation = (innerTimestamp) => {
-          const damageElapsed = innerTimestamp - startDamageTime;
-          if (damageElapsed >= damageAnimDuration) {
+        if (unit.isDefending) { // Check unit's current defending state
+            setShowDefendEffect(true);
+            if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SHOW_DEFEND_EFFECT`);
+        }
+
+        const animStartTime = performance.now();
+        const duration = 800;
+        const resetDamageAnimation = (ts) => {
+          const elapsed = ts - animStartTime;
+          if (elapsed >= duration) {
             setIsReceivingDamage(false);
-            // 标记动画完成
-            isAnimationInProgressRef.current = false;
+            // 延迟隐藏伤害数字，让它完成动画
+            setTimeout(() => {
+              setShowDamageNumber(false);
+            }, 500);
+            hitAnimInProgressRef.current = false;
+            isAnimationInProgressRef.current = attackAnimInProgressRef.current || hitAnimInProgressRef.current;
+            if (showDefendEffect) clearDefendEffect(); // Clear defend effect if it was shown
+            if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_HIT_END - isAnimInProgress: ${isAnimationInProgressRef.current}`);
             return;
           }
           requestAnimationFrame(resetDamageAnimation);
         };
-        
         requestAnimationFrame(resetDamageAnimation);
       };
-      
       requestAnimationFrame(startDamageAnimation);
     }
-  }, [battleLog, unit]);
+  }, [battleLog, unit]); // Removed isAnimationInProgressRef from dependencies as it's a ref
+
   if (!unit) return null;
 
   const { name, stats, isPlayerUnit, isDefeated } = unit;
@@ -331,6 +395,15 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
           </div>
         )}
         
+        {/* 伤害数字 */}
+        {showDamageNumber && damageValue > 0 && (
+          <div className="damage-number-container">
+            <div className={`damage-number ${isCritical ? 'critical' : ''}`}>
+              {isCritical ? '暴击！' : ''} {damageValue}
+            </div>
+          </div>
+        )}
+        
         {isDefeated && (
           <div className="absolute w-full h-full z-10 flex items-center justify-center">
             <div className="relative w-[60px] h-[60px]">
@@ -404,6 +477,8 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
                 {currentMp}/{maxMp}
               </div>
             </div>
+            
+            {/* BUFF栏已移至单位详情面板 */}
           </div>
         </div>
       )}
@@ -416,13 +491,4 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
 };
 
 // 使用React.memo包装组件，避免不必要的重新渲染
-export default memo(BattleUnitSprite, (prevProps, nextProps) => {
-  // 只有当关键属性变化时才重新渲染
-  return (
-    prevProps.unit?.id === nextProps.unit?.id &&
-    prevProps.hasAction === nextProps.hasAction &&
-    prevProps.unit?.isDefeated === nextProps.unit?.isDefeated &&
-    prevProps.unit?.stats?.currentHp === nextProps.unit?.stats?.currentHp &&
-    prevProps.unit?.stats?.currentMp === nextProps.unit?.stats?.currentMp
-  );
-});
+export default memo(BattleUnitSprite);

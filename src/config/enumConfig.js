@@ -201,6 +201,8 @@ export const PASSIVE_SKILL_TIMING = {
   // 回合相关
   TURN_START: "turn_start",          // 回合开始时
   TURN_END: "turn_end",             // 回合结束时
+  ROUND_START: "round_start",        // 新回合开始时
+  ROUND_END: "round_end",           // 回合结束时
   
   // 普通攻击相关
   BEFORE_NORMAL_ATTACK: "before_normal_attack",   // 普通攻击前
@@ -223,19 +225,29 @@ export const PASSIVE_SKILL_TIMING = {
   ON_MAGICAL_DAMAGE: "on_magical_damage",     // 受到法术伤害时
   ON_ANY_DAMAGE: "on_any_damage",           // 受到任何伤害时
   AFTER_DAMAGE: "after_damage",             // 受到伤害后
+  ON_HEAL: "on_heal",                     // 受到治疗时
+  AFTER_HEAL: "after_heal",                // 受到治疗后
   
   // 战斗状态相关
   ON_DODGE: "on_dodge",                    // 闪避成功时
   ON_CRIT: "on_crit",                     // 暴击成功时
   ON_KILL: "on_kill",                     // 击杀目标时
   ON_DEATH: "on_death",                   // 死亡时
+  ALLY_DEFEATED: "ally_defeated",          // 队友被击败时
+  ENEMY_DEFEATED: "enemy_defeated",        // 敌人被击败时
+  ON_LOW_HP: "on_low_hp",                 // 生命值低时
+  ON_BUFF_APPLIED: "on_buff_applied",      // BUFF被应用时
+  ON_DEBUFF_APPLIED: "on_debuff_applied",  // 负面BUFF被应用时
   
   // 战斗开始结束
   BATTLE_START: "battle_start",             // 战斗开始时
   BATTLE_END: "battle_end",                // 战斗结束时
   
   // 其他
-  ALWAYS: "always"                         // 始终生效
+  ALWAYS: "always",                        // 始终生效
+  ON_ACTION: "on_action",                  // 任何行动时
+  BEFORE_ACTION: "before_action",          // 行动前
+  AFTER_ACTION: "after_action"             // 行动后
 };
 
 // Unique ID Prefixes

@@ -250,6 +250,136 @@ export const buffConfig = [
     damageElement: ELEMENT_TYPES.FIRE,
     maxStacks: 1,
     durationRounds: 2
+  },
+  {
+    id: 'fire_power',
+    name: '火系掌握',
+    description: '增加火系技能伤害，减少受到的火系伤害',
+    icon: 'fa-fire',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.STAT_MULTIPLIER,
+    applyType: BUFF_APPLY_TYPES.HIGHEST,
+    elementType: 'fire',
+    elementDamageBonus: 0.2,   // 增加20%火系伤害
+    elementResistance: 0.15,   // 减少15%受到的火系伤害
+    maxStacks: 1,
+    durationRounds: -1         // 永久效果
+  },
+  {
+    id: 'water_power',
+    name: '水系掌握',
+    description: '增加水系技能伤害，减少受到的水系伤害',
+    icon: 'fa-water',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.STAT_MULTIPLIER,
+    applyType: BUFF_APPLY_TYPES.HIGHEST,
+    elementType: 'water',
+    elementDamageBonus: 0.2,
+    elementResistance: 0.15,
+    maxStacks: 1,
+    durationRounds: -1
+  },
+  {
+    id: 'thunder_power',
+    name: '雷系掌握',
+    description: '增加雷系技能伤害，减少受到的雷系伤害',
+    icon: 'fa-bolt',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.STAT_MULTIPLIER,
+    applyType: BUFF_APPLY_TYPES.HIGHEST,
+    elementType: 'thunder',
+    elementDamageBonus: 0.2,
+    elementResistance: 0.15,
+    maxStacks: 1,
+    durationRounds: -1
+  },
+  {
+    id: 'last_stand',
+    name: '背水一战',
+    description: '生命值低时，攻击和防御大幅提升',
+    icon: 'fa-skull',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.STAT_MULTIPLIER,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    statModifiers: {
+      attack: 0.3,       // 攻击力提升30%
+      defense: 0.3       // 防御力提升30%
+    },
+    maxStacks: 1,
+    durationRounds: 3
+  },
+  {
+    id: 'life_link',
+    name: '生命链接',
+    description: '与队友建立生命链接，共享伤害',
+    icon: 'fa-link',
+    type: BUFF_TYPES.NEUTRAL,
+    effectType: BUFF_EFFECT_TYPES.SPECIAL,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    damageSharing: 0.3,   // 分担30%伤害
+    maxStacks: 1,
+    durationRounds: -1    // 持续整场战斗
+  },
+  {
+    id: 'mana_shield',
+    name: '法力护盾',
+    description: '消耗MP抵消部分伤害',
+    icon: 'fa-shield-alt',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.SPECIAL,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    mpToHpRatio: 2,       // 每1点MP可以抵消2点伤害
+    maxStacks: 1,
+    durationRounds: 1
+  },
+  {
+    id: 'thorns',
+    name: '荆棘',
+    description: '反弹部分物理伤害',
+    icon: 'fa-cactus',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.REFLECT,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    reflectDamage: 5,      // 固定反弹5点伤害
+    reflectPercentage: 0.1, // 额外反弹10%伤害
+    maxStacks: 1,
+    durationRounds: -1     // 永久效果
+  },
+  {
+    id: 'vampiric_aura',
+    name: '吸血光环',
+    description: '攻击时吸取目标生命值',
+    icon: 'fa-droplet',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.SPECIAL,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    lifeStealPercent: 0.2, // 吸取造成伤害的20%
+    maxStacks: 1,
+    durationRounds: 1
+  },
+  {
+    id: 'meditation',
+    name: '冥想',
+    description: '回合结束时恢复MP',
+    icon: 'fa-brain',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.SPECIAL,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    mpRecovery: 5,        // 每回合恢复5点MP
+    maxStacks: 1,
+    durationRounds: -1    // 永久效果
+  },
+  {
+    id: 'elemental_harmony',
+    name: '元素和谐',
+    description: '下一个不同元素的技能威力提升',
+    icon: 'fa-yin-yang',
+    type: BUFF_TYPES.POSITIVE,
+    effectType: BUFF_EFFECT_TYPES.SPECIAL,
+    applyType: BUFF_APPLY_TYPES.REFRESH,
+    elementalBonus: 0.25, // 提升25%伤害
+    maxStacks: 1,
+    durationRounds: 2
   }
 ];
 
