@@ -208,6 +208,129 @@ export const activeSkillConfig = [
       { buffId: "speed_down", level: 1, chance: 0.6 }, // 60%几率降低速度
     ],
   },
+  {
+    id: "tiger_roar",
+    name: "虎啸占位",
+    description: "占位符技能 - 发出虎啸，可能对敌方群体造成震慑或减益效果。",
+    type: SKILL_TYPES.SUPPORT, // 或 PHYSICAL/MAGICAL 根据具体效果
+    icon: "fa-bullhorn",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.GROUP,
+    attackDistance: 3, // 示例值
+    cooldownRounds: 4, // 示例值
+    mpCost: 20, // 示例值
+    applyBuffs: [{ buffId: "fear_placeholder", level: 1, chance: 0.3 }] // 示例减益
+  },
+  {
+    id: "water_escape",
+    name: "水遁占位",
+    description: "占位符技能 - 利用水的力量快速脱离或获得保护。",
+    type: SKILL_TYPES.SUPPORT, // 或 DEFENSIVE
+    icon: "fa-tint",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SELF,
+    cooldownRounds: 5, // 示例值
+    mpCost: 15, // 示例值
+    applyBuffs: [{ buffId: "evasion_placeholder", level: 1 }] // 示例效果
+  },
+  {
+    id: "life_death_book",
+    name: "生死簿占位",
+    description: "占位符技能 - 操控生死之力，对目标造成特殊伤害或效果。",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-book-dead",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SINGLE,
+    attackDistance: 2, // 示例值
+    damage: 1.5, // 示例值
+    element: ELEMENT_TYPES.NETHER, // 假设的元素类型
+    cooldownRounds: 3, // 示例值
+    mpCost: 25, // 示例值
+    applyBuffs: [{ buffId: "doom_placeholder", level: 1, chance: 0.2 }]
+  },
+  {
+    id: "ghost_fire",
+    name: "鬼火占位",
+    description: "占位符技能 - 召唤鬼火攻击敌人。",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-fire-alt",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SINGLE,
+    attackDistance: 3, // 示例值
+    damage: 1.7, // 示例值
+    element: ELEMENT_TYPES.FIRE, // 或 NETHER
+    cooldownRounds: 2, // 示例值
+    mpCost: 22, // 示例值
+    applyBuffs: [{ buffId: "burn_placeholder", level: 1}]
+  },
+  {
+    id: "yin_yang_switch",
+    name: "阴阳转换占位",
+    description: "占位符技能 - 转换自身或目标的状态，或引发特殊效果。",
+    type: SKILL_TYPES.SUPPORT, // 或 MAGICAL
+    icon: "fa-yin-yang",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SELF, // 或 SINGLE
+    cooldownRounds: 4, // 示例值
+    mpCost: 30, // 示例值
+    // 效果待定
+  },
+  {
+    id: "nether_portal",
+    name: "幽冥之门占位",
+    description: "占位符技能 - 打开通往幽冥的传送门，召唤援军或对区域造成影响。",
+    type: SKILL_TYPES.MAGICAL, // 或 SUMMON
+    icon: "fa-dungeon",
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.AREA, // 或 NONE
+    attackDistance: 4, // 示例值
+    cooldownRounds: 6, // 示例值
+    mpCost: 50, // 示例值
+    // 效果待定
+  },
+  {
+    id: "jump_attack",
+    name: "跳跃攻击占位",
+    description: "占位符技能 - 高高跃起并对目标发动攻击。",
+    type: SKILL_TYPES.PHYSICAL,
+    icon: "fa-person-falling-burst", // 使用 Font Awesome 6 Free 图标
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SINGLE,
+    attackDistance: 1, // 示例值，通常是近战
+    damage: 2.0, // 示例值
+    cooldownRounds: 3, // 示例值
+    mpCost: 18, // 示例值
+    applyBuffs: []
+  },
+  {
+    id: "basic_healing",
+    name: "基础治疗占位",
+    description: "占位符技能 - 为目标恢复少量生命值。",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-heart-circle-plus", // 使用 Font Awesome 6 Free 图标
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SINGLE,
+    attackDistance: 2, // 示例值
+    healAmount: 1.0, // 示例值
+    cooldownRounds: 2, // 示例值
+    mpCost: 15, // 示例值
+    applyBuffs: []
+  },
+  {
+    id: "chaos_devour",
+    name: "混沌吞噬占位",
+    description: "占位符技能 - 释放混沌之力吞噬目标，造成巨大伤害或即死效果。",
+    type: SKILL_TYPES.MAGICAL,
+    icon: "fa-hurricane", // 使用 Font Awesome 6 Free 图标
+    mode: SKILL_MODES.ACTIVE,
+    targetType: SKILL_TARGET_TYPES.SINGLE,
+    attackDistance: 2, // 示例值
+    damage: 2.5, // 示例值，或特殊效果逻辑
+    element: ELEMENT_TYPES.CHAOS, // 假设存在 CHAOS 元素类型，若无则移除或替换
+    cooldownRounds: 5, // 示例值
+    mpCost: 40, // 示例值
+    applyBuffs: [{ buffId: "devoured_placeholder", level: 1, chance: 0.1 }]
+  }
 ];
 
 // Helper function for active skillSet

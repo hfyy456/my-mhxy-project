@@ -16,6 +16,7 @@ import mapReducer from '@/store/slices/mapSlice';
 import npcReducer from '@/store/slices/npcSlice';
 import formationReducer from '@/store/slices/formationSlice';
 import battleReducer from '@/store/slices/battleSlice';
+import towerReducer from '@/store/slices/towerSlice';
 
 const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ const store = configureStore({
     npcs: npcReducer,
     formation: formationReducer,
     battle: battleReducer,
+    tower: towerReducer,
   },
 });
 

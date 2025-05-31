@@ -541,6 +541,57 @@ export const passiveSkillConfig = [
     triggerBuffs: [
       { buffId: "elemental_harmony", level: 1, target: "self", chance: 0.8, duration: 2 }
     ]
+  },
+  {
+    id: "magic_defense",
+    name: "魔法防御占位",
+    description: "占位符技能 - 减少受到的法术伤害。",
+    type: SKILL_TYPES.DEFENSIVE,
+    icon: "fa-shield-alt",
+    mode: SKILL_MODES.PASSIVE,
+    targetType: SKILL_TARGET_TYPES.NONE,
+    timing: PASSIVE_SKILL_TIMING.ON_MAGICAL_DAMAGE,
+    magicResistance: 0.1, // 示例值
+    permanentBuffs: [{ buffId: "magic_defense_placeholder", level: 1, target: "self" }]
+  },
+  {
+    id: "turtle_shell",
+    name: "龟甲术占位",
+    description: "占位符技能 - 大幅提升物理和法术防御力。",
+    type: SKILL_TYPES.DEFENSIVE,
+    icon: "fa-shield-halved",
+    mode: SKILL_MODES.PASSIVE,
+    targetType: SKILL_TARGET_TYPES.NONE,
+    timing: PASSIVE_SKILL_TIMING.ALWAYS,
+    defenseBonus: 0.15, // 示例值
+    magicResistance: 0.15, // 示例值
+    permanentBuffs: [{ buffId: "turtle_shell_placeholder", level: 1, target: "self" }]
+  },
+  {
+    id: "moonlight_power",
+    name: "月华之力占位",
+    description: "占位符技能 - 提升自身某种属性或提供持续恢复。",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-moon",
+    mode: SKILL_MODES.PASSIVE,
+    targetType: SKILL_TARGET_TYPES.NONE,
+    timing: PASSIVE_SKILL_TIMING.ALWAYS,
+    // Placeholder effect, e.g., mana regeneration
+    manaRecovery: 0.05, // 示例值
+    permanentBuffs: [{ buffId: "moonlight_power_placeholder", level: 1, target: "self" }]
+  },
+  {
+    id: "omniscience",
+    name: "全知占位",
+    description: "占位符技能 - 拥有洞察敌人信息或特殊战场感知能力。",
+    type: SKILL_TYPES.SUPPORT,
+    icon: "fa-brain",
+    mode: SKILL_MODES.PASSIVE,
+    targetType: SKILL_TARGET_TYPES.NONE,
+    timing: PASSIVE_SKILL_TIMING.ALWAYS,
+    // Placeholder effect, e.g., increased accuracy or crit chance
+    accuracyBonus: 0.1, // 示例值
+    permanentBuffs: [{ buffId: "omniscience_placeholder", level: 1, target: "self" }]
   }
 ];
 

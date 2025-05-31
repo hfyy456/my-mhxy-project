@@ -1,9 +1,15 @@
 {
   "name": "my-mhxy-project",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "main": "electron/main.js",
+  "homepage": "./",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev:vite": "vite",
+    "build:vite": "vite build",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "build:electron": "npm run build:vite && cross-env NODE_ENV=production electron-builder",
+    "start": "cross-env NODE_ENV=production electron .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -29,10 +35,34 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "electron": "^36.3.1",
     "electron-builder": "^26.0.12",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.mhxy.game",
+    "productName": "梦幻西游单机版",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

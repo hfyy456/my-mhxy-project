@@ -567,15 +567,6 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                           className={`fa-solid ${iconToDisplay} text-4xl text-${colorForSkill}`}
                         ></i>
                       </div>
-                      <div
-                        className={`text-xs text-center text-gray-200 relative top-3 `}
-                      >
-                        <span
-                          className={`text-xs text-center text-gray-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full`}
-                        >
-                          {skillInfo.name}
-                        </span>
-                      </div>
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs bg-slate-800 text-white text-xs rounded-md py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none group-hover:pointer-events-auto shadow-lg border border-${colorForSkill} border-opacity-50">
                         <div className="flex items-center gap-2 mb-1.5">
                           <i className={`fa-solid ${iconToDisplay} text-${colorForSkill} text-lg`}></i>

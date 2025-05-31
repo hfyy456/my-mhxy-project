@@ -8,7 +8,7 @@ import React from 'react';
 
 const LoadingScreen = ({ progress = 0, message = "正在加载游戏资源..." }) => {
   return (
-    <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-50">
+    <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center z-50">
       {/* 顶部装饰 */}
       <div className="w-full h-8 bg-gradient-to-r from-purple-500/20 via-purple-600/20 to-purple-500/20"></div>
       

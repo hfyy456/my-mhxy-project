@@ -511,7 +511,7 @@ const BattleScreen = () => {
   }
 
   return (
-    <div className="relative w-full h-screen bg-gray-900 text-white font-sans overflow-hidden">
+    <div className="relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
       {/* 战斗动画层 - 绝对定位在最上层 */}
       <BattleAnimations />
       

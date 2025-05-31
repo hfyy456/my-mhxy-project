@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-21 02:52:59
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 20:02:03
+ * @LastEditTime: 2025-06-01 04:12:41
  */
 import React, {
   useState,
@@ -621,7 +621,11 @@ const GameMap = ({
   return (
     <div
       ref={mapContainerRef}
-      className={`w-full h-screen bg-slate-900 flex flex-col items-center justify-center p-4 select-none overflow-hidden relative cursor-auto`}
+      className={`w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col items-center justify-center p-4 select-none overflow-hidden relative cursor-auto`}
+      style={{
+        backgroundImage: `url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><path d="M0 0L100 100M100 0L0 100" stroke="white" stroke-width="0.5"/></svg>')`,
+        boxShadow: 'inset 0 0 50px rgba(0, 0, 0, 0.5)'
+      }}
       tabIndex={0}
     >
       {/* 注释掉或移除这个左上角的信息块以避免与 TileInfoPanel 重叠 */}
@@ -645,11 +649,15 @@ const GameMap = ({
         </div>
       </div> */}
 
-      <div className="text-center mb-4 text-2xl text-slate-200 font-bold tracking-wider">
-        {WORLD_REGIONS[currentRegionId]?.name || "游戏地图"} 
-        <span className="text-sm ml-2 text-slate-400">
-          ({WORLD_REGIONS[currentRegionId]?.description || ""})
-        </span>
+      <div className="text-center mb-4 relative">
+        <div className="inline-block px-8 py-2 bg-gradient-to-r from-amber-700/80 via-yellow-500/80 to-amber-700/80 rounded-lg border-2 border-yellow-300/70 shadow-lg">
+          <h2 className="text-2xl text-yellow-100 font-bold tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+            {WORLD_REGIONS[currentRegionId]?.name || "游戏地图"}
+          </h2>
+          <div className="text-sm text-yellow-200/90 mt-1">
+            {WORLD_REGIONS[currentRegionId]?.description || ""}
+          </div>
+        </div>
       </div>
 
       {mapContainerRef.current && calculatedCellSize > 0 && (
@@ -699,62 +707,101 @@ const GameMap = ({
       <div className="absolute top-4 right-4 z-20">
         <button
           onClick={handleOpenWorldMap}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
+          className="bg-gradient-to-b from-indigo-500 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white py-2 px-4 rounded-lg border border-indigo-300 shadow-lg transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+          style={{
+            boxShadow: '0 0 10px rgba(79, 70, 229, 0.5)',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}
         >
           <i className="fas fa-globe"></i> 世界地图
         </button>
       </div>
 
       <div className="absolute bottom-4 right-4 flex flex-col gap-3 z-20">
-        <button
-          onClick={onOpenSummonSystem}
-          className="bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-dragon"></i> 召唤
-        </button>
-        <button
-          onClick={onOpenIncubator}
-          className="bg-yellow-500 hover:bg-yellow-400 text-slate-800 py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-egg"></i> 孵化器
-        </button>
-        <button
-          onClick={onOpenPlayerInfo}
-          className="bg-blue-500 hover:bg-blue-400 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-user"></i> 角色
-        </button>
-        <button
-          onClick={onOpenInventory}
-          className="bg-orange-500 hover:bg-orange-400 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-briefcase"></i> 背包
-        </button>
-        <button
-          onClick={onOpenQuestLog}
-          className="bg-teal-500 hover:bg-teal-400 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-scroll"></i> 任务
-        </button>
-        <button
-          onClick={onOpenMinimap}
-          className="bg-lime-500 hover:bg-lime-400 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-map-marked-alt"></i> 小地图
-        </button>
-        <button
-          onClick={onOpenSettings}
-          className="bg-slate-600 hover:bg-slate-500 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
-        >
-          <i className="fas fa-cog"></i> 设置
-        </button>
+        {/* 梦幻西游风格的菜单按钮组 */}
+        <div className="bg-gradient-to-r from-slate-800/80 to-slate-900/80 p-3 rounded-lg border border-slate-600/50 shadow-xl">
+          <button
+            onClick={onOpenSummonSystem}
+            className="w-full mb-2 bg-gradient-to-b from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 text-white py-2 px-4 rounded-lg border border-purple-300/50 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(168, 85, 247, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-dragon"></i> 召唤兽
+          </button>
+          <button
+            onClick={onOpenIncubator}
+            className="w-full mb-2 bg-gradient-to-b from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-800 py-2 px-4 rounded-lg border border-yellow-300/70 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(251, 191, 36, 0.4)',
+              textShadow: '0 1px 1px rgba(255, 255, 255, 0.3)'
+            }}
+          >
+            <i className="fas fa-egg"></i> 孵化器
+          </button>
+          <button
+            onClick={onOpenPlayerInfo}
+            className="w-full mb-2 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white py-2 px-4 rounded-lg border border-blue-300/50 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-user"></i> 角色
+          </button>
+          <button
+            onClick={onOpenInventory}
+            className="w-full mb-2 bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-400 hover:to-orange-600 text-white py-2 px-4 rounded-lg border border-orange-300/50 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(249, 115, 22, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-briefcase"></i> 背包
+          </button>
+          <button
+            onClick={onOpenQuestLog}
+            className="w-full mb-2 bg-gradient-to-b from-teal-500 to-teal-700 hover:from-teal-400 hover:to-teal-600 text-white py-2 px-4 rounded-lg border border-teal-300/50 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(20, 184, 166, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-scroll"></i> 任务
+          </button>
+          <button
+            onClick={onOpenMinimap}
+            className="w-full mb-2 bg-gradient-to-b from-lime-500 to-lime-700 hover:from-lime-400 hover:to-lime-600 text-white py-2 px-4 rounded-lg border border-lime-300/50 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(132, 204, 22, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-map-marked-alt"></i> 小地图
+          </button>
+          <button
+            onClick={onOpenSettings}
+            className="w-full bg-gradient-to-b from-slate-600 to-slate-800 hover:from-slate-500 hover:to-slate-700 text-white py-2 px-4 rounded-lg border border-slate-400/30 shadow-md transition-all duration-150 text-sm flex items-center gap-2 font-medium"
+            style={{
+              boxShadow: '0 0 8px rgba(100, 116, 139, 0.4)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <i className="fas fa-cog"></i> 设置
+          </button>
+        </div>
       </div>
       
-      {/* 左侧信息面板 */}
-      <TileInfoPanel 
-        showToast={showToast} 
-        onOpenNpcPanel={onOpenNpcPanel} // 传递给 TileInfoPanel
-      />
+      {/* 左侧信息面板 - 梦幻西游风格 */}
+      <div className="absolute left-4 top-4 z-20">
+        <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-1 rounded-lg border border-slate-600/60 shadow-xl">
+          <TileInfoPanel 
+            showToast={showToast} 
+            onOpenNpcPanel={onOpenNpcPanel}
+          />
+        </div>
+      </div>
 
       {/* 世界地图模态框 */}
       <WorldMapModal 

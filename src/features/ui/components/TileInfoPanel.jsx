@@ -18,9 +18,14 @@ const TileInfoPanel = ({ showToast, onOpenNpcPanel }) => {
 
   if (!selectedCoords || !currentMapData || !currentMapData.grid) {
     return (
-      <div className="w-64 bg-slate-800 p-4 rounded-lg shadow-xl text-slate-300 fixed top-1/2 left-4 transform -translate-y-1/2">
-        <h3 className="text-lg font-bold text-slate-100 mb-3 border-b border-slate-700 pb-2">地块信息</h3>
-        <p className="text-sm">请在地图上选择一个地块查看详情。</p>
+      <div className="w-64 p-1">
+        <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-3 rounded-lg border border-amber-600/30 shadow-xl">
+          <h3 className="text-lg font-bold text-amber-100 mb-3 border-b border-amber-600/30 pb-2 text-center">
+            <i className="fas fa-map-marker-alt mr-2 text-amber-400"></i>
+            地块信息
+          </h3>
+          <p className="text-sm text-amber-200/80">请在地图上选择一个地块查看详情。</p>
+        </div>
       </div>
     );
   }
@@ -30,9 +35,14 @@ const TileInfoPanel = ({ showToast, onOpenNpcPanel }) => {
 
   if (!cellData) {
     return (
-      <div className="w-64 bg-slate-800 p-4 rounded-lg shadow-xl text-slate-300 fixed top-1/2 left-4 transform -translate-y-1/2">
-        <h3 className="text-lg font-bold text-slate-100 mb-3 border-b border-slate-700 pb-2">地块信息</h3>
-        <p className="text-sm text-red-400">无法获取选中地块的数据。</p>
+      <div className="w-64 p-1">
+        <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-3 rounded-lg border border-amber-600/30 shadow-xl">
+          <h3 className="text-lg font-bold text-amber-100 mb-3 border-b border-amber-600/30 pb-2 text-center">
+            <i className="fas fa-map-marker-alt mr-2 text-amber-400"></i>
+            地块信息
+          </h3>
+          <p className="text-sm text-red-400">无法获取选中地块的数据。</p>
+        </div>
       </div>
     );
   }
@@ -55,39 +65,68 @@ const TileInfoPanel = ({ showToast, onOpenNpcPanel }) => {
   };
 
   return (
-    <div className="w-64 bg-slate-800 p-4 rounded-lg shadow-xl text-slate-300 fixed top-1/2 left-4 transform -translate-y-1/2 flex flex-col space-y-3">
-      <h3 className="text-lg font-bold text-slate-100 mb-2 border-b border-slate-700 pb-2">地块信息</h3>
-      
-      <div>
-        <span className="font-semibold text-slate-400">坐标:</span> ({row}, {col})
-      </div>
-      <div>
-        <span className="font-semibold text-slate-400">类型:</span> 
-        <span style={{ color: cellTypeInfo.color, marginLeft: '0.25rem', padding: '0.1rem 0.3rem', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '0.25rem'}}>
-          {cellTypeInfo.name}
-        </span>
-      </div>
+    <div className="w-64 p-1">
+      <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-3 rounded-lg border border-amber-600/30 shadow-xl flex flex-col space-y-3">
+        <h3 className="text-lg font-bold text-amber-100 mb-2 border-b border-amber-600/30 pb-2 text-center">
+          <i className="fas fa-map-marker-alt mr-2 text-amber-400"></i>
+          地块信息
+        </h3>
+        
+        <div className="bg-gradient-to-r from-slate-700/50 to-slate-800/50 p-2 rounded border border-slate-600/30">
+          <div className="mb-1">
+            <span className="font-semibold text-amber-200/90">坐标:</span> 
+            <span className="text-amber-100">({row}, {col})</span>
+          </div>
+          <div>
+            <span className="font-semibold text-amber-200/90">类型:</span> 
+            <span style={{ 
+              color: cellTypeInfo.color, 
+              marginLeft: '0.25rem', 
+              padding: '0.1rem 0.5rem', 
+              backgroundColor: 'rgba(255,255,255,0.1)', 
+              borderRadius: '0.25rem',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+            }}>
+              {cellTypeInfo.name}
+            </span>
+          </div>
+        </div>
 
       {content && (
-        <div className="border-t border-slate-700 pt-3 mt-2">
-          <h4 className="text-md font-bold text-slate-100 mb-2">内容信息</h4>
+        <div className="pt-2 mt-1">
+          <h4 className="text-md font-bold text-amber-100 mb-2 text-center bg-gradient-to-r from-amber-800/30 to-amber-700/30 py-1 rounded border-y border-amber-600/30">
+            <i className="fas fa-info-circle mr-2 text-amber-400"></i>
+            内容信息
+          </h4>
           {content.type === TILE_CONTENT_TYPES.PORTAL && (
-            <div>
-              <p><span className="font-semibold text-slate-400">传送门:</span> {content.label || '未命名传送门'}</p>
+            <div className="bg-gradient-to-r from-slate-700/50 to-slate-800/50 p-2 rounded border border-slate-600/30">
+              <p>
+                <span className="font-semibold text-amber-200/90">传送门:</span> 
+                <span className="text-amber-100">{content.label || '未命名传送门'}</span>
+              </p>
               <button 
                 onClick={handlePortalTravel}
-                className="mt-2 w-full bg-purple-600 hover:bg-purple-500 text-white py-2 px-3 rounded-md text-sm transition-colors duration-150 flex items-center justify-center">
+                className="mt-3 w-full bg-gradient-to-b from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 text-white py-2 px-3 rounded-lg border border-purple-300/30 shadow-md text-sm transition-all duration-150 flex items-center justify-center font-medium"
+                style={{
+                  boxShadow: '0 0 8px rgba(168, 85, 247, 0.3)',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+                }}
+              >
                 <i className="fas fa-dungeon mr-2"></i>传 送
               </button>
             </div>
           )}
           {content.type === TILE_CONTENT_TYPES.NPC && npcConfig[content.id] && (
-            <div>
+            <div className="bg-gradient-to-r from-slate-700/50 to-slate-800/50 p-2 rounded border border-slate-600/30">
               <p>
-                <span className="font-semibold text-slate-400">NPC:</span> 
+                <span className="font-semibold text-amber-200/90">NPC:</span> 
                 <button 
                   onClick={() => onOpenNpcPanel(content.id)} 
-                  className="ml-1 text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                  className="ml-1 text-sky-300 hover:text-sky-200 underline cursor-pointer font-medium"
+                  style={{
+                    textShadow: '0 0 5px rgba(56, 189, 248, 0.5)'
+                  }}
                 >
                   {npcConfig[content.id].name || '未知NPC'}
                 </button>
@@ -103,15 +142,21 @@ const TileInfoPanel = ({ showToast, onOpenNpcPanel }) => {
           )}
           {/* Future content types like MONSTER, RESOURCE can be added here */} 
           {content.type !== TILE_CONTENT_TYPES.PORTAL && content.type !== TILE_CONTENT_TYPES.NPC && (
-            <p><span className="font-semibold text-slate-400">其他:</span> {content.id || content.type}</p>
+            <div className="bg-gradient-to-r from-slate-700/50 to-slate-800/50 p-2 rounded border border-slate-600/30">
+              <p><span className="font-semibold text-amber-200/90">其他:</span> <span className="text-amber-100">{content.id || content.type}</span></p>
+            </div>
           )}
         </div>
       )}
       {!content && (
-         <p className="text-sm text-slate-500 italic mt-2 pt-3 border-t border-slate-700">该地块没有可交互内容。</p>
+         <p className="text-sm text-amber-200/60 italic mt-2 pt-2 text-center bg-gradient-to-r from-slate-700/30 to-slate-800/30 p-2 rounded border border-slate-600/20">
+           <i className="fas fa-info-circle mr-1 opacity-70"></i>
+           该地块没有可交互内容
+         </p>
       )}
+      </div>
     </div>
   );
 };
 
-export default TileInfoPanel; 
+export default TileInfoPanel;

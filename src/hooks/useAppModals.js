@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentSummon } from "@/store/slices/summonSlice";
 import { useCurrentSummon, useSummons } from "@/store/reduxSetup";
+import { checkAndResetDailyData } from "@/store/slices/towerSlice";
 
 export const useAppModals = () => {
   const dispatch = useDispatch();
@@ -18,6 +19,7 @@ export const useAppModals = () => {
   const [isNpcPanelOpen, setIsNpcPanelOpen] = useState(false);
   const [selectedNpcId, setSelectedNpcId] = useState(null);
   const [isFormationModalOpen, setIsFormationModalOpen] = useState(false);
+  const [isTowerModalOpen, setIsTowerModalOpen] = useState(false);
 
   const openSummonModal = useCallback(() => {
     if (summons.length > 0) {
@@ -64,6 +66,13 @@ export const useAppModals = () => {
   const openFormationModal = useCallback(() => setIsFormationModalOpen(true), []);
   const closeFormationModal = useCallback(() => setIsFormationModalOpen(false), []);
 
+  const openTowerModal = useCallback(() => {
+    // 检查并重置每日数据
+    dispatch(checkAndResetDailyData());
+    setIsTowerModalOpen(true);
+  }, [dispatch]);
+  const closeTowerModal = useCallback(() => setIsTowerModalOpen(false), []);
+
   return {
     isSummonModalOpen,
     openSummonModal,
@@ -93,5 +102,8 @@ export const useAppModals = () => {
     isFormationModalOpen,
     openFormationModal,
     closeFormationModal,
+    isTowerModalOpen,
+    openTowerModal,
+    closeTowerModal,
   };
 }; 

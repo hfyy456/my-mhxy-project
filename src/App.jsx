@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import store from "@/store"; // 导入store以便获取用户阵型数据
 
+// 导入自定义样式
+import "@/styles/customScrollbar.css";
+
 // REMOVING global PixiJS and @pixi/react imports for extend
 // import { extend } from '@pixi/react';
 // import { Container as PixiContainer, Sprite as PixiSprite, Graphics as PixiGraphicsOriginal } from 'pixi.js'; 
@@ -51,6 +54,9 @@ import FormationSetup from "@/features/formation/components/FormationSetup";
 import BattleScreen from "@/features/battle/components/BattleScreen";
 import { selectIsBattleActive } from "@/store/slices/battleSlice";
 import { selectAllSummons } from "@/store/slices/summonSlice";
+import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
+import TowerSystem from "@/features/tower/components/TowerSystem";
+import TowerEntry from "@/features/tower/components/TowerEntry";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -87,6 +93,9 @@ const App = () => {
     isFormationModalOpen,
     openFormationModal,
     closeFormationModal,
+    isTowerModalOpen,
+    openTowerModal,
+    closeTowerModal,
   } = useAppModals();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -158,6 +167,7 @@ const App = () => {
   const GameActionBar = () => (
     <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '5px' }}>
       <button onClick={openFormationModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#555', border: 'none', borderRadius: '3px' }}>阵型</button>
+      <button onClick={openTowerModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#6b46c1', border: 'none', borderRadius: '3px' }}>封妖塔</button>
       {/* Add other action buttons here */}
     </div>
   );
@@ -166,10 +176,25 @@ const App = () => {
     <div
       style={{
         position: "relative",
-        minHeight: "100vh",
+        width: "100%",
+        height: "100vh", // 限制高度为视口高度
+        overflow: "hidden", // 防止滚动条出现
         backgroundColor: "#0f172a", // Background for the whole app
+        display: "flex",
+        flexDirection: "column"
       }}
     >
+      {/* 自定义标题栏 */}
+      <CustomTitleBar />
+      
+      {/* 游戏内容区 */}
+      <div 
+        style={{
+          flex: 1,
+          position: "relative",
+          overflow: "hidden"
+        }}
+      >
       {isLoading && (
         <LoadingScreen 
           progress={loadingProgress}
@@ -202,7 +227,7 @@ const App = () => {
             
             {/* 测试战斗按钮 */}
             {!isWorldMapOpen && !isBattleActive && (
-              <div className="absolute bottom-4 left-4 z-20">
+              <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
                 <button
                   onClick={() => {
                     // 导入并准备战斗数据
@@ -262,6 +287,10 @@ const App = () => {
                 >
                   <i className="fas fa-swords"></i> 测试战斗
                 </button>
+                
+                <div onClick={openTowerModal}>
+                  <TowerEntry onOpenTower={openTowerModal} />
+                </div>
               </div>
             )}
           </>
@@ -376,10 +405,23 @@ const App = () => {
           >
             <BattleScreen />
           </CommonModal>
+          
+          {/* 封妖塔模态框 */}
+          <CommonModal
+            isOpen={isTowerModalOpen}
+            onClose={closeTowerModal}
+            title={uiText.titles.towerModal || "封妖塔"}
+            maxWidthClass="max-w-5xl"
+            centerContent={false}
+            fullScreen={false}
+          >
+            <TowerSystem showToast={showResult} />
+          </CommonModal>
         </>
       )}
 
       <ToastContainer toasts={toasts} setToasts={setToasts} />
+      </div>
     </div>
   );
 };

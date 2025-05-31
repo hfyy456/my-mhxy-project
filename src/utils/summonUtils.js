@@ -99,6 +99,42 @@ export const getExperienceForLevel = (level) => {
 };
 
 /**
+ * 获取随机属性值
+ * @param {number} min - 最小值
+ * @param {number} max - 最大值
+ * @returns {number} 随机属性值
+ */
+const getRandomAttribute = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+/**
+ * 从正态分布中采样一个值
+ * 使用 Box-Muller transform
+ * @param {number} mean - 均值
+ * @param {number} stdDev - 标准差
+ * @returns {number} 采样值
+ */
+const sampleNormal = (mean, stdDev) => {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  // z is N(0,1). Scale and shift to N(mean, stdDev^2)
+  return z * stdDev + mean;
+};
+
+// Function to shuffle an array (Fisher-Yates shuffle)
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+/**
  * 生成新的召唤兽数据
  * @param {Object} params - 生成召唤兽所需的参数
  * @param {string} params.petId - 召唤兽的ID
@@ -123,6 +159,40 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
 
   const summonId = generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON);
 
+  let finalSkillSet = [];
+
+  // 1. 添加必带技能
+  if (petData.guaranteedInitialSkills && Array.isArray(petData.guaranteedInitialSkills)) {
+    finalSkillSet = [...petData.guaranteedInitialSkills];
+  }
+
+  // 2. 从技能池中按正态分布选择额外技能
+  if (petData.initialSkillPool && Array.isArray(petData.initialSkillPool) && petData.initialSkillPool.length > 0) {
+    const mean = typeof petData.initialSkillCountMean === 'number' ? petData.initialSkillCountMean : 1;
+    const stdDev = typeof petData.initialSkillCountStdDev === 'number' ? petData.initialSkillCountStdDev : 0.5;
+    
+    // 创建一个候选技能池，排除已在 finalSkillSet 中的技能 (必带技能)
+    const candidateSkillPool = petData.initialSkillPool.filter(skill => !finalSkillSet.includes(skill));
+
+    if (candidateSkillPool.length > 0) {
+      let numSkillsToAssign = Math.round(sampleNormal(mean, stdDev));
+      numSkillsToAssign = Math.max(0, numSkillsToAssign); // 确保非负
+      // 确保不超过候选技能池大小
+      numSkillsToAssign = Math.min(numSkillsToAssign, candidateSkillPool.length); 
+
+      if (numSkillsToAssign > 0) {
+        const shuffledPool = shuffleArray(candidateSkillPool); // 打乱候选技能池
+        const newSkills = shuffledPool.slice(0, numSkillsToAssign);
+        finalSkillSet = [...finalSkillSet, ...newSkills];
+      }
+    }
+  } else if (!petData.guaranteedInitialSkills && petData.initialSkills && Array.isArray(petData.initialSkills)) {
+    // 回退逻辑: 如果没有任何必带技能或新技能池配置，但有旧的 initialSkills 配置
+    finalSkillSet = petData.initialSkills;
+  }
+  // 确保最终技能列表中的技能是唯一的 (尽管上面的逻辑试图避免重复)
+  finalSkillSet = [...new Set(finalSkillSet)];
+
   // 基础数据结构
   const newSummon = {
     id: summonId,
@@ -146,7 +216,7 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
       intelligence: getRandomAttribute(...petData.basicAttributeRanges.intelligence),
       luck: getRandomAttribute(...petData.basicAttributeRanges.luck)
     } : {},
-    skillSet: petData.initialSkills || [],
+    skillSet: finalSkillSet, // 使用新生成的技能列表
     equippedItemIds: {},
     race: petData.race,
     source: source,
@@ -163,15 +233,5 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
   }
 
   return newSummon;
-};
-
-/**
- * 获取随机属性值
- * @param {number} min - 最小值
- * @param {number} max - 最大值
- * @returns {number} 随机属性值
- */
-const getRandomAttribute = (min, max) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 

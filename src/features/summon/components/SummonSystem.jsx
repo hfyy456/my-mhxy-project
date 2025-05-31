@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:06:55
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-22 03:06:16
+ * @LastEditTime: 2025-06-01 04:41:39
  */
 import React, { useEffect, useCallback, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -327,57 +327,68 @@ const SummonSystem = ({ toasts, setToasts }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <div className="flex-grow grid grid-cols-1 md:grid-cols-6 gap-4 p-4 overflow-y-auto">
-        <div className="md:col-span-1 flex flex-col gap-2">
+    <div className="w-full h-full flex flex-col summon-system-compact relative">
+      {/* 装饰性角落元素 */}
+      <div className="decorative-corner top-left"></div>
+      <div className="decorative-corner top-right"></div>
+      <div className="decorative-corner bottom-left"></div>
+      <div className="decorative-corner bottom-right"></div>
+      <div className="flex-grow grid grid-cols-1 md:grid-cols-6 gap-3 p-3 overflow-y-auto hidden-scrollbar">
+        <div className="md:col-span-1 flex flex-col gap-1.5">
           <button 
             onClick={handleRefineMonster} 
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+            style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
-            炼妖 (洗宠)
+            <i className="fas fa-magic mr-1.5"></i>炼妖 (洗宠)
           </button>
           
           <button 
             onClick={() => setIsFusionModalOpen(true)}
-            className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={summonsList.length < 2}
             title={summonsList.length < 2 ? "需要至少两个召唤兽才能合成" : "合成两个召唤兽"}
+            style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
-            合成
+            <i className="fas fa-mortar-pestle mr-1.5"></i>合成
           </button>
           
           {currentSummon && (
             <button 
               onClick={() => setIsHistoryModalOpen(true)} 
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+              className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+              style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
             >
-              培养历史
+              <i className="fas fa-history mr-1.5"></i>培养历史
             </button>
           )}
           <button 
             onClick={() => setIsPetCatalogModalOpen(true)} 
-            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm"
+            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+            style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
-            召唤兽图鉴
+            <i className="fas fa-book mr-1.5"></i>召唤兽图鉴
           </button>
 
-          <div className="bg-slate-800/70 p-2 rounded-lg shadow mt-2 flex-grow flex flex-col min-h-0">
-            <h3 className="text-sm font-semibold text-slate-300 mb-2 px-1 flex-shrink-0">
-              我的召唤兽 ({summonsList.length}/{maxSummons})
+          <div className="bg-gradient-to-b from-slate-800/90 to-slate-700/90 p-1.5 rounded-lg shadow-md mt-2 flex-grow flex flex-col min-h-0 border border-amber-700/30">
+            <h3 className="text-sm font-semibold text-amber-300 mb-1.5 px-1 flex-shrink-0 border-b border-amber-700/30 pb-1 flex items-center" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
+              <i className="fas fa-dragon text-amber-400 mr-1.5 text-xs"></i>
+              召唤兽 <span className="ml-1 text-amber-200">({summonsList.length}/{maxSummons})</span>
             </h3>
-            <div className="overflow-y-auto space-y-1 pr-1 flex-grow min-h-0">
+            <div className="overflow-y-auto space-y-1 pr-1 flex-grow min-h-0 hidden-scrollbar">
               {summonsList.length > 0 ? (
                 summonsList.map(pet => (
                   <button
                     key={pet.id}
                     onClick={() => dispatch(setCurrentSummon(pet.id))}
-                    className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors duration-150 
+                    className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-all duration-150 flex items-center 
                                 ${currentSummon?.id === pet.id 
-                                  ? 'bg-blue-600 text-white font-medium shadow-md' 
-                                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100'}`}
+                                  ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white font-medium shadow-md border border-amber-500/50' 
+                                  : 'bg-slate-700/80 hover:bg-slate-600/90 text-slate-300 hover:text-amber-200 border border-slate-600/50 hover:border-amber-700/30'}`}
                     title={pet.name}
                   >
-                    {pet.nickname || pet.name}
+                    <i className="fas fa-paw text-amber-400/80 mr-1.5 text-[10px]"></i>
+                    <span className="truncate">{pet.nickname || pet.name}</span>
                   </button>
                 ))
               ) : (
@@ -387,7 +398,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           </div>
         </div>
 
-        <div className="md:col-span-5 bg-slate-700/50 p-4 rounded-lg shadow-inner overflow-y-auto min-h-[450px]">
+        <div className="md:col-span-5 bg-gradient-to-b from-slate-800/90 to-slate-700/90 p-3 rounded-lg shadow-inner overflow-y-auto min-h-[450px] hidden-scrollbar border border-amber-700/30" style={{ boxShadow: 'inset 0 0 15px rgba(0, 0, 0, 0.3)' }}>
           {currentSummon ? (
             <SummonInfo
               summon={currentSummon}
