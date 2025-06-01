@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import {
-  petConfig,
+  summonConfig,
   qualityConfig,
   derivedAttributeConfig,
   STANDARD_EQUIPMENT_SLOTS,
@@ -13,7 +13,7 @@ import {
   // skillTypeConfig // Not directly used in reducers here, but could be for UI selectors
 } from '@/config/config'; // Assuming a merged config
 // import { equipmentConfig } from '@/config/equipmentConfig'; // Not directly used in this slice's reducers after items are pure data
-import { getRaceBonus } from '@/config/pet/raceConfig'; // 引入种族加成函数
+import { getRaceBonus } from '@/config/summon/raceConfig'; // 引入种族加成函数
 import { SKILL_MODES } from "@/config/enumConfig";
 // REMOVED: import { setItemStatus } from './itemSlice';
 import { playerBaseConfig } from '@/config/character/playerConfig';
@@ -121,8 +121,8 @@ const summonSlice = createSlice({
     },
     addSummon: (state, action) => {
       const summonData = action.payload;
-      if (!summonData || !summonData.id || !petConfig[summonData.petId]) {
-        console.error('addSummon: Invalid summonData, missing ID, or missing petConfig entry for:', summonData.petId, summonData);
+      if (!summonData || !summonData.id || !summonConfig[summonData.summonSourceId]) {
+        console.error('addSummon: Invalid summonData, missing ID, or missing summonConfig entry for:', summonData.summonSourceId, summonData);
         state.error = 'Failed to add summon: Invalid data.';
         return;
       }
@@ -135,11 +135,11 @@ const summonSlice = createSlice({
         return;
       }
 
-      const petBaseConf = petConfig[summonData.petId];
+      const summonBaseConf = summonConfig[summonData.summonSourceId];
       const newSummon = {
         ...summonData, 
         experience: summonData.experience || 0,
-        potentialPoints: summonData.potentialPoints !== undefined ? summonData.potentialPoints : (summonData.level -1) * (petBaseConf?.potentialPointsPerLevel || 5),
+        potentialPoints: summonData.potentialPoints !== undefined ? summonData.potentialPoints : (summonData.level -1) * (summonBaseConf?.potentialPointsPerLevel || 5),
         allocatedPoints: summonData.allocatedPoints || { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
         derivedAttributes: {}, 
         equipmentContributions: {},
@@ -158,7 +158,7 @@ const summonSlice = createSlice({
       for(const attr in newSummon.allocatedPoints) {
             initialBasicWithAllocated[attr] = (initialBasicWithAllocated[attr] || 0) + newSummon.allocatedPoints[attr];
       }
-      const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
+      const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic, power } = calculateDerivedAttributes(
           initialBasicWithAllocated,
           {}, // Pass empty map for items initially
           newSummon.level,
@@ -167,6 +167,7 @@ const summonSlice = createSlice({
       state.allSummons[newSummon.id].derivedAttributes = derivedAttributes;
       state.allSummons[newSummon.id].equipmentContributions = equipmentContributions;
       state.allSummons[newSummon.id].equipmentBonusesToBasic = equipmentBonusesToBasic;
+      state.allSummons[newSummon.id].power = power;
     },
     
     _internalUpdateSummonCalculatedFields: (state, summonId, allCurrentlyEquippedItemsData = {}) => {
@@ -181,7 +182,7 @@ const summonSlice = createSlice({
             currentBasicAttributesWithPoints[attr] = (currentBasicAttributesWithPoints[attr] || 0) + summon.allocatedPoints[attr];
         }
 
-        const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
+        const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic, power } = calculateDerivedAttributes(
             currentBasicAttributesWithPoints,
             allCurrentlyEquippedItemsData,
             summon.level,
@@ -191,6 +192,7 @@ const summonSlice = createSlice({
         summon.equipmentContributions = equipmentContributions || {};
         summon.equipmentBonusesToBasic = equipmentBonusesToBasic || {};
         summon.experienceToNextLevel = getExperienceForLevel(summon.level); // Keep XpToNextLevel updated
+        summon.power = power;
     },
 
     addExperienceToSummon: (state, action) => {
@@ -198,18 +200,18 @@ const summonSlice = createSlice({
       const summon = state.allSummons[summonId];
       if (!summon) return;
       
-      // Attempt to get pet-specific config for potential points per level
-      const currentPetConfig = petConfig[summon.name];
-      const pointsToGainPerLevel = currentPetConfig?.potentialPointsPerLevel !== undefined 
-                                    ? currentPetConfig.potentialPointsPerLevel 
+      // Attempt to get summon-specific config for potential points per level
+      const currentSummonConfig = summonConfig[summon.name];
+      const pointsToGainPerLevel = currentSummonConfig?.potentialPointsPerLevel !== undefined 
+                                    ? currentSummonConfig.potentialPointsPerLevel 
                                     : POINTS_PER_LEVEL; // Fallback to global config
 
       let baseConfig = {}; // For attributeGrowth
       try {
-        // Assuming summon.baseConfig might be the petConfig entry for this summon, stored during addSummon
-        // Or, if summon.baseConfig is not reliably populated, use petConfig[summon.name]
-        const petBaseConfForGrowth = summon.baseConfig || currentPetConfig || {};
-        baseConfig = JSON.parse(JSON.stringify(petBaseConfForGrowth));
+        // Assuming summon.baseConfig might be the summonConfig entry for this summon, stored during addSummon
+        // Or, if summon.baseConfig is not reliably populated, use summonConfig[summon.name]
+        const summonBaseConfForGrowth = summon.baseConfig || currentSummonConfig || {};
+        baseConfig = JSON.parse(JSON.stringify(summonBaseConfForGrowth));
       } catch (e) { console.error("Error parsing baseConfig in addExperienceToSummon", e); }
 
       summon.experience = (summon.experience || 0) + experienceAmount;
@@ -423,7 +425,7 @@ const summonSlice = createSlice({
       }
 
       // 验证新召唤兽数据是否有效
-      if (!newSummon || !newSummon.id || !petConfig[newSummon.petId]) {
+      if (!newSummon || !newSummon.id || !summonConfig[newSummon.summonSourceId]) {
         state.error = '合成失败：新召唤兽数据无效';
         return;
       }
@@ -438,13 +440,13 @@ const summonSlice = createSlice({
       }
 
       // 获取父召唤兽的配置
-      const petBaseConf = petConfig[newSummon.petId];
+      const summonBaseConf = summonConfig[newSummon.summonSourceId];
       
       // 创建新的召唤兽
       const fusedSummon = {
         ...newSummon,
         experience: 0,
-        potentialPoints: newSummon.potentialPoints !== undefined ? newSummon.potentialPoints : (newSummon.level - 1) * (petBaseConf?.potentialPointsPerLevel || 5),
+        potentialPoints: newSummon.potentialPoints !== undefined ? newSummon.potentialPoints : (newSummon.level - 1) * (summonBaseConf?.potentialPointsPerLevel || 5),
         allocatedPoints: newSummon.allocatedPoints || { constitution: 0, strength: 0, agility: 0, intelligence: 0, luck: 0 },
         derivedAttributes: {},
         equipmentContributions: {},
@@ -479,7 +481,7 @@ const summonSlice = createSlice({
         initialBasicWithAllocated[attr] = (initialBasicWithAllocated[attr] || 0) + fusedSummon.allocatedPoints[attr];
       }
       
-      const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic } = calculateDerivedAttributes(
+      const { derivedAttributes, equipmentContributions, equipmentBonusesToBasic, power } = calculateDerivedAttributes(
         initialBasicWithAllocated,
         {}, // 初始时传入空装备映射
         fusedSummon.level,
@@ -489,6 +491,7 @@ const summonSlice = createSlice({
       state.allSummons[fusedSummon.id].derivedAttributes = derivedAttributes;
       state.allSummons[fusedSummon.id].equipmentContributions = equipmentContributions;
       state.allSummons[fusedSummon.id].equipmentBonusesToBasic = equipmentBonusesToBasic;
+      state.allSummons[fusedSummon.id].power = power;
     },
     
     setState: (state, action) => {

@@ -20,7 +20,7 @@ import {
 // 攻击距离为5时，第1排可以打到第6排
 
 // 宠物配置
-export const petConfig = {
+export const summonConfig = {
   ghost: {
     id: "ghost",
     name: "幽灵",
@@ -485,4 +485,62 @@ export const petConfig = {
     background:
       "地府中的生死簿掌管者，手持生死簿和朱笔，能够判断生死。在战斗中使用阴间法术，能够攻击敌人的灵魂，甚至可以短暂地将敌人传送到冥界中受苦。",
   },
+  thief: {
+    id: "thief",
+    name: "盗贼",
+    fiveElement: FIVE_ELEMENTS.METAL,
+    growthRates: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.03,
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.035,
+      [ATTRIBUTE_TYPES.AGILITY]: 0.04,
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.02,
+      [ATTRIBUTE_TYPES.LUCK]: 0.025,
+    },
+    type: PET_TYPES.PHYSICAL,
+    color: COLOR_TYPES.GREEN,
+    race: RACE_TYPES.SPIRIT,
+    attackRange: 2,
+    basicAttributeRanges: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: [90, 190],
+      [ATTRIBUTE_TYPES.STRENGTH]: [100, 200],
+      [ATTRIBUTE_TYPES.AGILITY]: [120, 220],
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: [50, 150],
+      [ATTRIBUTE_TYPES.LUCK]: [70, 170],
+    },
+    guaranteedInitialSkills: ["stealth"],
+    initialSkillPool: ["power_strike", "critical_strike", "agility_boost"],
+    initialSkillCountMean: 1,
+    initialSkillCountStdDev: 1,
+    background:
+      "游荡在城市阴影中的机会主义者，擅长隐匿和快速攻击。",
+  },
+  ruffian: {
+    id: "ruffian",
+    name: "恶霸",
+    fiveElement: FIVE_ELEMENTS.EARTH,
+    growthRates: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.04,
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.042,
+      [ATTRIBUTE_TYPES.AGILITY]: 0.025,
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.018,
+      [ATTRIBUTE_TYPES.LUCK]: 0.02,
+    },
+    type: PET_TYPES.PHYSICAL,
+    color: COLOR_TYPES.BROWN,
+    race: RACE_TYPES.WARRIOR,
+    attackRange: 2,
+    basicAttributeRanges: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
+      [ATTRIBUTE_TYPES.STRENGTH]: [130, 230],
+      [ATTRIBUTE_TYPES.AGILITY]: [70, 170],
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: [40, 140],
+      [ATTRIBUTE_TYPES.LUCK]: [60, 160],
+    },
+    guaranteedInitialSkills: ["power_strike"],
+    initialSkillPool: ["critical_strike", "defense_boost", "counter"],
+    initialSkillCountMean: 1,
+    initialSkillCountStdDev: 1,
+    background:
+      "横行街头的地痞流氓，依仗蛮力欺压弱小。",
+  }
 };

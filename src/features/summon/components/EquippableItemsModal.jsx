@@ -2,7 +2,7 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { selectAllItemsWithSummonInfo } from '@/store/slices/itemSlice';
 import { selectAllSummons } from '@/store/slices/summonSlice';
-import { petEquipmentConfig, equipmentQualityConfig } from '@/config/item/petEquipmentConfig';
+import { summonEquipmentConfig, equipmentQualityConfig } from '@/config/item/summonEquipmentConfig';
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from '@/config/ui/uiTextConfig';
 
 // Helper to format attribute values (similar to ItemTooltip)

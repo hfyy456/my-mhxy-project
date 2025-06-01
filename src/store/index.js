@@ -9,7 +9,7 @@ import summonReducer from '@/store/slices/summonSlice';
 import itemReducer from '@/store/slices/itemSlice';
 import inventoryReducer from '@/store/slices/inventorySlice';
 import incubatorReducer from '@/store/slices/incubatorSlice';
-import petCatalogReducer from '@/store/slices/petCatalogSlice';
+import summonCatalogReducer from '@/store/slices/summonCatalogSlice';
 import saveReducer from '@/store/slices/saveSlice';
 import questReducer from '@/store/slices/questSlice';
 import mapReducer from '@/store/slices/mapSlice';
@@ -17,14 +17,16 @@ import npcReducer from '@/store/slices/npcSlice';
 import formationReducer from '@/store/slices/formationSlice';
 import battleReducer from '@/store/slices/battleSlice';
 import towerReducer from '@/store/slices/towerSlice';
+import playerReducer from '@/store/slices/playerSlice'; // 导入 playerReducer
 
 const store = configureStore({
   reducer: {
+    player: playerReducer, // 注册 playerReducer
     summons: summonReducer,
     items: itemReducer,
     inventory: inventoryReducer,
     incubator: incubatorReducer,
-    petCatalog: petCatalogReducer,
+    summonCatalog: summonCatalogReducer,
     saves: saveReducer,
     quests: questReducer,
     map: mapReducer,

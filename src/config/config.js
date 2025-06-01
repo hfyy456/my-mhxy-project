@@ -2,16 +2,16 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:44:31
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-26 04:14:26
+ * @LastEditTime: 2025-06-02 05:21:05
  */
-import { petConfig } from "@/config/pet/petConfig";
+import { summonConfig } from "@/config/summon/summonConfig";
 import { skillConfig } from "@/config/skill/skillConfig";
 import { SKILL_TYPES, EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
 // 此处可继续导入其他拆分的配置文件
 
 // 合并所有配置，可根据实际需求修改合并方式
 export {
-  petConfig,
+  summonConfig,
   skillConfig,
   // 此处可继续添加其他配置
 };
@@ -41,7 +41,7 @@ export const qualityConfig = {
 
 // 衍生属性配置
 export const derivedAttributeConfig = {
-  hp: { attributes: ["constitution"], multiplier: 25 },
+  hp: { attributes: ["constitution"], multiplier: 15 },
   mp: { attributes: ["intelligence"], multiplier: 10 },
   physicalAttack: { attributes: ["strength"], multiplier: 1 },
   magicalAttack: { attributes: ["intelligence"], multiplier: 1 },
@@ -93,7 +93,7 @@ export const levelExperienceRequirements = [
 
 // 游戏核心设定常量
 export const MAX_LEVEL = 100; // 召唤兽最大等级
-export const POINTS_PER_LEVEL = 5; // 每升一级获得的潜力点 (注意: petConfig 中也可能有此设定，需协调)
+export const POINTS_PER_LEVEL = 5; // 每升一级获得的潜力点 (注意: summonConfig 中也可能有此设定，需协调)
 export const MAX_SKILLS = 12; // 召唤兽最大技能槽数量
 export const ACTIVE_SKILL_LIMIT = 2; // 最大可拥有主动技能数量
 

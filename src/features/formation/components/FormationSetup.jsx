@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectFormationGrid, setSummonInSlot, selectTotalSummonsInFormation } from '@/store/slices/formationSlice';
 import { useSummons, useSummonById } from '@/store/reduxSetup'; // Assuming useSummons provides array of summon objects
 import { FORMATION_ROWS, FORMATION_COLS } from '@/config/config';
-import { petConfig } from '@/config/pet/petConfig'; // To get summon names or images
+import { summonConfig } from '@/config/summon/summonConfig'; // To get summon names or images
 import { uiText } from '@/config/ui/uiTextConfig'; // <-- Import uiText
 import { TOAST_TYPES } from '@/config/enumConfig'; // Import TOAST_TYPES
 
@@ -63,7 +63,7 @@ const FormationSetup = (props) => {
     // Ensure allPlayerSummons is treated as an array here too if find is used
     const summon = summonDetailsCache[summonId] || (allPlayerSummons ? allPlayerSummons.find(s => s.id === summonId) : null);
     if (!summon) return { name: '未知召唤兽', id: summonId, level: 'N/A' }; // Added level here
-    const basePetInfo = petConfig[summon.petId];
+    const basePetInfo = summonConfig[summon.summonSourceId];
     return {
       id: summon.id, // Make sure to return id
       name: summon.nickname || basePetInfo?.name || '召唤兽',
@@ -349,8 +349,14 @@ const FormationSetup = (props) => {
                   ...styles.gridCell,
                   ...positionStyle, // Apply position-specific style
                   ...(isBeingDraggedOver ? styles.gridCellDraggingOver : {}),
+                  boxShadow: summonIdInCell ? '0 2px 8px rgba(0,0,0,0.18)' : '0 1px 2px rgba(0,0,0,0.08)',
+                  borderRadius: '14px',
+                  borderWidth: isBeingDraggedOver || currentCellItemIsDragged ? '2px' : '1px',
+                  borderColor: isBeingDraggedOver || currentCellItemIsDragged ? '#00bcd4' : (positionStyle.borderColor || '#777'),
+                  background: !summonIdInCell ? 'linear-gradient(135deg, #2d3748 60%, #4fd1c5 100%)' : positionStyle.backgroundColor,
+                  transition: 'all 0.18s',
                 }}
-                onClick={() => !draggedItem && handleGridSlotClick(rowIndex, colIndex)} // Prevent click during dnd
+                onClick={() => !draggedItem && handleGridSlotClick(rowIndex, colIndex)}
                 onDragOver={handleDragOver}
                 onDragEnter={(e) => handleDragEnter(e, rowIndex, colIndex)}
                 onDragLeave={handleDragLeave}
@@ -359,14 +365,35 @@ const FormationSetup = (props) => {
                 <div
                   style={{
                     ...styles.gridCellContent,
-                    cursor: summonIdInCell ? 'grab' : 'default',
+                    cursor: summonIdInCell ? 'grab' : 'pointer',
                     ...(currentCellItemIsDragged ? styles.draggingItem : {})
                   }}
-                  draggable={!!summonIdInCell} // Only draggable if there's a summon
+                  draggable={!!summonIdInCell}
                   onDragStart={(e) => summonIdInCell && handleDragStart(e, 'grid', summonInfo, rowIndex, colIndex)}
-                  onDragEnd={handleDragEnd} // Add drag end to grid items as well
+                  onDragEnd={handleDragEnd}
                 >
-                  {summonInfo.name}
+                  <div style={{width:'100%',height:'100%',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    {!summonIdInCell && (
+                      <div style={{textAlign:'center', color:'#b2f5ea', fontSize:'2.2em', opacity:0.7}}>
+                        <i className="fa fa-plus"></i>
+                        <div style={{fontSize:'0.9em', color:'#81e6d9'}}>空</div>
+                      </div>
+                    )}
+                    {summonIdInCell && (
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%'}}>
+                        <img src={summonConfig[summonInfo.id]?.icon || '/assets/summons/default.png'} alt="icon" style={{width:48,height:48,borderRadius:8,marginBottom:4,boxShadow:'0 1px 4px #0004'}} />
+                        <div style={{fontWeight:'bold',fontSize:'1.1em',color:'#fff',textShadow:'0 1px 2px #0008'}}>{summonInfo.name}</div>
+                        <div style={{fontSize:'0.9em',color:'#c3e6fc'}}>Lv.{summonInfo.level}</div>
+                        <button
+                          style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,0.5)',border:'none',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:2}}
+                          title="移除该召唤兽"
+                          onClick={e=>{e.stopPropagation();dispatch(setSummonInSlot({row:rowIndex,col:colIndex,summonId:null}));}}
+                        >
+                          <i className="fa fa-times" style={{color:'#fff',fontSize:12}}></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -380,9 +407,7 @@ const FormationSetup = (props) => {
         </p>
         {allPlayerSummons && allPlayerSummons.length > 0 ? (
           allPlayerSummons.map(summon => {
-            // Directly use summon.name and summon.level from the mapped allPlayerSummons array object
-            // getSummonDisplayInfo can still be used for items in the grid if needed, or for consistency
-            const displayName = summon.nickname || (petConfig[summon.petId] ? petConfig[summon.petId].name : '召唤兽');
+            const displayName = summon.nickname || (summonConfig[summon.summonSourceId] ? summonConfig[summon.summonSourceId].name : '召唤兽');
             const displayLevel = summon.level || 'N/A';
 
             const isSelected = selectedSummonId === summon.id;
@@ -393,10 +418,10 @@ const FormationSetup = (props) => {
             if (isInFormation && !isBeingDragged) {
                 listItemStyle = { ...listItemStyle, ...styles.summonListItemInFormation };
             }
-            if (isSelected && !isBeingDragged && !isInFormation) { // Only apply selected style if not in formation already (inFormation style takes precedence)
+            if (isSelected && !isBeingDragged && !isInFormation) {
                  listItemStyle = styles.selectedSummonListItem;
             }
-            if (isBeingDragged) { // Dragging style should override others
+            if (isBeingDragged) {
                 listItemStyle = {...styles.summonListItem, ...styles.draggingItem};
             }
 
@@ -405,8 +430,8 @@ const FormationSetup = (props) => {
                 key={summon.id}
                 style={listItemStyle}
                 onClick={() => handleSelectSummonFromList(summon.id)}
-                draggable={true} // All list items are draggable
-                onDragStart={(e) => handleDragStart(e, 'list', {id: summon.id, name: displayName, level: displayLevel })} // Pass necessary info for drag
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'list', {id: summon.id, name: displayName, level: displayLevel })}
                 onDragEnd={handleDragEnd}
               >
                 {displayName} ({uiText.labels.level || '等级:'} {displayLevel}) {isInFormation ? "(已上阵)" : ""}

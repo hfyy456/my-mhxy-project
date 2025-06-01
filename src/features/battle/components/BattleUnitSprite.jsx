@@ -279,9 +279,9 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
           if (elapsed >= duration) {
             setIsReceivingDamage(false);
             // 延迟隐藏伤害数字，让它完成动画
-            setTimeout(() => {
-              setShowDamageNumber(false);
-            }, 500);
+          //   setTimeout(() => {
+          // setShowDamageNumber(false);
+          //   }, 500);
             hitAnimInProgressRef.current = false;
             isAnimationInProgressRef.current = attackAnimInProgressRef.current || hitAnimInProgressRef.current;
             if (showDefendEffect) clearDefendEffect(); // Clear defend effect if it was shown

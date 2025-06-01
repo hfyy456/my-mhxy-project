@@ -7,7 +7,7 @@
 import React, { useEffect, useCallback, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SummonInfo from "./SummonInfo";
-import PetCatalog from "./PetCatalog";
+import SummonCatalog from "./SummonCatalog";
 import SummonList from "./SummonList";
 import HistoryModal from "../../history/components/HistoryModal";
 import EquippableItemsModal from "./EquippableItemsModal";
@@ -28,7 +28,7 @@ import {
 import { addItems, selectAllItemsArray, selectItemEquipInfo } from "../../../store/slices/itemSlice";
 import { addToInventory } from "../../../store/slices/inventorySlice";
 import { uiText } from "@/config/ui/uiTextConfig";
-import { petConfig } from "@/config/config";
+import { summonConfig } from "@/config/config";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import NicknameModal from "./NicknameModal";
 import { generateUniqueId } from "@/utils/idUtils";
@@ -49,8 +49,8 @@ const SummonSystem = ({ toasts, setToasts }) => {
     historyList,
     isHistoryModalOpen,
     setIsHistoryModalOpen,
-    isPetCatalogModalOpen,
-    setIsPetCatalogModalOpen,
+    isSummonCatalogModalOpen,
+    setIsSummonCatalogModalOpen,
   } = useSummonSystem(toasts, setToasts);
 
   const [isEquipmentSelectorOpen, setIsEquipmentSelectorOpen] = useState(false);
@@ -59,7 +59,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
   const [selectedSkillSlotIndex, setSelectedSkillSlotIndex] = useState(null);
   const [currentSkillForSlot, setCurrentSkillForSlot] = useState(null);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
-  const [selectedPetForNickname, setSelectedPetForNickname] = useState(null);
+  const [selectedSummonForNickname, setSelectedSummonForNickname] = useState(null);
   const [tempSummonData, setTempSummonData] = useState(null);
 
   const [showCrossEquipConfirm, setShowCrossEquipConfirm] = useState(false);
@@ -85,13 +85,13 @@ const SummonSystem = ({ toasts, setToasts }) => {
     setIsSkillEditorOpen(true);
   }, [currentSummon, setToasts]);
 
-  const handleOpenNicknameModal = useCallback((pet) => {
-    setSelectedPetForNickname(pet);
+  const handleOpenNicknameModal = useCallback((summon) => {
+    setSelectedSummonForNickname(summon);
     setIsNicknameModalOpen(true);
   }, []);
 
   const handleNicknameConfirm = useCallback((nickname) => {
-    if (selectedPetForNickname) {
+    if (selectedSummonForNickname) {
       if (tempSummonData) {
         const updatedSummonPayload = {
           ...tempSummonData.summonPayload,
@@ -103,19 +103,19 @@ const SummonSystem = ({ toasts, setToasts }) => {
         setTempSummonData(null);
       } else {
         dispatch(updateSummonNickname({ 
-          id: selectedPetForNickname.id, 
+          id: selectedSummonForNickname.id, 
           nickname 
         }));
       }
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
         type: "success",
-        message: `成功为${selectedPetForNickname.name}设置昵称：${nickname}`,
+        message: `成功为${selectedSummonForNickname.name}设置昵称：${nickname}`,
       }]);
     }
-    setSelectedPetForNickname(null);
+    setSelectedSummonForNickname(null);
     setIsNicknameModalOpen(false);
-  }, [selectedPetForNickname, tempSummonData, dispatch, setToasts]);
+  }, [selectedSummonForNickname, tempSummonData, dispatch, setToasts]);
 
   const handleRefineMonster = useCallback(async () => {
     const { refineMonster } = await import('../../../gameLogic');
@@ -135,9 +135,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
           dispatch(addToInventory({ itemId: item.id }));
         });
         if (result.requireNickname) {
-          setSelectedPetForNickname({
+          setSelectedSummonForNickname({
             ...result.newSummonPayload,
-            name: petConfig[result.newSummonPayload.petId]?.name || result.newSummonPayload.name
+            name: summonConfig[result.newSummonPayload.summonSourceId]?.name || result.newSummonPayload.name
           });
           setIsNicknameModalOpen(true);
           setTempSummonData({
@@ -182,7 +182,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
       // 显示成功提示
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
-        message: `合成成功！获得了新的召唤兽「${petConfig[newSummon.petId]?.name || '未知召唤兽'}」`,
+        message: `合成成功！获得了新的召唤兽「${summonConfig[newSummon.summonSourceId]?.name || '未知召唤兽'}」`,
         type: 'success'
       }]);
     } catch (error) {
@@ -363,7 +363,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
             </button>
           )}
           <button 
-            onClick={() => setIsPetCatalogModalOpen(true)} 
+            onClick={() => setIsSummonCatalogModalOpen(true)} 
             className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
@@ -377,18 +377,18 @@ const SummonSystem = ({ toasts, setToasts }) => {
             </h3>
             <div className="overflow-y-auto space-y-1 pr-1 flex-grow min-h-0 hidden-scrollbar">
               {summonsList.length > 0 ? (
-                summonsList.map(pet => (
+                summonsList.map(summon => (
                   <button
-                    key={pet.id}
-                    onClick={() => dispatch(setCurrentSummon(pet.id))}
+                    key={summon.id}
+                    onClick={() => dispatch(setCurrentSummon(summon.id))}
                     className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-all duration-150 flex items-center 
-                                ${currentSummon?.id === pet.id 
+                                ${currentSummon?.id === summon.id 
                                   ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white font-medium shadow-md border border-amber-500/50' 
                                   : 'bg-slate-700/80 hover:bg-slate-600/90 text-slate-300 hover:text-amber-200 border border-slate-600/50 hover:border-amber-700/30'}`}
-                    title={pet.name}
+                    title={summon.name}
                   >
                     <i className="fas fa-paw text-amber-400/80 mr-1.5 text-[10px]"></i>
-                    <span className="truncate">{pet.nickname || pet.name}</span>
+                    <span className="truncate">{summon.nickname || summon.name}</span>
                   </button>
                 ))
               ) : (
@@ -425,10 +425,10 @@ const SummonSystem = ({ toasts, setToasts }) => {
         />
       )}
 
-      {isPetCatalogModalOpen && (
-        <PetCatalog 
-          isOpen={isPetCatalogModalOpen} 
-          onClose={() => setIsPetCatalogModalOpen(false)} 
+      {isSummonCatalogModalOpen && (
+        <SummonCatalog 
+          isOpen={isSummonCatalogModalOpen} 
+          onClose={() => setIsSummonCatalogModalOpen(false)} 
         />
       )}
       
@@ -437,12 +437,12 @@ const SummonSystem = ({ toasts, setToasts }) => {
           isOpen={isNicknameModalOpen} 
           onClose={() => {
             setIsNicknameModalOpen(false);
-            setSelectedPetForNickname(null);
+            setSelectedSummonForNickname(null);
             setTempSummonData(null);
           }}
           onConfirm={handleNicknameConfirm} 
-          initialNickname={selectedPetForNickname?.nickname || ''}
-          petName={selectedPetForNickname?.name || ''}
+          initialNickname={selectedSummonForNickname?.nickname || ''}
+          summonName={selectedSummonForNickname?.name || ''}
         />
       )}
 

@@ -16,7 +16,7 @@ const getGameState = () => {
     items: state.items,
     inventory: state.inventory,
     incubator: state.incubator,
-    petCatalog: state.petCatalog,
+    summonCatalog: state.summonCatalog,
   };
 };
 
@@ -79,7 +79,7 @@ export const loadSave = (saveId) => {
       'summons',    // 然后是召唤兽，因为它们可能装备了物品
       'inventory',  // 接着是背包，因为它引用了物品
       'incubator',  // 培养皿系统
-      'petCatalog', // 宠物图鉴
+      'summonCatalog', // 宠物图鉴
     ];
 
     // 按顺序加载每个状态

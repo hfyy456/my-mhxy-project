@@ -73,4 +73,11 @@ export const {
   resetPlayer 
 } = playerSlice.actions;
 
-export default playerSlice.reducer; 
+export default playerSlice.reducer;
+
+// Selectors
+export const selectPlayerLevel = (state) => state.player.level;
+export const selectPlayerExperience = (state) => state.player.experience;
+export const selectPlayerMaxSummons = (state) => state.player.maxSummons;
+export const selectPlayerAchievements = (state) => state.player.achievements;
+export const selectPlayerStatistics = (state) => state.player.statistics; 

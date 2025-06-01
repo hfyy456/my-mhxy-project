@@ -19,7 +19,7 @@ export const eggQualityConfig = {
   timeMultiplier: [1.0, 1.5, 2.0, 2.5, 3.0], // 品质对孵化时间的乘数
   weight: [50, 30, 15, 4, 1], // 抽取权重
   // 品质概率表 - 每行代表蛋的品质，每列代表可能获得的召唤兽品质的概率
-  petQualityChances: [
+  summonQualityChances: [
     // 普通  稀有  史诗  传说  神话
     [0.80, 0.15, 0.05, 0.00, 0.00], // 普通蛋
     [0.40, 0.40, 0.15, 0.05, 0.00], // 稀有蛋

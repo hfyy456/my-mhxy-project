@@ -28,7 +28,7 @@ export const OBJECTIVE_TYPES = {
  * @property {string} id - 目标唯一ID (例如 "kill_goblins_obj1")
  * @property {OBJECTIVE_TYPES} type - 目标类型
  * @property {string} description - 目标描述 (例如 "击杀5只哥布林")
- * @property {string} [targetId] - 目标ID (例如怪物ID 'goblin_grunt', 物品ID 'herb_sunpetal', NPC_ID 'npc_old_man')
+ * @property {string} [targetId] - 目标ID (例如怪物ID 'goblin_grunt', 物品ID 'herb_sunsummonal', NPC_ID 'npc_old_man')
  * @property {string} [targetName] - 目标名称 (用于显示，例如 "哥布林投手", "阳光草")
  * @property {number} [requiredAmount] - 需要的数量 (用于击杀/收集类)
  * @property {number} [currentAmount] - 当前完成数量 (用于击杀/收集类)
@@ -190,7 +190,7 @@ export const quests = {
         id: "ch01_obj1_collect_herbs",
         type: OBJECTIVE_TYPES.COLLECT_ITEMS,
         description: "收集3株[阳光草]。", // [阳光草] 可以考虑用特定标记，方便后续解析和高亮
-        targetId: "item_herb_sunpetal", // 假设的阳光草物品ID
+        targetId: "item_herb_sunsummonal", // 假设的阳光草物品ID
         targetName: "阳光草",
         requiredAmount: 3,
         currentAmount: 0,
@@ -222,4 +222,4 @@ export const getQuestObjective = (questId, objectiveId) => {
 // TODO:
 // - NPC配置：每个NPC有哪些任务可以提供 (giverNpcId在这里定义了，但NPC自身也需要知道)
 // - 怪物掉落配置：某些任务物品 (如剧情任务中的 "遗失的包裹") 可能需要特定怪物掉落
-// - 物品配置：确保任务相关的物品 (item_lost_package_01, item_herb_sunpetal) 在物品配置中有定义 
+// - 物品配置：确保任务相关的物品 (item_lost_package_01, item_herb_sunsummonal) 在物品配置中有定义 

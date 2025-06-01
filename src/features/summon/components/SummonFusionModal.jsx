@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { petConfig } from "@/config/config";
+import { summonConfig } from "@/config/config";
 import { selectAllSummons } from "../../../store/slices/summonSlice";
 import { generateUniqueId } from "@/utils/idUtils";
 import { FIVE_ELEMENTS } from "@/config/enumConfig";
@@ -28,34 +28,34 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
   // 计算合成结果
   const calculateFusionResult = (summon1, summon2) => {
     // 获取两个召唤兽的配置
-    const pet1Config = petConfig[summon1.petId];
-    const pet2Config = petConfig[summon2.petId];
+    const summon1Config = summonConfig[summon1.summonSourceId];
+    const summon2Config = summonConfig[summon2.summonSourceId];
 
-    if (!pet1Config || !pet2Config) {
+    if (!summon1Config || !summon2Config) {
       return null;
     }
 
     // 随机选择一个召唤兽作为基础
-    const basePet = Math.random() < 0.5 ? summon1 : summon2;
-    const basePetConfig = basePet === summon1 ? pet1Config : pet2Config;
-    const secondaryPet = basePet === summon1 ? summon2 : summon1;
+    const baseSummon = Math.random() < 0.5 ? summon1 : summon2;
+    const baseSummonConfig = baseSummon === summon1 ? summon1Config : summon2Config;
+    const secondarySummon = baseSummon === summon1 ? summon2 : summon1;
     
     // 生成合成结果
     const result = {
       id: generateUniqueId('summon'),
-      petId: basePet.petId,
-      name: basePetConfig.name,
+      summonSourceId: baseSummon.summonSourceId,
+      name: baseSummonConfig.name,
       level: Math.max(1, Math.floor((summon1.level + summon2.level) / 3)),
-      basicAttributes: { ...basePet.basicAttributes },
-      race: basePetConfig.race,
-      fiveElement: basePetConfig.fiveElement,
+      basicAttributes: { ...baseSummon.basicAttributes },
+      race: baseSummonConfig.race,
+      fiveElement: baseSummonConfig.fiveElement,
       // 计算继承的技能
-      inheritedSkills: calculateInheritedSkills(basePet, secondaryPet),
+      inheritedSkills: calculateInheritedSkills(baseSummon, secondarySummon),
       parentInfo: {
         parent1Id: summon1.id,
-        parent1Name: summon1.name || pet1Config.name,
+        parent1Name: summon1.name || summon1Config.name,
         parent2Id: summon2.id,
-        parent2Name: summon2.name || pet2Config.name
+        parent2Name: summon2.name || summon2Config.name
       }
     };
 
@@ -180,12 +180,12 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
                   >
                     <div className="flex items-center">
                       <span className="flex-grow">
-                        {summon.nickname || petConfig[summon.petId]?.name || "未知召唤兽"}
+                        {summon.nickname || summonConfig[summon.summonSourceId]?.name || "未知召唤兽"}
                       </span>
                       <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
                         Lv.{summon.level}
                       </span>
-                      <i className={`ml-2 ${getElementIcon(petConfig[summon.petId]?.fiveElement)} ${getElementColor(petConfig[summon.petId]?.fiveElement)}`}></i>
+                      <i className={`ml-2 ${getElementIcon(summonConfig[summon.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[summon.summonSourceId]?.fiveElement)}`}></i>
                     </div>
                   </button>
                 ))}
@@ -208,12 +208,12 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
                   >
                     <div className="flex items-center">
                       <span className="flex-grow">
-                        {summon.nickname || petConfig[summon.petId]?.name || "未知召唤兽"}
+                        {summon.nickname || summonConfig[summon.summonSourceId]?.name || "未知召唤兽"}
                       </span>
                       <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
                         Lv.{summon.level}
                       </span>
-                      <i className={`ml-2 ${getElementIcon(petConfig[summon.petId]?.fiveElement)} ${getElementColor(petConfig[summon.petId]?.fiveElement)}`}></i>
+                      <i className={`ml-2 ${getElementIcon(summonConfig[summon.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[summon.summonSourceId]?.fiveElement)}`}></i>
                     </div>
                   </button>
                 ))}
@@ -233,12 +233,12 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
                 <div className="bg-slate-800 p-3 rounded-md">
                   <div className="flex items-center">
                     <h5 className="text-white flex-grow">
-                      {selectedSummon1?.nickname || petConfig[selectedSummon1?.petId]?.name || "未知召唤兽"}
+                      {selectedSummon1?.nickname || summonConfig[selectedSummon1?.summonSourceId]?.name || "未知召唤兽"}
                     </h5>
                     <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
                       Lv.{selectedSummon1?.level}
                     </span>
-                    <i className={`ml-2 ${getElementIcon(petConfig[selectedSummon1?.petId]?.fiveElement)} ${getElementColor(petConfig[selectedSummon1?.petId]?.fiveElement)}`}></i>
+                    <i className={`ml-2 ${getElementIcon(summonConfig[selectedSummon1?.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[selectedSummon1?.summonSourceId]?.fiveElement)}`}></i>
                   </div>
                   {selectedSummon1?.skillSet?.filter(Boolean).length > 0 && (
                     <div className="mt-2">
@@ -267,12 +267,12 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
                 <div className="bg-slate-800 p-3 rounded-md">
                   <div className="flex items-center">
                     <h5 className="text-white flex-grow">
-                      {selectedSummon2?.nickname || petConfig[selectedSummon2?.petId]?.name || "未知召唤兽"}
+                      {selectedSummon2?.nickname || summonConfig[selectedSummon2?.summonSourceId]?.name || "未知召唤兽"}
                     </h5>
                     <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
                       Lv.{selectedSummon2?.level}
                     </span>
-                    <i className={`ml-2 ${getElementIcon(petConfig[selectedSummon2?.petId]?.fiveElement)} ${getElementColor(petConfig[selectedSummon2?.petId]?.fiveElement)}`}></i>
+                    <i className={`ml-2 ${getElementIcon(summonConfig[selectedSummon2?.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[selectedSummon2?.summonSourceId]?.fiveElement)}`}></i>
                   </div>
                   {selectedSummon2?.skillSet?.filter(Boolean).length > 0 && (
                     <div className="mt-2">

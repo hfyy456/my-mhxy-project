@@ -2,12 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-19 05:32:21
+ * @LastEditTime: 2025-06-02 02:52:53
  */
-import { petConfig } from '@/config/pet/petConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '@/config/config';
-import { getRaceBonus } from '@/config/pet/raceConfig';
-import { unlockPet } from '@/store/slices/petCatalogSlice';
+import { getRaceBonus } from '@/config/summon/raceConfig';
+import { unlockSummon } from '@/store/slices/summonCatalogSlice';
 import { generateUniqueId } from '@/utils/idUtils';
 import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from "@/config/enumConfig";
 
@@ -79,10 +79,33 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
     }
   }
 
+  // === 战力值计算 ===
+  // 以主要衍生属性为基础，加入等级和品质加成
+  // 你可以根据实际需要调整权重
+  const hp = derived.hp || 0;
+  const mp = derived.mp || 0;
+  const patk = derived.physicalAttack || 0;
+  const matk = derived.magicalAttack || 0;
+  const pdef = derived.physicalDefense || 0;
+  const mdef = derived.magicalDefense || 0;
+  const speed = derived.speed || 0;
+  const level = currentLevel || 1;
+  let qualityMultiplier = 1;
+  if (basicAttributesWithPoints.quality) {
+    // 如果传入了quality字段
+    const idx = qualityConfig.names.indexOf(basicAttributesWithPoints.quality);
+    qualityMultiplier = qualityConfig.attributeMultipliers[idx] || 1;
+  }
+  // 简单加权公式，可根据实际调整
+  const power = Math.floor(
+    hp * 0.2 + mp * 0.1 + patk * 1.2 + matk * 1.2 + pdef * 0.8 + mdef * 0.8 + speed * 1.0 + level * 10 * qualityMultiplier
+  );
+
   return {
     derivedAttributes: derived,
     equipmentContributions,
     equipmentBonusesToBasic,
+    power, // 新增战力值
   };
 };
 
@@ -137,24 +160,24 @@ const shuffleArray = (array) => {
 /**
  * 生成新的召唤兽数据
  * @param {Object} params - 生成召唤兽所需的参数
- * @param {string} params.petId - 召唤兽的ID
+ * @param {string} params.summonSourceId - 召唤兽的ID
  * @param {string} params.quality - 召唤兽的品质
  * @param {SUMMON_SOURCES[keyof SUMMON_SOURCES]} params.source - 召唤兽的来源 (using enum values)
  * @param {Function} params.dispatch - Redux dispatch 函数
  * @returns {Object} 新的召唤兽数据
  */
-export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
+export const generateNewSummon = ({ summonSourceId, quality, source, dispatch }) => {
   // 记录到图鉴
   if (dispatch) {
-    dispatch(unlockPet({
-      petId,
+    dispatch(unlockSummon({
+      summonSourceId,
       quality
     }));
   }
 
-  const petData = petConfig[petId];
-  if (!petData) {
-    throw new Error(`找不到召唤兽配置：${petId}`);
+  const summonData = summonConfig[summonSourceId];
+  if (!summonData) {
+    throw new Error(`找不到召唤兽配置：${summonSourceId}`);
   }
 
   const summonId = generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON);
@@ -162,17 +185,17 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
   let finalSkillSet = [];
 
   // 1. 添加必带技能
-  if (petData.guaranteedInitialSkills && Array.isArray(petData.guaranteedInitialSkills)) {
-    finalSkillSet = [...petData.guaranteedInitialSkills];
+  if (summonData.guaranteedInitialSkills && Array.isArray(summonData.guaranteedInitialSkills)) {
+    finalSkillSet = [...summonData.guaranteedInitialSkills];
   }
 
   // 2. 从技能池中按正态分布选择额外技能
-  if (petData.initialSkillPool && Array.isArray(petData.initialSkillPool) && petData.initialSkillPool.length > 0) {
-    const mean = typeof petData.initialSkillCountMean === 'number' ? petData.initialSkillCountMean : 1;
-    const stdDev = typeof petData.initialSkillCountStdDev === 'number' ? petData.initialSkillCountStdDev : 0.5;
+  if (summonData.initialSkillPool && Array.isArray(summonData.initialSkillPool) && summonData.initialSkillPool.length > 0) {
+    const mean = typeof summonData.initialSkillCountMean === 'number' ? summonData.initialSkillCountMean : 1;
+    const stdDev = typeof summonData.initialSkillCountStdDev === 'number' ? summonData.initialSkillCountStdDev : 0.5;
     
     // 创建一个候选技能池，排除已在 finalSkillSet 中的技能 (必带技能)
-    const candidateSkillPool = petData.initialSkillPool.filter(skill => !finalSkillSet.includes(skill));
+    const candidateSkillPool = summonData.initialSkillPool.filter(skill => !finalSkillSet.includes(skill));
 
     if (candidateSkillPool.length > 0) {
       let numSkillsToAssign = Math.round(sampleNormal(mean, stdDev));
@@ -186,9 +209,9 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
         finalSkillSet = [...finalSkillSet, ...newSkills];
       }
     }
-  } else if (!petData.guaranteedInitialSkills && petData.initialSkills && Array.isArray(petData.initialSkills)) {
+  } else if (!summonData.guaranteedInitialSkills && summonData.initialSkills && Array.isArray(summonData.initialSkills)) {
     // 回退逻辑: 如果没有任何必带技能或新技能池配置，但有旧的 initialSkills 配置
-    finalSkillSet = petData.initialSkills;
+    finalSkillSet = summonData.initialSkills;
   }
   // 确保最终技能列表中的技能是唯一的 (尽管上面的逻辑试图避免重复)
   finalSkillSet = [...new Set(finalSkillSet)];
@@ -196,8 +219,8 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
   // 基础数据结构
   const newSummon = {
     id: summonId,
-    petId: petId,
-    nickname: petData.name,
+    summonSourceId: summonSourceId,
+    nickname: summonData.name,
     level: 1,
     quality: quality,
     experience: 0,
@@ -209,16 +232,16 @@ export const generateNewSummon = ({ petId, quality, source, dispatch }) => {
       intelligence: 0,
       luck: 0
     },
-    basicAttributes: petData.basicAttributeRanges ? {
-      constitution: getRandomAttribute(...petData.basicAttributeRanges.constitution),
-      strength: getRandomAttribute(...petData.basicAttributeRanges.strength),
-      agility: getRandomAttribute(...petData.basicAttributeRanges.agility),
-      intelligence: getRandomAttribute(...petData.basicAttributeRanges.intelligence),
-      luck: getRandomAttribute(...petData.basicAttributeRanges.luck)
+    basicAttributes: summonData.basicAttributeRanges ? {
+      constitution: getRandomAttribute(...summonData.basicAttributeRanges.constitution),
+      strength: getRandomAttribute(...summonData.basicAttributeRanges.strength),
+      agility: getRandomAttribute(...summonData.basicAttributeRanges.agility),
+      intelligence: getRandomAttribute(...summonData.basicAttributeRanges.intelligence),
+      luck: getRandomAttribute(...summonData.basicAttributeRanges.luck)
     } : {},
     skillSet: finalSkillSet, // 使用新生成的技能列表
     equippedItemIds: {},
-    race: petData.race,
+    race: summonData.race,
     source: source,
     obtainedAt: new Date().toISOString(),
   };

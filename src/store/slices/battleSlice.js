@@ -11,6 +11,7 @@ import {
   calculateModifiedAttribute,
   processReflectDamage
 } from '@/features/battle/logic/buffManager';
+import { DAMAGE_CONSTANTS } from '@/config/system/combatConfig';
 import { passiveSkillConfig } from '@/config/skill/passiveSkillConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 import { buffConfig } from '@/config/skill/buffConfig';
@@ -23,6 +24,13 @@ import {
   processPassiveSkillDodge,
   initializePassiveSkills
 } from '@/features/battle/logic/passiveSkillSystem';
+import { summonConfig } from '@/config/config'; // 导入召唤兽配置
+import { WORLD_REGIONS, selectEncounterForRegion } from '@/config/map/worldMapConfig.js'; // 导入世界区域和遭遇选择配置
+import { calculateSummonStats } from '@/features/battle/logic/summonUtils'; // 导入召唤兽属性计算函数
+import { generateUniqueId } from '@/utils/idUtils'; // 导入标准ID生成函数
+import { calculateRewards } from '@/features/battle/logic/battleRewards'; // 导入奖励计算函数
+import { selectFormationGrid } from '@/store/slices/formationSlice'; // 导入阵型选择器
+import { selectSummonById } from '@/store/slices/summonSlice'; // 导入召唤兽选择器
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;
@@ -52,6 +60,216 @@ export const setEnemyAIActions = createAsyncThunk(
     });
     
     return enemyActions;
+  }
+);
+
+// 新的异步 Thunk，用于从地图触发战斗
+export const initiateMapBattleAction = createAsyncThunk(
+  'battle/initiateMapBattle',
+  async ({ areaId, playerLevel, playerPosition }, { getState, dispatch }) => {
+    console.log('[battleSlice] initiateMapBattleAction called with:', { areaId, playerLevel, playerPosition });
+
+    if (!areaId || playerLevel === undefined) {
+      console.error('[battleSlice] initiateMapBattleAction requires areaId and playerLevel.');
+      throw new Error('areaId and playerLevel are required to initiate map battle.');
+    }
+
+    const state = getState();
+    const formationGrid = selectFormationGrid(state);
+    const playerSummonsData = [];
+
+    if (formationGrid) {
+      for (let r = 0; r < formationGrid.length; r++) {
+        for (let c = 0; c < formationGrid[r].length; c++) {
+          const summonId = formationGrid[r][c];
+          if (summonId) {
+            const summonDetails = selectSummonById(state, summonId);
+            if (summonDetails) {
+              // 将 summonDetails 转换为 BattleUnit 结构
+              // 注意: 这里的属性映射需要根据 summonDetails 和 BattleUnit 的实际结构进行调整
+              playerSummonsData.push({
+                id: summonDetails.id, // battleUnitId 通常与 summonId 相同
+                sourceId: summonDetails.summonSourceId, // 原始模板ID
+                name: summonDetails.nickname || summonDetails.name, // 优先使用昵称
+                level: summonDetails.level,
+                stats: {
+                  currentHp: summonDetails.derivedAttributes?.hp || 1,
+                  maxHp: summonDetails.derivedAttributes?.hp || 1,
+                  currentMp: summonDetails.derivedAttributes?.mp || 0,
+                  maxMp: summonDetails.derivedAttributes?.mp || 0,
+                  physicalAttack: summonDetails.derivedAttributes?.physicalAttack || 0,
+                  magicalAttack: summonDetails.derivedAttributes?.magicalAttack || 0,
+                  physicalDefense: summonDetails.derivedAttributes?.physicalDefense || 0,
+                  magicalDefense: summonDetails.derivedAttributes?.magicalDefense || 0,
+                  speed: summonDetails.derivedAttributes?.speed || 0,
+                  critRate: summonDetails.derivedAttributes?.critRate || 0,
+                  critDamage: summonDetails.derivedAttributes?.critDamage || 1.5,
+                  hitRate: summonDetails.derivedAttributes?.hitRate || 1,
+                  dodgeRate: summonDetails.derivedAttributes?.dodgeRate || 0,
+                },
+                skillSet: summonDetails.skillSet || [], // 确保技能列表存在
+                isPlayerUnit: true,
+                type: summonDetails.race || 'player_summon', // 使用召唤兽的种族或通用类型
+                spriteAssetKey: summonDetails.spriteAssetKey || summonConfig[summonDetails.summonSourceId]?.sprite, // 战斗单位的精灵图
+                // 确保 gridPosition 在后续步骤中正确设置
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (playerSummonsData.length === 0) {
+      const errorMsg = '[battleSlice] Critical: Attempted to initiate map battle with no player summons in formation. Aborting battle setup.';
+      console.error(errorMsg);
+      // Optionally, dispatch an action to show a more user-facing error, though UI should prevent this.
+      // For example: dispatch(showGlobalErrorNotificationAction(errorMsg));
+      return; // Abort battle setup
+    }
+    const playerParty = playerSummonsData; // 使用从 store 获取的数据
+
+    let enemyUnitsData = [];
+    const currentRegion = WORLD_REGIONS[areaId];
+
+    if (!currentRegion) {
+      console.error(`[battleSlice] Region with areaId: ${areaId} not found in WORLD_REGIONS.`);
+      throw new Error(`Region configuration not found for area ${areaId}.`);
+    }
+
+    const regionEncounterConfig = currentRegion.encounterConfig;
+    const encounter = selectEncounterForRegion(regionEncounterConfig, playerLevel);
+
+    if (!encounter || !encounter.team || encounter.team.length === 0) {
+      console.warn(`[battleSlice] No suitable encounter found for areaId: ${areaId} and playerLevel: ${playerLevel}. Aborting battle setup.`);
+      // TODO: Decide how to handle no encounters: throw error, or skip battle, or use a default placeholder enemy.
+      // For now, let's throw an error to make it clear during development.
+      throw new Error(`No suitable encounter found for area ${areaId} at level ${playerLevel}.`);
+    }
+
+    console.log('[battleSlice] Selected encounter:', encounter);
+
+    encounter.team.forEach((summonSourceId, index) => {
+      const summonTemplate = summonConfig[summonSourceId];
+      if (!summonTemplate) {
+        console.warn(`[battleSlice] Summon template with sourceId ${summonSourceId} not found in summonConfig. Skipping this enemy.`);
+        return; // Skip this summon if template not found
+      }
+
+      let currentLevel = summonTemplate.defaultLevel || 1;
+      if (encounter.summonLevelFixed) {
+        currentLevel = encounter.summonLevelFixed;
+      } else if (encounter.summonLevelOffset) {
+        currentLevel = (summonTemplate.defaultLevel || 1) + encounter.summonLevelOffset;
+      } else if (encounter.summonLevelOverride && encounter.summonLevelOverride.min && encounter.summonLevelOverride.max) {
+        currentLevel = Math.floor(Math.random() * (encounter.summonLevelOverride.max - encounter.summonLevelOverride.min + 1)) + encounter.summonLevelOverride.min;
+      }
+      currentLevel = Math.max(1, currentLevel); // Ensure level is at least 1
+
+      const calculatedStats = calculateSummonStats(summonTemplate, currentLevel);
+
+      const enemySummonId = `enemy_summon_${summonSourceId}_${Date.now()}_${index}`; // Ensure more unique ID
+      enemyUnitsData.push({
+        id: enemySummonId,
+        sourceId: summonSourceId,
+        name: summonTemplate.name,
+        level: currentLevel,
+        stats: calculatedStats, // Use dynamically calculated stats
+        skillSet: summonTemplate.skills || [],
+        isPlayerUnit: false,
+        type: summonTemplate.type || 'unknown_type', // Use PET_TYPES from summonConfig
+        spriteAssetKey: summonTemplate.sprite,
+      });
+    });
+
+    if (enemyUnitsData.length === 0) {
+      console.error(`[battleSlice] Failed to load any valid enemies from encounter for areaId: ${areaId}. Check areaEncounterConfig and summonConfig.`);
+      throw new Error('Failed to load any valid enemies from encounter.');
+    }
+
+    // 创建 battleUnits 对象
+    const battleUnits = {};
+    playerParty.forEach((unit, index) => {
+      const unitId = unit.id; // unit.id 应该已经是唯一的 summonId
+      battleUnits[unitId] = {
+        ...unit, // unit 已经是转换后的 BattleUnit 结构
+        // gridPosition 将在下面的 playerFormation/enemyFormation 循环中正确设置
+        statusEffects: [], // 初始化状态效果
+        isDefeated: false,
+      };
+    });
+    enemyUnitsData.forEach((unit, index) => {
+      const unitId = unit.id || `enemy_${index}`;
+      battleUnits[unitId] = {
+        ...unit,
+        id: unitId, // 确保有ID
+        gridPosition: { team: 'enemy', row: Math.floor(index / BATTLE_GRID_COLS), col: index % BATTLE_GRID_COLS }, // 简易阵型
+        statusEffects: [], // 初始化状态效果
+        isDefeated: false,
+      };
+    });
+
+    // 阵型 (简单占位)
+    const playerFormation = createEmptyGrid(); // 使用 slice 内的函数
+    const enemyFormation = createEmptyGrid();
+
+    // 根据 formationGrid 填充 playerFormation
+    if (formationGrid) {
+      for (let r = 0; r < formationGrid.length; r++) {
+        for (let c = 0; c < formationGrid[r].length; c++) {
+          const summonIdInFormation = formationGrid[r][c];
+          if (summonIdInFormation && battleUnits[summonIdInFormation]) {
+            playerFormation[r][c] = summonIdInFormation;
+            // 更新 battleUnits 中对应单位的 gridPosition
+            battleUnits[summonIdInFormation].gridPosition = { team: 'player', row: r, col: c };
+          } else {
+            playerFormation[r][c] = null;
+          }
+        }
+      }
+    } else {
+      // 如果 formationGrid 不存在，则按顺序填充（作为后备）
+      playerParty.forEach((unit, index) => {
+          const unitId = unit.id;
+          const row = Math.floor(index / BATTLE_GRID_COLS);
+          const col = index % BATTLE_GRID_COLS;
+          if (row < BATTLE_GRID_ROWS && col < BATTLE_GRID_COLS) {
+              playerFormation[row][col] = unitId;
+              if (battleUnits[unitId]) {
+                battleUnits[unitId].gridPosition = { team: 'player', row, col };
+              }
+          }
+      });
+    }
+    enemyUnitsData.forEach((unit, index) => {
+        const unitId = unit.id || `enemy_${index}`;
+        const row = Math.floor(index / BATTLE_GRID_COLS);
+        const col = index % BATTLE_GRID_COLS;
+        if (row < BATTLE_GRID_ROWS && col < BATTLE_GRID_COLS) {
+            enemyFormation[row][col] = unitId;
+        }
+    });
+
+
+    // TODO: 计算初始 turnOrder (基于速度)
+    const turnOrder = Object.values(battleUnits)
+      .sort((a, b) => b.stats.speed - a.stats.speed)
+      .map(unit => unit.id);
+
+    const battleId = generateUniqueId('battle'); // 使用项目标准ID生成函数
+
+    const setupPayload = {
+      battleId,
+      battleUnits,
+      playerFormation,
+      enemyFormation,
+      turnOrder,
+      // enemyEncounterId: monsterId, // 可以考虑用 monsterId 作为遭遇ID
+    };
+
+    console.log('[battleSlice] Dispatching setupBattle with payload:', setupPayload);
+    dispatch(battleSlice.actions.setupBattle(setupPayload)); // 注意：直接使用 battleSlice.actions
+
+    return setupPayload; // thunk 成功时返回的数据
   }
 );
 
@@ -643,8 +861,36 @@ const battleSlice = createSlice({
             const allEnemyDefeated = enemyUnits.every(unit => unit.isDefeated);
             
             if (allPlayerDefeated || allEnemyDefeated) {
-              state.currentPhase = 'awaiting_final_animation';
-              // Actual resolution will happen in finalizeBattleResolution
+              state.currentPhase = 'battle_over'; // 标记战斗正式结束
+              state.battleResult = allEnemyDefeated ? 'victory' : 'defeat';
+
+              // 计算奖励
+              const rewards = calculateRewards(
+                Object.values(state.battleUnits).filter(u => u.isPlayerUnit),
+                Object.values(state.battleUnits).filter(u => !u.isPlayerUnit),
+                state.battleResult
+              );
+              state.rewards = rewards;
+
+              // 添加战斗结束日志
+              state.battleLog.push({
+                id: generateUniqueId(),
+                type: 'BATTLE_END',
+                message: state.battleResult === 'victory' ? '战斗胜利！' : '战斗失败。',
+                timestamp: Date.now(),
+                result: state.battleResult,
+                rewards: rewards
+              });
+
+              if (rewards && rewards.message) {
+                state.battleLog.push({
+                  id: generateUniqueId(),
+                  type: 'REWARD_INFO',
+                  message: rewards.message,
+                  timestamp: Date.now()
+                });
+              }
+              // 后续可以在此触发其他战斗结束后的逻辑，例如返回地图、显示奖励界面等
             }
         }
       }
@@ -800,17 +1046,12 @@ const battleSlice = createSlice({
             }
           }
           
-          // 使用 calculateBattleDamage 函数计算详细伤害
-          
-          // 计算默认百分比减伤
-          let percentReduction = 0.15; // 默认防御减免15%
-          
           // 检查被动技能闪避效果
           const dodgeResult = processPassiveSkillDodge(target, unit);
-          const dodged = dodgeResult.dodged || Math.random() > 0.95;
-          
-          // 如果被动技能闪避触发，记录日志
-          if (dodgeResult.dodged) {
+          // TODO: Math.random() > 0.95 应该是一个临时或错误的闪避逻辑，后续应移除或改为由实际闪避率决定
+          const dodged = dodgeResult.dodged; // || Math.random() > 0.95; 
+
+          if (dodgeResult.dodged && dodgeResult.message) {
             state.battleLog.push({
               message: dodgeResult.message,
               timestamp: Date.now(),
@@ -818,59 +1059,91 @@ const battleSlice = createSlice({
               isPassiveEffect: true
             });
           }
-          
+
           if (dodged) {
             state.battleLog.push({
+              id: generateUniqueId(),
+              type: 'ATTACK_DODGED',
               message: `${unit.name} 的攻击被 ${target.name} 闪避了！`,
               timestamp: Date.now(),
               unitId,
-              targetId
+              targetId,
+              isDodged: true
             });
-            break;
-          }
-          
-          // 计算基础伤害
-          let baseDamage = Math.max(1, Math.round(unit.stats.attack - target.stats.defense * 0.5));
-          
-          // 检查是否处于防御状态
-          if (target.isDefending) {
-            // 如果在防御状态，再减兆15%伤害
-            percentReduction += 0.15;
-            state.battleLog.push({ 
-              message: `${target.name} 的防御姿态增加了额外的15%伤害减免`, 
-              timestamp: Date.now(),
-              unitId: targetId,
-              effect: {
-                type: 'shield',
-                icon: 'fa-shield-alt',
-                color: '#3498db',
-                size: 'large',
-                duration: 1000  // 特效持续1秒
+            // 触发闪避相关的被动技能
+            battleSlice.caseReducers.triggerPassiveSkills(state, {
+              payload: {
+                unitId: targetId,
+                triggerType: 'ON_DODGE',
+                sourceUnitId: unitId
               }
             });
+            break; // 攻击被闪避，结束处理
           }
-          
-          let damage = Math.max(1, Math.round(baseDamage * (1 - percentReduction)));
-          
-          // 处理护盾吸收
-          const shieldResult = processShieldAbsorption(target, damage);
-          if (shieldResult.absorbedDamage > 0) {
-            damage = shieldResult.remainingDamage;
-            state.battleLog.push({ 
-              message: shieldResult.message, 
+
+          // 使用 calculateBattleDamage 函数计算详细伤害
+          const damageResult = calculateBattleDamage(
+            unit, 
+            target, 
+            'auto', // damageType, 'auto' 会自动判断物理或法术
+            DAMAGE_CONSTANTS.COMMON.DEFAULT_SKILL_BONUS, // skillBonus for basic attack
+            {} // options for basic attack
+          );
+
+          let finalDamage = damageResult.finalDamage;
+          const isCrit = damageResult.isCritical;
+
+          // 检查是否处于防御状态 (calculateBattleDamage 内部可能已处理，但这里可以额外记录日志或调整)
+          if (target.isDefending) {
+            // 防御状态的效果应该在 calculateBattleDamage 内部通过 fixedReduction 或 percentReduction 体现
+            // 如果 calculateBattleDamage 未处理防御状态，则需要在这里调整 finalDamage
+            // 例如: finalDamage = Math.round(finalDamage * 0.5); // 防御减伤50%
+            // 确保防御日志只记录一次，或者由 calculateBattleDamage 返回防御信息
+            // 为了避免重复，暂时注释掉这里的防御日志，假设 calculateBattleDamage 会处理
+            /* state.battleLog.push({ 
+              message: `${target.name} 处于防御状态，受到的伤害减少了。`, 
               timestamp: Date.now(),
               unitId: targetId
+            }); */
+          }
+
+          // 处理护盾吸收
+          const shieldResult = processShieldAbsorption(target, finalDamage);
+          if (shieldResult.absorbedDamage > 0) {
+            finalDamage = shieldResult.remainingDamage;
+            state.battleLog.push({ 
+              id: generateUniqueId(),
+              type: 'SHIELD_ABSORB',
+              message: shieldResult.message, 
+              timestamp: Date.now(),
+              unitId: targetId,
+              absorbedAmount: shieldResult.absorbedDamage,
+              remainingDamage: finalDamage
             });
           }
           
+          // 应用保底伤害：如果计算出的伤害大于0，则至少为1；如果是治疗(小于0)，则按原样或特定保底治疗
+          if (finalDamage > 0) {
+            finalDamage = Math.max(1, finalDamage);
+          } else if (finalDamage < 0) {
+            // 对于治疗，可以设定最小治疗量，例如 Math.min(-1, finalDamage)
+            // 目前伤害计算函数不直接产生负数伤害（治疗），所以此分支可能用不到
+          }
+
           // 应用最终伤害
-          target.stats.currentHp = Math.max(target.stats.currentHp - damage, 0);
+          target.stats.currentHp = Math.max(0, target.stats.currentHp - finalDamage);
           
+          const damageLogMessage = `${unit.name} 攻击了 ${target.name}，造成 ${finalDamage} 点伤害。${isCrit ? ' 暴击！' : ''}`;
           state.battleLog.push({
-            message: `${unit.name} 攻击了 ${target.name}，造成 ${damage} 点伤害。`,
+            id: generateUniqueId(),
+            type: 'ATTACK_DAMAGE',
+            message: damageLogMessage,
             timestamp: Date.now(),
             unitId,
-            targetId
+            targetId,
+            damageAmount: finalDamage,
+            isCritical: isCrit,
+            isDodged: false // 已经处理过闪避
           });
           
           // 触发目标的被动技能 - 受到物理伤害时
@@ -879,7 +1152,7 @@ const battleSlice = createSlice({
               unitId: targetId,
               triggerType: 'ON_PHYSICAL_DAMAGE',
               sourceUnitId: unitId,
-              damageAmount: damage
+              damageAmount: finalDamage
             }
           });
           
@@ -1012,9 +1285,9 @@ const battleSlice = createSlice({
                   
                   // 记录详细的伤害计算过程
                   state.battleLog.push({
+                    type: 'CALCULATION_DETAIL',
                     message: `${skillInfo.name} 伤害计算详情 (类型: ${damageTypeDisplay}):`,
                     timestamp: Date.now(),
-                    isDetailLog: true,
                     unitId: unit.id,
                     targetId: target.id
                   });
@@ -1022,37 +1295,47 @@ const battleSlice = createSlice({
                   // 基础伤害
                   if (details.basePhysicalDamage !== undefined) {
                     state.battleLog.push({
+                      type: 'CALCULATION_DETAIL',
                       message: `基础物理伤害: ${details.basePhysicalDamage} (攻击力: ${unit.stats.physicalAttack}, 防御力: ${target.stats.physicalDefense})`,
                       timestamp: Date.now(),
-                      isDetailLog: true
+                      unitId: unit.id,
+                      targetId: target.id
                     });
                   } else if (details.baseMagicalDamage !== undefined) {
                     state.battleLog.push({
+                      type: 'CALCULATION_DETAIL',
                       message: `基础魔法伤害: ${details.baseMagicalDamage} (魔法攻击: ${unit.stats.magicalAttack}, 魔法防御: ${target.stats.magicalDefense})`,
                       timestamp: Date.now(),
-                      isDetailLog: true
+                      unitId: unit.id,
+                      targetId: target.id
                     });
                   }
                   
                   // 技能加成
                   state.battleLog.push({
+                    type: 'CALCULATION_DETAIL',
                     message: `技能加成: ${skillBonus}倍 (${skillInfo.name})`,
                     timestamp: Date.now(),
-                    isDetailLog: true
+                    unitId: unit.id,
+                    targetId: target.id
                   });
                   
                   // 暴击
                   state.battleLog.push({
+                    type: 'CALCULATION_DETAIL',
                     message: `暴击检定: ${details.isCritical ? '触发暴击!' : '未暴击'} (暴击率: ${(unit.stats.critRate * 100).toFixed(1)}%)`,
                     timestamp: Date.now(),
-                    isDetailLog: true
+                    unitId: unit.id,
+                    targetId: target.id
                   });
                   
                   if (details.isCritical) {
                     state.battleLog.push({
+                      type: 'CALCULATION_DETAIL',
                       message: `暴击伤害: ${details.criticalDamage} (暴击倍率: ${(unit.stats.critDamage * 100).toFixed(1)}%)`,
                       timestamp: Date.now(),
-                      isDetailLog: true
+                      unitId: unit.id,
+                      targetId: target.id
                     });
                   }
                   

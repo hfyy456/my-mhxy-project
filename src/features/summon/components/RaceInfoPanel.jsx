@@ -1,5 +1,5 @@
 import React from 'react';
-import { raceConfig, getRaceTraits } from '@/config/pet/raceConfig';
+import { raceConfig, getRaceTraits } from '@/config/summon/raceConfig';
 
 const RaceInfoPanel = ({ race }) => {
   if (!race || !raceConfig[race]) {

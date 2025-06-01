@@ -198,26 +198,33 @@ if (!npcPlaced && generatedMapGrid[idealTownCenterY][idealTownCenterX]) { // Fal
     generatedMapGrid[idealTownCenterY][idealTownCenterX].content = { type: TILE_CONTENT_TYPES.NPC, id: 'npc_001' };
 }
 
-
-// Place a Monster (e.g., 野狼 in a forest or grass patch not too close to town)
-let monsterPlaced = false;
-for (let i = 0; i < 50 && !monsterPlaced; i++) { // Try 50 random spots
-    const randRow = Math.floor(Math.random() * defaultMapRows);
-    const randCol = Math.floor(Math.random() * defaultMapCols);
-    const cell = generatedMapGrid[randRow][randCol];
-    // Avoid placing on town, water, mountains, or cells already with content
-    if (cell.type !== CELL_TYPES.TOWN.id && 
-        cell.type !== CELL_TYPES.WATER.id && 
-        cell.type !== CELL_TYPES.MOUNTAIN.id &&
-        !cell.content) {
-        // Prefer forest, then grass
-        if (cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) {
-            cell.content = { type: TILE_CONTENT_TYPES.MONSTER, id: 'monster_001' };
-            monsterPlaced = true;
-        }
-    }
-}
-
+// 
+// // Place a Monster (e.g., a wolf in a forest or grass area)
+// let monsterPlaced = false;
+// for (let i = 0; i < 50 && !monsterPlaced; i++) { // Try 50 random spots
+//     const randRow = Math.floor(Math.random() * defaultMapRows);
+//     const randCol = Math.floor(Math.random() * defaultMapCols);
+//     const cell = generatedMapGrid[randRow][randCol];
+//     // Avoid placing on town, water, mountains, or cells already with content
+//     if ((cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) && !cell.content) {
+//         cell.content = { type: TILE_CONTENT_TYPES.MONSTER, id: 'monster_001' }; // 'monster_001' is the wolf
+//         monsterPlaced = true;
+//     }
+// }
+// // Fallback if not placed
+// if (!monsterPlaced) {
+//     // Try to find any valid spot
+//     for (let r = 0; r < defaultMapRows && !monsterPlaced; r++) {
+//         for (let c = 0; c < defaultMapCols && !monsterPlaced; c++) {
+//             const cell = generatedMapGrid[r][c];
+//             if ((cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) && !cell.content) {
+//                 cell.content = { type: TILE_CONTENT_TYPES.MONSTER, id: 'monster_001' };
+//                 monsterPlaced = true;
+//                 break;
+//             }
+//         }
+//     }
+// }
 // Place a Resource (e.g., 铁矿脉 on a mountain or non-town grass/forest)
 let resourcePlaced = false;
 for (let i = 0; i < 50 && !resourcePlaced; i++) { // Try 50 random spots
@@ -374,23 +381,23 @@ const placeMapContent = (grid, rows, cols) => {
     }
   }
   
-  // 放置怪物
-  for (let i = 0; i < Math.max(3, Math.floor(rows * cols * 0.01)); i++) {
-    let monsterPlaced = false;
-    for (let j = 0; j < 20 && !monsterPlaced; j++) {
-      const randRow = Math.floor(Math.random() * rows);
-      const randCol = Math.floor(Math.random() * cols);
-      const cell = grid[randRow][randCol];
+  // // 放置怪物
+  // for (let i = 0; i < Math.max(3, Math.floor(rows * cols * 0.01)); i++) {
+  //   let monsterPlaced = false;
+  //   for (let j = 0; j < 20 && !monsterPlaced; j++) {
+  //     const randRow = Math.floor(Math.random() * rows);
+  //     const randCol = Math.floor(Math.random() * cols);
+  //     const cell = grid[randRow][randCol];
       
-      if ((cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) && !cell.content) {
-        cell.content = { 
-          type: TILE_CONTENT_TYPES.MONSTER, 
-          id: 'monster_001' 
-        };
-        monsterPlaced = true;
-      }
-    }
-  }
+  //     if ((cell.type === CELL_TYPES.FOREST.id || cell.type === CELL_TYPES.GRASS.id) && !cell.content) {
+  //       cell.content = { 
+  //         type: TILE_CONTENT_TYPES.MONSTER, 
+  //         id: 'monster_001' 
+  //       };
+  //       monsterPlaced = true;
+  //     }
+  //   }
+  // }
   
   // 放置资源
   for (let i = 0; i < Math.max(2, Math.floor(rows * cols * 0.005)); i++) {

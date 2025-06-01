@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import CommonModal from "@/features/ui/components/CommonModal";
 
-const NicknameModal = ({ isOpen, onClose, onConfirm, petName }) => {
+const NicknameModal = ({ isOpen, onClose, onConfirm, summonName }) => {
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
 
@@ -32,7 +32,7 @@ const NicknameModal = ({ isOpen, onClose, onConfirm, petName }) => {
       className="w-[320px]"
     >
       <div className="mb-4">
-        <p className="text-gray-300 mb-2">为你的{petName}起一个昵称吧！</p>
+        <p className="text-gray-300 mb-2">为你的{summonName}起一个昵称吧！</p>
         <input
           type="text"
           value={nickname}

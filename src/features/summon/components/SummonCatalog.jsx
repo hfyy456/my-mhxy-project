@@ -6,13 +6,13 @@
  */
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { petConfig } from "@/config/pet/petConfig";
+import { summonConfig } from "@/config/summon/summonConfig";
 import CommonModal from "@/features/ui/components/CommonModal";
 import {
   selectAllSummons,
   setCurrentSummon,
 } from "@/store/slices/summonSlice";
-import { getAllRaces } from "@/config/pet/raceConfig";
+import { getAllRaces } from "@/config/summon/raceConfig";
 import {
   getPetTypeDisplayName,
   getRaceTypeDisplayName,
@@ -31,7 +31,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const allSummons = useSelector(selectAllSummons);
   const summonsList = Object.values(allSummons || {});
-  const petEntries = Object.entries(petConfig);
+  const summonEntries = Object.entries(summonConfig);
   const allRaces = getAllRaces();
   const [selectedRace, setSelectedRace] = useState("全部");
 
@@ -50,8 +50,8 @@ const PetCatalog = ({ isOpen, onClose }) => {
 
   const filteredPets =
     selectedRace === "全部"
-      ? petEntries
-      : petEntries.filter(([_, pet]) => pet.race === selectedRace);
+      ? summonEntries
+      : summonEntries.filter(([_, summon]) => summon.race === selectedRace);
 
   if (!isOpen) return null;
 
@@ -103,19 +103,19 @@ const PetCatalog = ({ isOpen, onClose }) => {
               <p className="text-slate-400 text-lg">未找到符合条件的召唤兽。</p>
             </div>
           )}
-          {filteredPets.map(([petId, pet]) => {
-            const petInfo = petConfig[petId];
+          {filteredPets.map(([summonSourceId, summon]) => {
+            const summonInfo = summonConfig[summonSourceId];
             const imageUrl =
-              (petId && images[`/src/assets/summons/${petId}.png`]?.default) ||
+              (summonSourceId && images[`/src/assets/summons/${summonSourceId}.png`]?.default) ||
               images["/src/assets/summons/default.png"]?.default;
 
-            const typeColorClass = petInfo.color
-              ? `border-${petInfo.color}`
+            const typeColorClass = summonInfo.color
+              ? `border-${summonInfo.color}`
               : "border-slate-500";
 
             return (
               <div
-                key={petId}
+                key={summonSourceId}
                 className="group bg-slate-700/70 rounded-lg p-4 shadow-lg hover:shadow-purple-500/30 transition-all duration-300 transform hover:-translate-y-1 flex flex-col border border-slate-600 hover:border-purple-400/80"
               >
                 <div className="flex items-start mb-3">
@@ -124,7 +124,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
                   >
                     <img
                       src={imageUrl}
-                      alt={petInfo.name}
+                      alt={summonInfo.name}
                       className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
                         if (images["/src/assets/summons/default.png"]?.default) {
@@ -138,19 +138,19 @@ const PetCatalog = ({ isOpen, onClose }) => {
                   <div className="flex-grow">
                     <h3
                       className="text-lg md:text-xl font-semibold text-purple-300 mb-1.5 truncate"
-                      title={petInfo.name}
+                      title={summonInfo.name}
                     >
-                      {petInfo.name}
+                      {summonInfo.name}
                     </h3>
                     <div>
                       <div className="mb-1.5"> 
-                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${petInfo.color?.split('-')[0]}-600 text-${petInfo.color?.split('-')[0]}-100`}>{getPetTypeDisplayName(petInfo.type)}</span>
+                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${summonInfo.color?.split('-')[0]}-600 text-${summonInfo.color?.split('-')[0]}-100`}>{getPetTypeDisplayName(summonInfo.type)}</span>
                       </div>
                       <div className="mb-1.5">
-                        <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-600 text-slate-100">{getRaceTypeDisplayName(petInfo.race)}</span>
+                        <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-600 text-slate-100">{getRaceTypeDisplayName(summonInfo.race)}</span>
                       </div>
                       <div>
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${FIVE_ELEMENT_COLORS[petInfo.fiveElement] || 'bg-gray-500 text-white'}`}>{getFiveElementDisplayName(petInfo.fiveElement)}</span>
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${FIVE_ELEMENT_COLORS[summonInfo.fiveElement] || 'bg-gray-500 text-white'}`}>{getFiveElementDisplayName(summonInfo.fiveElement)}</span>
                       </div>
                     </div>
                   </div>
@@ -158,7 +158,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
 
                 <div className="flex flex-col flex-grow">
                   <p className="text-xs text-slate-400 line-clamp-3 mb-2 flex-shrink-0">
-                    {petInfo.background}
+                    {summonInfo.background}
                   </p>
 
                   <div className="mt-auto pt-3 border-t border-slate-600/70 text-xs text-slate-300 space-y-2">
@@ -167,7 +167,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
                         成长率:
                       </h5>
                       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                        {Object.entries(petInfo.growthRates).map(
+                        {Object.entries(summonInfo.growthRates).map(
                           ([attrEnum, value]) => (
                             <div
                               key={attrEnum}
@@ -190,7 +190,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
                         初始属性范围:
                       </h5>
                       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                        {Object.entries(petInfo.basicAttributeRanges).map(
+                        {Object.entries(summonInfo.basicAttributeRanges).map(
                           ([attrEnum, range]) => (
                             <div
                               key={attrEnum}
@@ -213,7 +213,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
                         初始技能:
                       </h5>
                       <div className="flex flex-wrap gap-1.5">
-                        {petInfo.initialSkills.map((skillId) => {
+                        {summonInfo.initialSkills.map((skillId) => {
                           const skill = skillConfig.find(
                             (s) => s.id === skillId
                           );

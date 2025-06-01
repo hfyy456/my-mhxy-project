@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { eggConfig, eggQualityConfig } from '@/config/pet/eggConfig';
-import { petConfig } from '@/config/pet/petConfig';
+import { eggConfig, eggQualityConfig } from '@/config/summon/eggConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 import { playerBaseConfig } from '@/config/character/playerConfig';
 
 const initialState = {
@@ -87,24 +87,24 @@ const incubatorSlice = createSlice({
       // 生成召唤兽品质
       const qualityIndex = eggQualityConfig.names.indexOf(egg.quality);
       const qualities = eggQualityConfig.names;
-      const chances = eggQualityConfig.petQualityChances[qualityIndex];
+      const chances = eggQualityConfig.summonQualityChances[qualityIndex];
       
       let random = Math.random();
       let sum = 0;
-      let petQuality = qualities[0];
+      let summonQuality = qualities[0];
       
       for (let i = 0; i < qualities.length; i++) {
         sum += chances[i];
         if (random < sum) {
-          petQuality = qualities[i];
+          summonQuality = qualities[i];
           break;
         }
       }
 
       // 随机选择一个可能的宠物
       const eggData = eggConfig[egg.eggType];
-      const possiblePets = eggData.possiblePets;
-      const randomPet = possiblePets[Math.floor(Math.random() * possiblePets.length)];
+      const possibleSummons = eggData.possibleSummons;
+      const randomSummon = possibleSummons[Math.floor(Math.random() * possibleSummons.length)];
 
       // 从completedEggs中移除这个蛋
       delete state.completedEggs[eggId];
@@ -114,9 +114,9 @@ const incubatorSlice = createSlice({
         eggId,
         eggType: egg.eggType,
         eggQuality: egg.quality,
-        petType: randomPet,
-        petQuality: petQuality,
-        petData: petConfig[randomPet],
+        summonType: randomSummon,
+        summonQuality: summonQuality,
+        summonData: summonConfig[randomSummon],
       };
     },
 

@@ -39,8 +39,8 @@ export const uiText = {
     equipmentBar: "装备栏",
     basicAttributes: "基础属性",
     skillSet: "技能",
-    petList: "召唤兽列表",
-    petDetails: "召唤兽详情",
+    summonList: "召唤兽列表",
+    summonDetails: "召唤兽详情",
     skillEditor: "技能编辑",
     equipmentSelector: "装备选择",
     summonModal: "召唤兽",
@@ -131,7 +131,7 @@ export const uiText = {
   },
 
   // 宠物类型
-  petTypes: {
+  summonTypes: {
     [PET_TYPES.PHYSICAL]: "物理攻击型",
     [PET_TYPES.MAGICAL]: "法术攻击型",
     [PET_TYPES.DEFENSE]: "生命防御型",
@@ -167,7 +167,7 @@ export const uiText = {
 
   // 按钮文本
   buttons: {
-    petCatalog: "召唤兽图鉴",
+    summonCatalog: "召唤兽图鉴",
     refineHistory: "炼妖历史",
     refineToGetSummon: "炼妖获取召唤兽",
     refine: "炼妖",
@@ -265,7 +265,7 @@ export const getQualityDisplayName = (quality) => {
 
 // 获取宠物类型显示名称
 export const getPetTypeDisplayName = (type) => {
-  return uiText.petTypes[type] || uiText.general.unknown;
+  return uiText.summonTypes[type] || uiText.general.unknown;
 };
 
 // 获取技能模式显示名称

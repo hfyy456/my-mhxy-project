@@ -4,7 +4,7 @@ import { selectAllSummons } from "@/store/slices/summonSlice";
 import {
   selectUnlockProgress,
   selectQualityCounts,
-} from "@/store/slices/petCatalogSlice";
+} from "@/store/slices/summonCatalogSlice";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { qualityConfig } from "@/config/config";

@@ -6,14 +6,14 @@
  */
 // gameLogic.js
 import {
-  petConfig,
+  summonConfig,
   skillConfig,
   qualityConfig,
   probabilityConfig,
   STANDARD_EQUIPMENT_SLOTS,
   // levelExperienceRequirements // Not directly used here, summonSlice will handle
 } from "@/config/config";
-import { petEquipmentConfig } from "@/config/item/petEquipmentConfig";
+import { summonEquipmentConfig } from "@/config/item/summonEquipmentConfig";
 import { 
   SKILL_MODES,
   UNIQUE_ID_PREFIXES,
@@ -35,9 +35,9 @@ import { ITEM_BASE_CONFIG } from '@/config/item/inventoryConfig';
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
 // import summonManagerInstance from "@/managers/SummonManager"; // Removed
 
-export const getRandomPet = () => {
-  const pets = Object.values(petConfig);
-  return pets[Math.floor(Math.random() * pets.length)];
+export const getRandomSummon = () => {
+  const summons = Object.values(summonConfig);
+  return summons[Math.floor(Math.random() * summons.length)];
 };
 
 export const getRandomQuality = () => {
@@ -58,11 +58,11 @@ export const getRandomSkill = () => {
 // 获取随机装备
 export const getRandomEquipment = () => {
   // 随机选择一个装备类型 (category/slotType)
-  const equipmentCategories = Object.keys(petEquipmentConfig);
+  const equipmentCategories = Object.keys(summonEquipmentConfig);
   const randomCategory = equipmentCategories[Math.floor(Math.random() * equipmentCategories.length)];
   
   // 从选中的类型中随机选择一件装备配置
-  const equipmentList = petEquipmentConfig[randomCategory];
+  const equipmentList = summonEquipmentConfig[randomCategory];
   const randomEquipmentConfig = equipmentList[Math.floor(Math.random() * equipmentList.length)];
   
   // 随机选择一个品质
@@ -73,7 +73,7 @@ export const getRandomEquipment = () => {
   // finalEffects 将由 itemSlice.addItem reducer 计算。
   const newEquipmentData = {
     id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
-    name: randomEquipmentConfig.name, // 必须与 petEquipmentConfig.js 中的 name 匹配
+    name: randomEquipmentConfig.name, // 必须与 summonEquipmentConfig.js 中的 name 匹配
     quality: randomQuality,
     level: 1, // 初始等级为1
     itemType: 'equipment',
@@ -140,8 +140,8 @@ export const refineMonster = (playerLevel) => {
   const availableQualities = playerBaseConfig.getAvailableRefinementQualities(playerLevel);
   
   // 随机选择一个宠物ID和其配置
-  const petEntries = Object.entries(petConfig);
-  const [selectedPetId, petDetails] = petEntries[Math.floor(Math.random() * petEntries.length)];
+  const summonEntries = Object.entries(summonConfig);
+  const [selectedSummonId, summonDetails] = summonEntries[Math.floor(Math.random() * summonEntries.length)];
 
   // 从可用品质中随机选择一个
   const quality = availableQualities[Math.floor(Math.random() * availableQualities.length)];
@@ -151,7 +151,7 @@ export const refineMonster = (playerLevel) => {
 
   // 使用公共函数生成新的召唤兽
   const newSummon = generateNewSummon({
-    petId: selectedPetId,
+    summonSourceId: selectedSummonId,
     quality: quality,
     source: REFINEMENT_SOURCES.REFINEMENT
   });
@@ -159,14 +159,14 @@ export const refineMonster = (playerLevel) => {
   // 准备历史记录
   const historyItem = {
     id: newSummon.id,
-    petId: selectedPetId,
+    summonSourceId: selectedSummonId,
     quality: newSummon.quality,
     level: newSummon.level,
     basicAttributes: { ...newSummon.basicAttributes },
     derivedAttributes: {},
     skillSet: [...newSummon.skillSet],
     equipment: newSummon.equippedItemIds,
-    race: petDetails.race,
+    race: summonDetails.race,
   };
 
   // 从配置中获取经验值
@@ -184,7 +184,7 @@ export const refineMonster = (playerLevel) => {
     newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
     requireNickname: false,
-    message: `炼妖成功！召唤兽 ${petDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(petDetails.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
+    message: `炼妖成功！召唤兽 ${summonDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(summonDetails.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
     experienceGained: experienceGained
   };
 };
@@ -291,18 +291,18 @@ export const confirmReplaceSkill = (summonId, currentSkillSet, pendingSkillId) =
 
 /**
  * 计算指定等级的基础属性
- * @param {string} petName - 宠物名称
+ * @param {string} summonName - 宠物名称
  * @param {number} level - 目标等级
  * @param {object} currentAttributes - 当前等级的基础属性
  * @returns {object} - 指定等级的基础属性
  */
 export const calculateAttributesByLevel = (
-  petName,
+  summonName,
   level,
   currentAttributes
 ) => {
-  const petData = petConfig[petName];
-  if (!petData) {
+  const summonData = summonConfig[summonName];
+  if (!summonData) {
     throw new Error("未找到该宠物的配置信息");
   }
 
@@ -311,11 +311,11 @@ export const calculateAttributesByLevel = (
     for (const attr in attributes) {
       if (
         attributes.hasOwnProperty(attr) &&
-        petData.growthRates &&
-        petData.growthRates[attr] !== undefined
+        summonData.growthRates &&
+        summonData.growthRates[attr] !== undefined
       ) {
         attributes[attr] = Math.floor(
-          attributes[attr] * (1 + petData.growthRates[attr] * 0.04)
+          attributes[attr] * (1 + summonData.growthRates[attr] * 0.04)
         );
       }
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { eggConfig } from "@/config/pet/eggConfig";
+import { eggConfig } from "@/config/summon/eggConfig";
 import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { QUALITY_TYPES } from "@/config/enumConfig";
 import {
@@ -13,10 +13,10 @@ import {
 } from "@/store/slices/incubatorSlice";
 import { addSummon, selectAllSummons } from "@/store/slices/summonSlice";
 import { generateNewSummon } from "@/utils/summonUtils";
-import { petConfig } from "@/config/pet/petConfig";
+import { summonConfig } from "@/config/summon/summonConfig";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import { useToast } from "@/hooks/useToast";
-import { unlockPet } from '@/store/slices/petCatalogSlice';
+import { unlockSummon } from '@/store/slices/summonCatalogSlice';
 
 export const Incubator = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
@@ -89,10 +89,10 @@ export const Incubator = ({ toasts, setToasts }) => {
     }
 
     if (action.payload.result) {
-      const { petType, petQuality } = action.payload.result;
+      const { summonType, summonQuality } = action.payload.result;
       const newSummon = generateNewSummon({
-        petId: petType,
-        quality: petQuality,
+        summonSourceId: summonType,
+        quality: summonQuality,
         source: 'incubation',
         dispatch
       });
@@ -100,10 +100,10 @@ export const Incubator = ({ toasts, setToasts }) => {
       setErrorMessage(null);
       
       // 获取召唤兽名称和品质显示名
-      const petData = petConfig[petType];
-      const qualityDisplayName = getQualityDisplayName(petQuality);
+      const summonData = summonConfig[summonType];
+      const qualityDisplayName = getQualityDisplayName(summonQuality);
       
-      showResult(`恭喜！获得了一只${qualityDisplayName}品质的${petData.name}！`, "success");
+      showResult(`恭喜！获得了一只${qualityDisplayName}品质的${summonData.name}！`, "success");
     }
   };
 

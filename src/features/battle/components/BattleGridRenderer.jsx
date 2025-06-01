@@ -13,7 +13,7 @@ import {
   startExecutionPhase
 } from '@/store/slices/battleSlice';
 import { getValidTargetsForUnit } from '@/features/battle/logic/skillSystem';
-import { petConfig } from '@/config/pet/petConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 
 const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selectedSkill, selectedTarget, skillAffectedArea }) => {
   const dispatch = useDispatch();
@@ -49,7 +49,7 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selec
       const allUnits = Object.values(battleUnits);
       
       // 获取可攻击的目标单位
-      const validTargets = getValidTargetsForUnit(selectedUnit, allUnits, petConfig, 'normal');
+      const validTargets = getValidTargetsForUnit(selectedUnit, allUnits, summonConfig, 'normal');
       
       // 提取可攻击目标的位置信息
       const attackablePositions = validTargets.map(target => {

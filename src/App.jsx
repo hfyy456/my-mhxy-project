@@ -233,7 +233,7 @@ const App = () => {
                     // 导入并准备战斗数据
                     import('@/features/battle/logic/battleLogic').then(({ prepareBattleSetupData }) => {
                       import('@/config/character/enemyConfig').then(({ getEnemyTemplateById }) => {
-                        import('@/config/pet/petConfig').then(({ petConfig }) => {
+                        import('@/config/summon/summonConfig').then(({ summonConfig }) => {
                           // 获取玩家的召唤兽和阵型
                           const playerSummons = Object.values(summonsListObject || {}).reduce((acc, summon) => {
                             acc[summon.id] = summon;
@@ -274,7 +274,7 @@ const App = () => {
                             playerSummons,
                             playerFormation,
                             enemyTemplates,
-                            petConfig
+                            summonConfig
                           );
                           
                           // 触发战斗

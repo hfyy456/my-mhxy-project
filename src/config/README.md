@@ -7,7 +7,7 @@
 ## 配置文件命名规则
 
 1. 所有配置文件使用 `camelCase` 命名方式，以 `Config.js` 结尾
-2. 配置文件名应当清晰表达其功能，例如 `petConfig.js` 表示宠物相关配置
+2. 配置文件名应当清晰表达其功能，例如 `summonConfig.js` 表示宠物相关配置
 3. 通用枚举类型配置统一放在 `enumConfig.js` 中
 
 ## 配置文件编写规则
@@ -50,7 +50,7 @@ export const someConfig = {
 ## 常见配置文件说明
 
 1. **enumConfig.js** - 包含所有枚举类型定义
-2. **petConfig.js** - 宠物相关配置
+2. **summonConfig.js** - 宠物相关配置
 3. **skillConfig.js** - 技能相关配置（包括主动和被动技能）
 4. **itemConfig.js** - 物品相关配置
 5. **combatConfig.js** - 战斗系统相关配置

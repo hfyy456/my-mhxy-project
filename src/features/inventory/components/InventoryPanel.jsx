@@ -382,7 +382,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                 
                 // 移除物品
                 dispatch(removeFromInventory(slotIndex));
-                showToast(`${summon.nickname || summon.petId} 学会了 ${skillName}`, "success");
+                showToast(`${summon.nickname || summon.summonSourceId} 学会了 ${skillName}`, "success");
                 setModalContent(null);
               },
               onCancel: () => setModalContent(null)
@@ -1040,7 +1040,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
                     onClick={() => modalContent.onSelect(summon.id)}
                   >
                     <div className="flex-1">
-                      <div className="font-medium text-white">{summon.nickname || summon.petId}</div>
+                      <div className="font-medium text-white">{summon.nickname || summon.summonSourceId}</div>
                       <div className="text-sm text-gray-300">等级: {summon.level}</div>
                     </div>
                   </div>
@@ -1063,7 +1063,7 @@ const InventoryPanel = ({ isOpen, onClose, showToast }) => {
             <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
               <h2 className="text-xl font-bold text-white mb-4">{modalContent.title}</h2>
               <p className="text-gray-300 mb-4">
-                为 {modalContent.summon.nickname || modalContent.summon.petId} 选择要替换或添加的技能槽位
+                为 {modalContent.summon.nickname || modalContent.summon.summonSourceId} 选择要替换或添加的技能槽位
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 8 }).map((_, index) => {

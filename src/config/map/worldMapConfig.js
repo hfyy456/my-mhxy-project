@@ -103,7 +103,17 @@ export const WORLD_REGIONS = {
       { regionId: 'northern_mountains', exitPoint: { row: 0, col: 15 }, enterPoint: { row: 29, col: 15 } },
       { regionId: 'western_lake', exitPoint: { row: 15, col: 0 }, enterPoint: { row: 15, col: 29 } },
       { regionId: 'southern_desert', exitPoint: { row: 29, col: 15 }, enterPoint: { row: 0, col: 15 } }
-    ]
+    ],
+    encounterConfig: {
+      levelRange: { min: 1, max: 3 },
+      encounterRate: 0.15, // 15% 遭遇几率
+      description: '长安城郊外或治安事件',
+      encounters: [
+        { weight: 70, team: ['thief'], summonLevelFixed: 1 },
+        { weight: 25, team: ['thief', 'thief'], summonLevelFixed: 1 },
+        { weight: 5, team: ['ruffian'], summonLevelFixed: 2 },
+      ],
+    }
   },
   
   // 东部森林
@@ -120,7 +130,16 @@ export const WORLD_REGIONS = {
     connections: [
       { regionId: 'central_town', exitPoint: { row: 15, col: 0 }, enterPoint: { row: 15, col: 29 } },
       { regionId: 'forest_cave', exitPoint: { row: 20, col: 25 }, enterPoint: { row: 5, col: 5 } }
-    ]
+    ],
+    encounterConfig: {
+      levelRange: { min: 1, max: 5 },
+      description: '新手森林外围',
+      encounters: [
+        { weight: 60, team: ['ghost'], summonLevelOverride: null },
+        { weight: 30, team: ['ghost', 'thunderBird'], summonLevelOverride: { min: 2, max: 4 } },
+        { weight: 10, team: ['catSpirit'], summonLevelFixed: 5 },
+      ],
+    }
   },
   
   // 北部山脉
@@ -136,7 +155,8 @@ export const WORLD_REGIONS = {
     }),
     connections: [
       { regionId: 'central_town', exitPoint: { row: 29, col: 15 }, enterPoint: { row: 0, col: 15 } }
-    ]
+    ],
+    encounterConfig: null
   },
   
   // 西部湖泊
@@ -152,7 +172,8 @@ export const WORLD_REGIONS = {
     }),
     connections: [
       { regionId: 'central_town', exitPoint: { row: 15, col: 29 }, enterPoint: { row: 15, col: 0 } }
-    ]
+    ],
+    encounterConfig: null
   },
   
   // 南部沙漠
@@ -168,7 +189,16 @@ export const WORLD_REGIONS = {
     }),
     connections: [
       { regionId: 'central_town', exitPoint: { row: 0, col: 15 }, enterPoint: { row: 29, col: 15 } }
-    ]
+    ],
+    encounterConfig: {
+      levelRange: { min: 6, max: 10 },
+      description: '闹鬼沼泽A区',
+      encounters: [
+        { weight: 50, team: ['heavenGuard', 'heavenGuard'] },
+        { weight: 30, team: ['vampire', 'thunderBird'], summonLevelOffset: 1 },
+        { weight: 20, team: ['mechanicalBird'], summonLevelFixed: 10 },
+      ],
+    }
   },
   
   // 森林洞穴 - 隐藏区域
@@ -184,7 +214,8 @@ export const WORLD_REGIONS = {
     }),
     connections: [
       { regionId: 'eastern_forest', exitPoint: { row: 5, col: 5 }, enterPoint: { row: 20, col: 25 } }
-    ]
+    ],
+    encounterConfig: null
   }
 };
 
@@ -227,4 +258,60 @@ export const WORLD_MAP_CONFIG = {
   regionNodeSize: 60,
   lineColor: '#4a5568',
   lineWidth: 2
+};
+
+/**
+ * 根据区域的遭遇配置和当前等级选择一个遭遇。
+ * @param {object | null} regionEncounterConfig - 特定区域的 encounterConfig 对象，或 null。
+ * @param {number} currentLevel - 当前玩家等级或区域基准等级。
+ * @returns {object|null} 包含遭遇队伍信息的对象，或 null 如果没有匹配或不应遭遇。
+ */
+export const selectEncounterForRegion = (regionEncounterConfig, currentLevel) => {
+  if (!regionEncounterConfig) {
+    // console.log(`[worldMapConfig] No encounter configuration for this region.`);
+    return null;
+  }
+
+  if (!regionEncounterConfig.levelRange || !regionEncounterConfig.encounters) {
+    console.warn(`[worldMapConfig] Encounter configuration is malformed (missing levelRange or encounters). Region description: ${regionEncounterConfig.description}`);
+    return null;
+  }
+  
+  if (regionEncounterConfig.encounters.length === 0) {
+    // console.log(`[worldMapConfig] Region configured with no encounters (e.g., towns). Description: ${regionEncounterConfig.description}`);
+    return null;
+  }
+
+  if (currentLevel < regionEncounterConfig.levelRange.min || currentLevel > regionEncounterConfig.levelRange.max) {
+    // console.warn(`[worldMapConfig] currentLevel ${currentLevel} is outside the configured range (${regionEncounterConfig.levelRange.min}-${regionEncounterConfig.levelRange.max}) for region: ${regionEncounterConfig.description}.`);
+    return null;
+  }
+
+  const possibleEncounters = regionEncounterConfig.encounters;
+  if (possibleEncounters.length === 0) {
+    // This case should ideally be caught by the earlier check
+    // console.warn(`[worldMapConfig] No encounters available for region: ${regionEncounterConfig.description} (after level check).`);
+    return null;
+  }
+
+  const totalWeight = possibleEncounters.reduce((sum, enc) => sum + (enc.weight || 1), 0);
+  if (totalWeight <= 0) {
+      console.warn(`[worldMapConfig] Total weight of encounters is not positive for region: ${regionEncounterConfig.description}. Cannot select an encounter.`);
+      // Fallback to the first encounter if weights are problematic but encounters exist
+      return possibleEncounters.length > 0 ? { ...possibleEncounters[0] } : null;
+  }
+  
+  let randomPick = Math.random() * totalWeight;
+
+  for (const encounter of possibleEncounters) {
+    const weight = encounter.weight || 1;
+    if (randomPick < weight) {
+      return { ...encounter }; // Return a copy
+    }
+    randomPick -= weight;
+  }
+  
+  // Fallback: Should ideally not be reached if weights are positive and sum > 0.
+  // If it is reached (e.g. floating point inaccuracies for the last item), return the last one.
+  return possibleEncounters.length > 0 ? { ...possibleEncounters[possibleEncounters.length - 1] } : null;
 }; 

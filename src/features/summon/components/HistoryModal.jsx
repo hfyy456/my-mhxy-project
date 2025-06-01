@@ -1,7 +1,7 @@
 import React from "react";
 import { qualityConfig, skillConfig, skillTypeConfig } from "@/config/config";
 import CommonModal from "@/features/ui/components/CommonModal";
-import { petConfig } from '@/config/pet/petConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 
 const HistoryModal = ({ historyList, isOpen, onClose }) => {
   return (
@@ -11,7 +11,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
           <p className="text-gray-400 italic text-center py-8">暂无历史记录。</p>
         ) : (
           historyList.map((record) => {
-            const petInfo = petConfig[record.petId];
+            const summonInfo = summonConfig[record.summonSourceId];
             const qualityColorName = `text-quality-${qualityConfig.colors[record.quality]?.split('-')[1] || 'normal'}`;
 
             return (
@@ -21,7 +21,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
               >
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-semibold text-gray-100">
-                    {petInfo.name}
+                    {summonInfo.name}
                   </h3>
                   <span className={`text-sm font-medium ${qualityColorName}`}>
                     {record.quality}

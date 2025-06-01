@@ -10,7 +10,7 @@ import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import BattleUnitDetailPanel from './BattleUnitDetailPanel';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
-import { petConfig } from '@/config/pet/petConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 
 import {
@@ -91,7 +91,7 @@ const BattleScreen = () => {
       const allUnits = Object.values(battleUnits);
       
       // 使用getValidTargetsForUnit函数获取可攻击的目标
-      return getValidTargetsForUnit(selectedUnit, allUnits, petConfig, 'normal');
+      return getValidTargetsForUnit(selectedUnit, allUnits, summonConfig, 'normal');
     }
     
     // 如果是技能，使用技能特定的目标选择逻辑
@@ -101,7 +101,7 @@ const BattleScreen = () => {
       
       // 如果有技能配置对象，可以使用getValidTargetsForSkill
       // 这里暂时使用普通攻击目标选择逻辑
-      return getValidTargetsForUnit(selectedUnit, allUnits, petConfig, 'skill');
+      return getValidTargetsForUnit(selectedUnit, allUnits, summonConfig, 'skill');
     }
     
     // 如果是防御或其他，没有目标

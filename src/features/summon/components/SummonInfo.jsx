@@ -5,12 +5,12 @@ import {
   qualityConfig,
   skillTypeConfig,
   STANDARD_EQUIPMENT_SLOTS,
-  petConfig,
+  summonConfig,
 } from "@/config/config";
 import {
-  petEquipmentConfig,
+  summonEquipmentConfig,
   equipmentQualityConfig,
-} from "@/config/item/petEquipmentConfig";
+} from "@/config/item/summonEquipmentConfig";
 import { 
   uiText, 
   getAttributeDisplayName, 
@@ -105,7 +105,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   // Destructure all necessary properties directly from the Summon instance
   const {
     id: summonId,
-    petId,
+    summonSourceId,
     quality,
     level,
     experience,
@@ -136,7 +136,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   const qualityColorName = quality ? `text-${qualityConfig.colors[quality]}` : "text-gray-400";
 
   const imageUrl =
-    (petId && images[`/src/assets/summons/${petId}.png`]?.default) ||
+    (summonSourceId && images[`/src/assets/summons/${summonSourceId}.png`]?.default) ||
     images["/src/assets/summons/default.png"].default;
 
   // 计算经验百分比
@@ -177,7 +177,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
     };
   });
 
-  const displayName = petConfig[petId]?.name || petId || uiText.general.unknown;
+  const displayName = summonConfig[summonSourceId]?.name || summonSourceId || uiText.general.unknown;
 
   // 添加tooltip状态
   const [tooltipItem, setTooltipItem] = useState(null);
@@ -345,11 +345,11 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
               </div>
               
               {/* Five Element Tag */}
-              {(summon.fiveElement || petConfig[summon.petId]?.fiveElement) && (
-                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${FIVE_ELEMENT_COLORS[summon.fiveElement || petConfig[summon.petId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
+              {(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement) && (
+                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${FIVE_ELEMENT_COLORS[summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
                  <i className="fas fa-adjust mr-2"></i>
                  <span className="text-xs font-semibold">
-                    {getFiveElementDisplayName(summon.fiveElement || petConfig[summon.petId]?.fiveElement)}
+                    {getFiveElementDisplayName(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement)}
                   </span>
                 </div>
               )}
@@ -379,6 +379,15 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
               <i className="fa-solid fa-star text-purple-400 mr-2"></i>
               {uiText.titles.coreAttributes}
             </h3>
+            {/* 战力值展示 */}
+            {typeof summon.power === 'number' && (
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-yellow-400 font-bold text-base flex items-center">
+                  <i className="fas fa-fire-alt mr-2"></i>战力值
+                </span>
+                <span className="text-lg font-extrabold text-yellow-300 drop-shadow">{summon.power}</span>
+              </div>
+            )}
             <ul className="space-y-2 mb-2">
               {[
                 { key: "hp" },

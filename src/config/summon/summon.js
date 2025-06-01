@@ -1,10 +1,10 @@
-import { petConfig } from './petConfig';
+import { summonConfig } from './summonConfig';
 import { GROWTH_RATE_TIERS, ATTRIBUTE_TYPES } from './enumConfig';
 
 // 计算宠物评分
-export const calculatePetScore = (petName, attributes, level) => {
-  const pet = petConfig[petName];
-  if (!pet) return 0;
+export const calculateSummonScore = (summonName, attributes, level) => {
+  const summon = summonConfig[summonName];
+  if (!summon) return 0;
 
   let score = 0;
   const weights = {
@@ -28,12 +28,12 @@ export const calculatePetScore = (petName, attributes, level) => {
 };
 
 // 获取宠物成长等级评价
-export const getPetGrowthRating = (petName) => {
-  const pet = petConfig[petName];
-  if (!pet) return null;
+export const getSummonGrowthRating = (summonName) => {
+  const summon = summonConfig[summonName];
+  if (!summon) return null;
 
   // 计算平均成长率
-  const growthRates = pet.growthRates;
+  const growthRates = summon.growthRates;
   const avgGrowthRate = Object.values(growthRates).reduce((a, b) => a + b, 0) / Object.keys(growthRates).length;
 
   // 根据成长率判断等级
@@ -47,12 +47,12 @@ export const getPetGrowthRating = (petName) => {
 };
 
 // 计算宠物属性范围
-export const calculateAttributeRange = (petName, attribute, level) => {
-  const pet = petConfig[petName];
-  if (!pet) return null;
+export const calculateAttributeRange = (summonName, attribute, level) => {
+  const summon = summonConfig[summonName];
+  if (!summon) return null;
 
-  const baseRange = pet.basicAttributeRanges[attribute];
-  const growthRate = pet.growthRates[attribute];
+  const baseRange = summon.basicAttributeRanges[attribute];
+  const growthRate = summon.growthRates[attribute];
 
   return {
     min: Math.round(baseRange[0] * (1 + growthRate * level)),

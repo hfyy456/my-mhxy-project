@@ -4,8 +4,8 @@
  * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-05-19 03:45:26
  */
-import { eggConfig, eggQualityConfig } from '@/config/pet/eggConfig';
-import { petConfig } from '@/config/pet/petConfig';
+import { eggConfig, eggQualityConfig } from '@/config/summon/eggConfig';
+import { summonConfig } from '@/config/summon/summonConfig';
 
 export class Incubator {
   constructor() {
@@ -30,7 +30,7 @@ export class Incubator {
   generatePetQuality(eggQuality) {
     const qualityIndex = eggQualityConfig.names.indexOf(eggQuality);
     const qualities = eggQualityConfig.names;
-    const chances = eggQualityConfig.petQualityChances[qualityIndex];
+    const chances = eggQualityConfig.summonQualityChances[qualityIndex];
     
     const random = Math.random();
     let sum = 0;
@@ -109,7 +109,7 @@ export class Incubator {
     const randomPet = possiblePets[Math.floor(Math.random() * possiblePets.length)];
     
     // 根据蛋的品质决定召唤兽的品质
-    const petQuality = this.generatePetQuality(egg.quality);
+    const summonQuality = this.generatePetQuality(egg.quality);
     
     // 从培养皿中移除这个蛋
     this.incubatingEggs.delete(eggId);
@@ -119,9 +119,9 @@ export class Incubator {
       eggId,
       eggType: egg.eggType,
       eggQuality: egg.quality,
-      petType: randomPet,
-      petQuality: petQuality,
-      petData: petConfig[randomPet],
+      summonType: randomPet,
+      summonQuality: summonQuality,
+      summonData: summonConfig[randomPet],
     };
   }
 

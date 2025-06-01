@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from "react-redux";
-import { petConfig, qualityConfig, skillConfig } from "../../../config/config";
+import { summonConfig, qualityConfig, skillConfig } from "../../../config/config";
 import { selectAllSummons, setCurrentSummon, releaseSummon } from "../../../store/slices/summonSlice";
 import { 
   uiText, 
@@ -105,9 +105,9 @@ const SummonList = ({ isOpen, onClose }) => {
             </div>
           ) : (
             Object.values(summons).map((summon) => {
-              const petInfo = petConfig[summon.petId];
-              const displayName = petInfo?.name || summon.name;
-              const typeGradient = getTypeColor(petInfo?.type);
+              const summonInfo = summonConfig[summon.summonSourceId];
+              const displayName = summonInfo?.name || summon.name;
+              const typeGradient = getTypeColor(summonInfo?.type);
               const qualityClassName = getQualityClass(summon.quality);
 
               return (
@@ -133,10 +133,10 @@ const SummonList = ({ isOpen, onClose }) => {
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${typeGradient} text-white shadow-sm`}>
-                          {getPetTypeDisplayName(petInfo?.type)}
+                          {getPetTypeDisplayName(summonInfo?.type)}
                         </span>
                         <span className="text-sm text-gray-300">
-                          {getRaceTypeDisplayName(petInfo?.race)}
+                          {getRaceTypeDisplayName(summonInfo?.race)}
                         </span>
                       </div>
                     </div>

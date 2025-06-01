@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-05-16 03:19:34
  */
 import React from "react";
-import { qualityConfig, skillConfig, skillTypeConfig, petConfig } from "@/config/config";
+import { qualityConfig, skillConfig, skillTypeConfig, summonConfig } from "@/config/config";
 import CommonModal from "@/features/ui/components/CommonModal";
 import { getQualityDisplayName, getSkillTypeDisplayName } from "@/config/ui/uiTextConfig";
 
@@ -16,9 +16,9 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
         {historyList.length === 0 ? (
           <p className="text-gray-400 italic text-center py-8">暂无历史记录。</p>
         ) : (
-          historyList.map((pet, index) => {
-            const displayName = petConfig[pet.name]?.name || pet.name;
-            const qualityColorName = qualityConfig.colors[pet.quality] || 'normal';
+          historyList.map((summon, index) => {
+            const displayName = summonConfig[summon.name]?.name || summon.name;
+            const qualityColorName = qualityConfig.colors[summon.quality] || 'normal';
             return (
               <div
                 key={index}
@@ -28,7 +28,7 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                   <h4 className="font-bold text-purple-300">
                     {displayName}
                     <span className={`text-${qualityColorName} ml-2`}>
-                      ({getQualityDisplayName(pet.quality)})
+                      ({getQualityDisplayName(summon.quality)})
                     </span>
                   </h4>
                   <span className="text-xs text-gray-400">
@@ -38,23 +38,23 @@ const HistoryModal = ({ historyList, isOpen, onClose }) => {
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-300">攻击:</span>
-                    <span className="font-medium text-gray-100">{pet.attack}</span>
+                    <span className="font-medium text-gray-100">{summon.attack}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-300">防御:</span>
-                    <span className="font-medium text-gray-100">{pet.defense}</span>
+                    <span className="font-medium text-gray-100">{summon.defense}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-300">速度:</span>
-                    <span className="font-medium text-gray-100">{pet.speed}</span>
+                    <span className="font-medium text-gray-100">{summon.speed}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-300">气血:</span>
-                    <span className="font-medium text-gray-100">{pet.hp}</span>
+                    <span className="font-medium text-gray-100">{summon.hp}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {pet.skillSet.map((skillName) => {
+                  {summon.skillSet.map((skillName) => {
                     const skillInfo = skillConfig.find(
                       (s) => s.name === skillName
                     );

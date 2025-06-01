@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-26 04:32:46
+ * @LastEditTime: 2025-06-02 02:07:27
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
@@ -22,18 +22,18 @@ import {
  * 获取一个技能可以攻击的所有目标单位
  * @param {BattleUnit} sourceUnit - 发起攻击的单位
  * @param {BattleUnit[]} allUnits - 战场上的所有单位
- * @param {Object} globalPetConfig - 全局宠物配置对象
+ * @param {Object} globalSummonConfig - 全局宠物配置对象
  * @param {string} attackType - 攻击类型，默认为'normal'，可以是'skill'等
  * @param {Object} options - 额外选项
  * @param {boolean} options.includeAllies - 是否包含友方单位作为可能目标
  * @param {boolean} options.includeSelf - 是否包含自己作为可能目标
  * @returns {BattleUnit[]} - 可攻击的目标单位数组
  */
-export const getValidTargetsForUnit = (sourceUnit, allUnits, globalPetConfig, attackType = 'normal', options = {}) => {
+export const getValidTargetsForUnit = (sourceUnit, allUnits, globalSummonConfig, attackType = 'normal', options = {}) => {
   if (!sourceUnit || !allUnits || allUnits.length === 0) return [];
   
   // 获取攻击距离属性
-  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalPetConfig, attackType);
+  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalSummonConfig, attackType);
   
   // 默认情况下，只能攻击敌方单位
   const includeAllies = options.includeAllies || false;
@@ -53,7 +53,7 @@ export const getValidTargetsForUnit = (sourceUnit, allUnits, globalPetConfig, at
     if (targetUnit.stats.currentHp <= 0) return false;
     
     // 检查是否在攻击范围内
-    return canUnitAttackTarget(sourceUnit, targetUnit, globalPetConfig, attackType);
+    return canUnitAttackTarget(sourceUnit, targetUnit, globalSummonConfig, attackType);
   });
 };
 
@@ -62,10 +62,10 @@ export const getValidTargetsForUnit = (sourceUnit, allUnits, globalPetConfig, at
  * @param {BattleUnit} sourceUnit - 发起攻击的单位
  * @param {string} skillId - 技能ID
  * @param {BattleUnit[]} allUnits - 战场上的所有单位
- * @param {Object} globalPetConfig - 全局宠物配置对象
+ * @param {Object} globalSummonConfig - 全局宠物配置对象
  * @returns {BattleUnit[]} - 可攻击的目标单位数组
  */
-export const getValidTargetsForSkill = (sourceUnit, skillId, allUnits, globalPetConfig) => {
+export const getValidTargetsForSkill = (sourceUnit, skillId, allUnits, globalSummonConfig) => {
   if (!sourceUnit || !skillId || !allUnits || allUnits.length === 0) return [];
   
   // 获取技能配置
@@ -79,7 +79,7 @@ export const getValidTargetsForSkill = (sourceUnit, skillId, allUnits, globalPet
   };
   
   // 使用技能的攻击类型获取有效目标
-  return getValidTargetsForUnit(sourceUnit, allUnits, globalPetConfig, 'skill', targetOptions);
+  return getValidTargetsForUnit(sourceUnit, allUnits, globalSummonConfig, 'skill', targetOptions);
 };
 
 /**
@@ -242,13 +242,13 @@ export const getSkillAffectedArea = (skillId, targetId, battleUnits, selectedUni
  * 判断一个单位是否能够攻击到另一个单位，基于攻击距离
  * @param {BattleUnit} sourceUnit - 发起攻击的单位
  * @param {BattleUnit} targetUnit - 攻击目标单位
- * @param {Object} globalPetConfig - 全局宠物配置对象
+ * @param {Object} globalSummonConfig - 全局宠物配置对象
  * @param {string} attackType - 攻击类型，默认为'normal'，可以是'skill'等
  * @returns {boolean} - 如果可以攻击返回true，否则返回false
  */
-export const canUnitAttackTarget = (sourceUnit, targetUnit, globalPetConfig, attackType = 'normal') => {
+export const canUnitAttackTarget = (sourceUnit, targetUnit, globalSummonConfig, attackType = 'normal') => {
   // 获取攻击距离属性
-  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalPetConfig, attackType);
+  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalSummonConfig, attackType);
   
   // 计算两个单位之间的距离
   const distance = calculateBattleDistance(sourceUnit.gridPosition, targetUnit.gridPosition, rangeProps.type);
@@ -269,11 +269,11 @@ export const canUnitAttackTarget = (sourceUnit, targetUnit, globalPetConfig, att
 /**
  * 获取单位的攻击距离属性
  * @param {BattleUnit} unit - 单位
- * @param {Object} globalPetConfig - 全局宠物配置对象
+ * @param {Object} globalSummonConfig - 全局宠物配置对象
  * @param {string} attackType - 攻击类型，默认为'normal'，可以是'skill'等
  * @returns {Object} - 攻击距离属性对象 { min: 最小距离, max: 最大距离, type: 距离计算类型 }
  */
-export const getUnitAttackRangeProperties = (unit, globalPetConfig, attackType = 'normal') => {
+export const getUnitAttackRangeProperties = (unit, globalSummonConfig, attackType = 'normal') => {
   // 默认攻击距离属性
   const defaultRangeProps = {
     min: 1,
@@ -282,65 +282,65 @@ export const getUnitAttackRangeProperties = (unit, globalPetConfig, attackType =
   };
   
   // 打印全局宠物配置对象类型
-  console.log(`globalPetConfig 类型: ${typeof globalPetConfig}`);
-  console.log(`globalPetConfig 是数组吗: ${Array.isArray(globalPetConfig)}`);
+  console.log(`globalSummonConfig 类型: ${typeof globalSummonConfig}`);
+  console.log(`globalSummonConfig 是数组吗: ${Array.isArray(globalSummonConfig)}`);
   
   // 如果没有单位或配置，返回默认值
-  if (!unit || !globalPetConfig) {
+  if (!unit || !globalSummonConfig) {
     console.log('没有单位或宠物配置，返回默认值');
     return defaultRangeProps;
   }
   
   // 获取单位的基础属性
-  let petId = unit.sourceId;
-  console.log(`原始单位源ID: ${petId}`);
+  let summonSourceId = unit.sourceId;
+  console.log(`原始单位源ID: ${summonSourceId}`);
   
   // 处理召唤ID的情况
-  if (petId && petId.startsWith('summon-')) {
+  if (summonSourceId && summonSourceId.startsWith('summon-')) {
     // 从单位中获取真正的宠物ID
-    petId = unit.petId || unit.type || unit.petType;
-    console.log(`检测到召唤ID，尝试使用单位的petId/type/petType: ${petId}`);
+    summonSourceId = unit.summonSourceId || unit.type || unit.summonType;
+    console.log(`检测到召唤ID，尝试使用单位的summonSourceId/type/summonType: ${summonSourceId}`);
   }
   
   // 如果还是找不到宠物ID，使用单位名称或其他属性匹配
-  if (!petId || petId.includes('-')) {
+  if (!summonSourceId || summonSourceId.includes('-')) {
     // 如果单位有名称，尝试根据名称匹配
     const unitName = unit.name;
     console.log(`尝试根据单位名称匹配: ${unitName}`);
     
-    // 确保 globalPetConfig 是对象
-    if (typeof globalPetConfig === 'object') {
+    // 确保 globalSummonConfig 是对象
+    if (typeof globalSummonConfig === 'object') {
       // 遍历所有宠物配置
-      for (const key in globalPetConfig) {
-        const pet = globalPetConfig[key];
+      for (const key in globalSummonConfig) {
+        const summon = globalSummonConfig[key];
         // 如果宠物名称与单位名称匹配
-        if (pet && pet.name === unitName) {
-          petId = pet.id;
-          console.log(`根据名称匹配到宠物ID: ${petId}`);
+        if (summon && summon.name === unitName) {
+          summonSourceId = summon.id;
+          console.log(`根据名称匹配到宠物ID: ${summonSourceId}`);
           break;
         }
       }
     }
   }
   
-  console.log(`最终使用的宠物ID: ${petId}`);
+  console.log(`最终使用的宠物ID: ${summonSourceId}`);
   
-  // 尝试直接从 petConfig 中获取宠物数据
-  let petData = null;
+  // 尝试直接从 summonConfig 中获取宠物数据
+  let summonData = null;
   
-  // 如果 globalPetConfig 是对象且不是数组，直接使用键值访问
-  if (typeof globalPetConfig === 'object' && !Array.isArray(globalPetConfig)) {
-    petData = globalPetConfig[petId];
-    console.log(`使用对象方式获取宠物数据: ${petData ? '成功' : '失败'}`);
+  // 如果 globalSummonConfig 是对象且不是数组，直接使用键值访问
+  if (typeof globalSummonConfig === 'object' && !Array.isArray(globalSummonConfig)) {
+    summonData = globalSummonConfig[summonSourceId];
+    console.log(`使用对象方式获取宠物数据: ${summonData ? '成功' : '失败'}`);
   } 
-  // 如果 globalPetConfig 是数组，使用 find 方法
-  else if (Array.isArray(globalPetConfig)) {
-    petData = globalPetConfig.find(pet => pet.id === petId);
-    console.log(`使用数组方式获取宠物数据: ${petData ? '成功' : '失败'}`);
+  // 如果 globalSummonConfig 是数组，使用 find 方法
+  else if (Array.isArray(globalSummonConfig)) {
+    summonData = globalSummonConfig.find(summon => summon.id === summonSourceId);
+    console.log(`使用数组方式获取宠物数据: ${summonData ? '成功' : '失败'}`);
   }
   
   // 如果找不到对应的宠物配置，尝试根据单位名称设置默认攻击距离
-  if (!petData) {
+  if (!summonData) {
     console.log(`找不到宠物配置，尝试根据单位名称设置默认攻击距离`);
     
     // 确保单位有名称
@@ -373,7 +373,7 @@ export const getUnitAttackRangeProperties = (unit, globalPetConfig, attackType =
     };
   }
   
-  console.log(`找到宠物配置:`, petData);
+  console.log(`找到宠物配置:`, summonData);
   
   // 根据攻击类型获取不同的攻击距离属性
   if (attackType === 'skill') {
@@ -388,17 +388,17 @@ export const getUnitAttackRangeProperties = (unit, globalPetConfig, attackType =
     return result;
   } else {
     // 普通攻击距离，从宠物配置中获取
-    // 注意：petConfig 中的 attackRange 是一个单一数值，表示最大攻击距离
+    // 注意：summonConfig 中的 attackRange 是一个单一数值，表示最大攻击距离
     
     // 直接访问并打印宠物的attackRange属性
-    console.log(`宠物 ${petData.name || petId} 的attackRange属性:`, petData.attackRange);
+    console.log(`宠物 ${summonData.name || summonSourceId} 的attackRange属性:`, summonData.attackRange);
     
     // 确保使用正确的攻击距离
-    const attackRange = petData.attackRange || defaultRangeProps.max;
+    const attackRange = summonData.attackRange || defaultRangeProps.max;
     
     // 打印调试信息
     console.log(`单位 ${unit.name || unit.id} 的攻击距离属性:`);
-    console.log(`宠物ID: ${petId}, 配置中的攻击距离: ${attackRange}`);
+    console.log(`宠物ID: ${summonSourceId}, 配置中的攻击距离: ${attackRange}`);
     
     // 确保最大攻击距离是数字
     const maxRange = Number(attackRange) || defaultRangeProps.max;
@@ -462,12 +462,12 @@ export const getUnitAbsoluteColumn = (position) => {
  * 检查单位是否有可攻击的目标
  * @param {BattleUnit} sourceUnit - 发起攻击的单位
  * @param {BattleUnit[]} allUnits - 战场上的所有单位
- * @param {Object} globalPetConfig - 全局宠物配置对象
+ * @param {Object} globalSummonConfig - 全局宠物配置对象
  * @param {string} attackType - 攻击类型，默认为'normal'
  * @returns {boolean} - 如果有可攻击的目标返回true，否则返回false
  */
-export const hasValidTargets = (sourceUnit, allUnits, globalPetConfig, attackType = 'normal') => {
-  const targets = getValidTargetsForUnit(sourceUnit, allUnits, globalPetConfig, attackType);
+export const hasValidTargets = (sourceUnit, allUnits, globalSummonConfig, attackType = 'normal') => {
+  const targets = getValidTargetsForUnit(sourceUnit, allUnits, globalSummonConfig, attackType);
   return targets.length > 0;
 };
 

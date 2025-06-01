@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-21 02:52:59
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-01 04:12:41
+ * @LastEditTime: 2025-06-02 04:30:37
  */
 import React, {
   useState,
@@ -21,11 +21,13 @@ import {
 // import { FixedSizeGrid } from 'react-window'; // <-- 注释掉 FixedSizeGrid
 import {
   CELL_TYPES,
+  initialMapData,
   MAP_VIEW_CONFIG,
   TILE_CONTENT_TYPES,
-} from "@/config/map/mapConfig"; // 导入地图数据和类型
-import { WORLD_REGIONS } from "@/config/map/worldMapConfig"; // 导入世界地图配置
-import { findPathAStar } from "@/utils/pathfinding"; // 导入 A* 寻路算法
+} from "@/config/map/mapConfig"; // 导入地图配置
+import { WORLD_REGIONS } from "@/config/map/worldMapConfig";
+import { selectPlayerLevel } from "@/store/slices/playerSlice";
+import { initiateMapBattleAction } from "@/store/slices/battleSlice";
 import {
   setPlayerPositionAction,
   selectPlayerPosition,
@@ -236,7 +238,8 @@ const GameMap = ({
   onOpenNpcPanel, // <-- Add new prop for NPC panel
 }) => {
   const dispatch = useDispatch();
-  const playerPosition = useSelector(selectPlayerPosition); // Get player position from Redux
+  const playerPosition = useSelector(selectPlayerPosition);
+  const playerLevel = useSelector(selectPlayerLevel);
   const currentRegionId = useSelector(selectCurrentRegionId); // 获取当前区域ID
   const currentMapData = useSelector(selectCurrentRegionMapData); // 获取当前区域地图数据
   
@@ -346,6 +349,43 @@ const GameMap = ({
         return false;
       }
       dispatch(setPlayerPositionAction({ row: targetRow, col: targetCol }));
+
+      // 随机遭遇逻辑
+      if (currentRegionId && typeof playerLevel === 'number' && playerLevel > 0) {
+        const regionConfig = WORLD_REGIONS[currentRegionId];
+        if (regionConfig && regionConfig.encounterConfig) {
+          const cell = grid[targetRow]?.[targetCol]; // 安全地访问 grid
+          if (cell) { // 确保 cell 存在
+            const cellType = cell.type;
+            const typeDetails = Object.values(CELL_TYPES).find(ct => ct.id === cellType);
+
+            // 定义允许遭遇的图块类型
+            const ENCOUNTER_TILE_TYPES = [
+              CELL_TYPES.GRASS.id,
+              CELL_TYPES.FOREST.id,
+              // CELL_TYPES.SAND.id, // SAND 类型当前未在 mapConfig.js中定义
+              CELL_TYPES.BRIDGE.id, // 假设桥上也可能发生遭遇
+              //CELL_TYPES.WATER.id, // 水上遭遇？
+            ];
+
+            if (typeDetails && ENCOUNTER_TILE_TYPES.includes(typeDetails.id)) {
+              const { levelRange, encounterRate } = regionConfig.encounterConfig;
+              const effectiveEncounterRate = typeof encounterRate === 'number' ? encounterRate : 0.1; // 默认10%遭遇率
+
+              if (playerLevel >= levelRange.min && playerLevel <= levelRange.max) {
+                if (Math.random() < effectiveEncounterRate) {
+                  console.log(`[GameMap] Triggering encounter in ${currentRegionId} for player level ${playerLevel} at ${targetRow},${targetCol}`);
+                  dispatch(initiateMapBattleAction({ 
+                    areaId: currentRegionId, 
+                    playerLevel, 
+                    playerPosition: { row: targetRow, col: targetCol } 
+                  }));
+                }
+              }
+            }
+          }
+        }
+      }
       return true;
     },
     [rows, cols, grid, showToast, triggerShake, dispatch]

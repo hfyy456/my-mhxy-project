@@ -8,7 +8,7 @@ import { generateUniqueId } from '@/utils/idUtils';
 import { BATTLE_UNIT_TYPES, BATTLE_PHASES, UNIQUE_ID_PREFIXES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
 import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
 // import { skillConfig } from '@/config/config'; // 稍后用于技能效果处理
-import { petConfig } from '@/config/pet/petConfig'; // 用于获取召唤兽基础信息
+import { summonConfig } from '@/config/summon/summonConfig'; // 用于获取召唤兽基础信息
 
 /**
  * @typedef {Object} BattleUnitStat
@@ -54,24 +54,24 @@ import { petConfig } from '@/config/pet/petConfig'; // 用于获取召唤兽基�
  * @property {string[]} skillSet - Array of skill IDs this unit has access to
  * @property {StatusEffect[]} statusEffects - Array of active status effects
  * @property {BattleUnitPosition} gridPosition - Position in the 3x3 grid
- * @property {string} spriteAssetKey - Key to find the visual asset (e.g., petId for summons)
+ * @property {string} spriteAssetKey - Key to find the visual asset (e.g., summonSourceId for summons)
  * @property {boolean} isDefeated - True if currentHp <= 0
  * @property {number} actionPoints - (可选) 如果使用行动点系统而非纯速度排序
  */
 
 /**
  * Creates a battle unit from player's summon data.
- * @param {Object} summonData - The summon object from summonSlice (should have id, petId, nickname, level, derivedAttributes, skillSet, etc.)
+ * @param {Object} summonData - The summon object from summonSlice (should have id, summonSourceId, nickname, level, derivedAttributes, skillSet, etc.)
  * @param {BattleUnitPosition} position - Position in the player's battle formation.
- * @param {Object} petConfig - Global pet configuration object.
+ * @param {Object} summonConfig - Global summon configuration object.
  * @returns {BattleUnit}
  */
-export const createPlayerBattleUnit = (summonData, position, petConfig) => {
+export const createPlayerBattleUnit = (summonData, position, summonConfig) => {
   if (!summonData || !summonData.id) {
     console.error("Invalid summonData provided to createPlayerBattleUnit", summonData);
     return null;
   }
-  const basePetInfo = petConfig[summonData.petId] || {};
+  const baseSummonInfo = summonConfig[summonData.summonSourceId] || {};
 
   // 使用 enumConfig.js 中定义的核心属性名
   const { HP, MP, PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED, CRIT_RATE, CRIT_DAMAGE, DODGE_RATE } = EQUIPMENT_EFFECT_TYPES;
@@ -80,7 +80,7 @@ export const createPlayerBattleUnit = (summonData, position, petConfig) => {
     id: generateUniqueId(UNIQUE_ID_PREFIXES.BATTLE_UNIT),
     sourceId: summonData.id, // Original summon ID
     isPlayerUnit: true,
-    name: summonData.nickname || basePetInfo.name || '召唤兽',
+    name: summonData.nickname || baseSummonInfo.name || '召唤兽',
     level: summonData.level,
     stats: {
       // 生命和法力
@@ -126,21 +126,21 @@ export const createPlayerBattleUnit = (summonData, position, petConfig) => {
       sourceType: 'summonData',
       sourceId: summonData.id,
       sourceName: summonData.name,
-      petId: summonData.petId,
+      summonSourceId: summonData.summonSourceId,
       sourceSkillSet: summonData.skillSet || [],
       skillsLength: (summonData.skillSet || []).length,
       hasSkillSetProperty: summonData.hasOwnProperty('skillSet'),
-      petConfigInfo: petConfig[summonData.petId] ? {
-        name: petConfig[summonData.petId].name,
-        hasSkills: petConfig[summonData.petId].hasOwnProperty('skillSet'),
-        skillsFromConfig: petConfig[summonData.petId].skillSet || []
-      } : 'petConfig not found',
+      summonConfigInfo: summonConfig[summonData.summonSourceId] ? {
+        name: summonConfig[summonData.summonSourceId].name,
+        hasSkills: summonConfig[summonData.summonSourceId].hasOwnProperty('skillSet'),
+        skillsFromConfig: summonConfig[summonData.summonSourceId].skillSet || []
+      } : 'summonConfig not found',
       importTime: new Date().toISOString(),
       importDetails: `从召唤兽数据导入技能: ${JSON.stringify(summonData.skillSet || [])}`
     },
     statusEffects: [],
     gridPosition: position, 
-    spriteAssetKey: summonData.petId, // Use petId for sprite lookup, or a more specific asset key if available
+    spriteAssetKey: summonData.summonSourceId, // Use summonSourceId for sprite lookup, or a more specific asset key if available
     isDefeated: false,
     actionPoints: 0, // Initialize if using AP system
   };
@@ -246,7 +246,7 @@ export const determineInitialTurnOrder = (allUnits) => {
  * @param {string[][]} playerInitialFormationGrid - 3x3 grid with player summonIds or null.
  * @param {Object[]} enemyTemplates - Array of enemy template objects from enemyConfig.
  * @param {string[][]} enemyInitialFormationGrid - 3x3 grid with enemy templateIds or null.
- * @param {Object} globalPetConfig - The petConfig object.
+ * @param {Object} globalSummonConfig - The summonConfig object.
  * @param {Object} globalEnemyConfig - The enemyConfig object (used to fetch templates by ID).
  * @returns {Object} Payload for the setupBattle action in battleSlice.
  */
@@ -255,7 +255,7 @@ export const prepareBattleSetupData = (
     playerSummonsData, 
     playerInitialFormationGrid, 
     enemyTemplatesOnGrid, // Array of { template, position } for enemies on grid
-    globalPetConfig,
+    globalSummonConfig,
     // globalEnemyConfig // No longer needed if enemyTemplatesOnGrid contains full templates
   ) => {
   const battleUnitsMap = {};
@@ -268,7 +268,7 @@ export const prepareBattleSetupData = (
       if (summonId && playerSummonsData[summonId]) {
         const summon = playerSummonsData[summonId];
         const position = { team: 'player', row: rIndex, col: cIndex };
-        const battleUnit = createPlayerBattleUnit(summon, position, globalPetConfig);
+        const battleUnit = createPlayerBattleUnit(summon, position, globalSummonConfig);
         if (battleUnit) {
           battleUnitsMap[battleUnit.id] = battleUnit;
           playerBattleFormation[rIndex][cIndex] = battleUnit.id; // Store battleUnit.id in formation
