@@ -10,7 +10,7 @@ export const useAppModals = () => {
   const currentSummon = useCurrentSummon();
 
   const [isSummonModalOpen, setIsSummonModalOpen] = useState(false);
-  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isInventoryOOPOpen, setIsInventoryOOPOpen] = useState(false);
   const [isIncubatorOpen, setIsIncubatorOpen] = useState(false);
   const [isPlayerInfoOpen, setIsPlayerInfoOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -20,6 +20,8 @@ export const useAppModals = () => {
   const [selectedNpcId, setSelectedNpcId] = useState(null);
   const [isFormationModalOpen, setIsFormationModalOpen] = useState(false);
   const [isTowerModalOpen, setIsTowerModalOpen] = useState(false);
+  const [isHomesteadModalOpen, setIsHomesteadModalOpen] = useState(false);
+  const [isSummonEquipmentOpen, setIsSummonEquipmentOpen] = useState(false);
 
   const openSummonModal = useCallback(() => {
     if (summons.length > 0) {
@@ -36,8 +38,8 @@ export const useAppModals = () => {
 
   const closeSummonModal = useCallback(() => setIsSummonModalOpen(false), []);
   
-  const openInventoryModal = useCallback(() => setIsInventoryOpen(true), []);
-  const closeInventoryModal = useCallback(() => setIsInventoryOpen(false), []);
+  const openInventoryOOPModal = useCallback(() => setIsInventoryOOPOpen(true), []);
+  const closeInventoryOOPModal = useCallback(() => setIsInventoryOOPOpen(false), []);
 
   const openIncubatorModal = useCallback(() => setIsIncubatorOpen(true), []);
   const closeIncubatorModal = useCallback(() => setIsIncubatorOpen(false), []);
@@ -73,13 +75,35 @@ export const useAppModals = () => {
   }, [dispatch]);
   const closeTowerModal = useCallback(() => setIsTowerModalOpen(false), []);
 
+  const openHomesteadModal = useCallback(() => {
+    
+    setIsHomesteadModalOpen(true);
+  }, []);
+  const closeHomesteadModal = useCallback(() => setIsHomesteadModalOpen(false), []);
+
+  // 召唤兽装备管理（集成背包系统的召唤兽界面）
+  const openSummonEquipmentModal = useCallback(() => {
+    if (summons.length > 0) {
+      if (!currentSummon) {
+        dispatch(setCurrentSummon(summons[0].id));
+      }
+    } else {
+      if (currentSummon) {
+        dispatch(setCurrentSummon(null));
+      }
+    }
+    setIsSummonEquipmentOpen(true);
+  }, [dispatch, summons, currentSummon]);
+
+  const closeSummonEquipmentModal = useCallback(() => setIsSummonEquipmentOpen(false), []);
+
   return {
     isSummonModalOpen,
     openSummonModal,
     closeSummonModal,
-    isInventoryOpen,
-    openInventoryModal,
-    closeInventoryModal,
+    isInventoryOOPOpen,
+    openInventoryOOPModal,
+    closeInventoryOOPModal,
     isIncubatorOpen,
     openIncubatorModal,
     closeIncubatorModal,
@@ -105,5 +129,12 @@ export const useAppModals = () => {
     isTowerModalOpen,
     openTowerModal,
     closeTowerModal,
+    isHomesteadModalOpen,
+    openHomesteadModal,
+    closeHomesteadModal,
+    isSummonEquipmentOpen,
+    setIsSummonEquipmentOpen,
+    openSummonEquipmentModal,
+    closeSummonEquipmentModal,
   };
 }; 

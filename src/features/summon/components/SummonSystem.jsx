@@ -26,7 +26,7 @@ import {
   fuseSummons
 } from "../../../store/slices/summonSlice";
 import { addItems, selectAllItemsArray, selectItemEquipInfo } from "../../../store/slices/itemSlice";
-import { addToInventory } from "../../../store/slices/inventorySlice";
+import { useInventoryActions } from "../../../hooks/useInventoryManager";
 import { uiText } from "@/config/ui/uiTextConfig";
 import { summonConfig } from "@/config/config";
 import { playerBaseConfig } from "@/config/character/playerConfig";
@@ -34,6 +34,7 @@ import NicknameModal from "./NicknameModal";
 import { generateUniqueId } from "@/utils/idUtils";
 import { manageEquipItemThunk, manageUnequipItemThunk } from "../../../store/thunks/equipmentThunks";
 import store from "@/store"; // Import the store instance
+import inventoryManager from "@/store/InventoryManager";
 
 const SummonSystem = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
@@ -65,6 +66,8 @@ const SummonSystem = ({ toasts, setToasts }) => {
   const [showCrossEquipConfirm, setShowCrossEquipConfirm] = useState(false);
   const [crossEquipDetails, setCrossEquipDetails] = useState(null);
   const [isFusionModalOpen, setIsFusionModalOpen] = useState(false);
+
+  const inventoryActions = useInventoryActions();
 
   const handleOpenEquipmentSelector = useCallback((slotType) => {
     if (!currentSummon) {
@@ -131,9 +134,69 @@ const SummonSystem = ({ toasts, setToasts }) => {
       const result = refineMonster(playerLevel);
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
         dispatch(addItems(result.newlyCreatedItems));
-        result.newlyCreatedItems.forEach(item => {
-          dispatch(addToInventory({ itemId: item.id }));
+        
+        // 改进物品添加逻辑 - 使用异步并行处理
+        const itemAddPromises = result.newlyCreatedItems.map(async (item) => {
+          try {
+            const inventoryItem = {
+              id: item.id,
+              name: item.name,
+              type: item.itemType || 'equipment',
+              subType: item.subType,
+              rarity: inventoryManager.mapQualityToRarity(item.quality),
+              quality: item.quality,
+              description: item.description,
+              value: item.sellPrice || 100,
+              isEquipment: item.itemType === 'equipment',
+              slotType: item.slotType,
+              effects: item.effects || {},
+              level: item.level || 1,
+              quantity: 1,
+              maxStack: 1, // 装备不能堆叠
+              stackable: false,
+              source: 'refineMonster',
+              createdAt: Date.now()
+            };
+            
+            console.log('[SummonSystem] 准备添加物品到背包:', inventoryItem);
+            const success = inventoryActions.addItem(inventoryItem);
+            
+            if (success) {
+              console.log('[SummonSystem] 成功添加物品:', item.name);
+              return { success: true, item: inventoryItem };
+            } else {
+              console.warn('[SummonSystem] 背包已满，无法添加物品:', item.name);
+              return { success: false, item: inventoryItem, reason: 'inventory_full' };
+            }
+          } catch (error) {
+            console.error('[SummonSystem] 添加物品到背包失败:', error, item);
+            return { success: false, item, reason: error.message };
+          }
         });
+
+        // 等待所有物品添加完成
+        const addResults = await Promise.all(itemAddPromises);
+        
+        // 强制触发背包状态更新
+        setTimeout(() => {
+          inventoryManager.emit('inventory_changed', inventoryManager.getState());
+          console.log('[SummonSystem] 炼妖完成，强制触发背包状态更新');
+        }, 50);
+
+        // 处理添加结果
+        const successItems = addResults.filter(r => r.success);
+        const failedItems = addResults.filter(r => !r.success);
+
+        if (failedItems.length > 0) {
+          failedItems.forEach(({ item, reason }) => {
+            setToasts(prev => [...prev, {
+              id: generateUniqueId('toast'),
+              message: `无法添加物品：${item.name} (${reason === 'inventory_full' ? '背包已满' : reason})`,
+              type: 'warning'
+            }]);
+          });
+        }
+
         if (result.requireNickname) {
           setSelectedSummonForNickname({
             ...result.newSummonPayload,
@@ -149,10 +212,21 @@ const SummonSystem = ({ toasts, setToasts }) => {
           dispatch(setCurrentSummon(result.newSummonPayload.id));
           dispatch(addRefinementHistoryItem(result.historyItem));
         }
+        
+        // 根据添加结果生成消息
+        let message = "炼妖成功！获得了新的召唤兽";
+        if (successItems.length > 0) {
+          const itemNames = successItems.map(r => r.item.name).join('、');
+          message += `和初始装备：${itemNames}！物品已添加到背包！`;
+        }
+        if (failedItems.length > 0) {
+          message += ` 但有${failedItems.length}个物品因背包已满未能添加。`;
+        }
+        
         setToasts(prev => [...prev, {
           id: generateUniqueId('toast'),
-          message: result.message || "炼妖成功！获得了新的召唤兽和初始装备！",
-          type: 'success'
+          message,
+          type: successItems.length > 0 ? 'success' : 'warning'
         }]);
       } else {
         throw new Error(result.message || "炼妖失败，未能返回完整的召唤兽、物品或历史数据");
@@ -165,7 +239,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
         type: 'error'
       }]);
     }
-  }, [dispatch, setToasts, summonsList.length, maxSummons, playerLevel]);
+  }, [dispatch, setToasts, summonsList.length, maxSummons, playerLevel, inventoryActions]);
   
   const handleFusion = useCallback((newSummon, summonId1, summonId2) => {
     try {
@@ -212,6 +286,40 @@ const SummonSystem = ({ toasts, setToasts }) => {
       console.error("Cannot equip item: current summon or slot type is missing.");
       setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备失败：缺少召唤兽或槽位信息", type: 'error' }]);
       setIsEquipmentSelectorOpen(false);
+      return;
+    }
+
+    if (itemToEquip.source === 'inventory') {
+      try {
+        const result = await inventoryManager.equipItemToSummon(
+          itemToEquip.slotIndex, 
+          currentSummon.id
+        );
+        
+        if (result.success) {
+          setToasts(prev => [...prev, { 
+            id: generateUniqueId('toast'), 
+            message: result.message, 
+            type: 'success' 
+          }]);
+        } else {
+          setToasts(prev => [...prev, { 
+            id: generateUniqueId('toast'), 
+            message: result.error, 
+            type: 'error' 
+          }]);
+        }
+      } catch (error) {
+        console.error('背包系统装备失败:', error);
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'), 
+          message: `装备失败: ${error.message}`, 
+          type: 'error' 
+        }]);
+      }
+      
+      setIsEquipmentSelectorOpen(false);
+      setSelectedSlotForEquipping(null);
       return;
     }
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import store from "@/store"; // 导入store以便获取用户阵型数据
+import store from "./store/index.js"; // 导入store以便获取用户阵型数据
 
 // 导入自定义样式
-import "@/styles/customScrollbar.css";
+import "./styles/customScrollbar.css";
 
 // REMOVING global PixiJS and @pixi/react imports for extend
 // import { extend } from '@pixi/react';
@@ -24,7 +24,10 @@ import { useToast } from "@/hooks/useToast";
 // import { useModalState } from "@/hooks/useModalState"; // No longer needed if we manage modals directly
 import { useAutoSave } from "@/features/save/hooks/useAutoSave";
 import ToastContainer from "@/features/ui/components/ToastContainer";
-import InventoryPanel from "@/features/inventory/components/InventoryPanel";
+// 移除旧的Redux背包系统
+// import InventoryPanel from "@/features/inventory/components/InventoryPanel";
+import InventoryModal from "@/features/inventory/components/InventoryModal"; // 主背包系统
+import { useInventoryManager } from "@/hooks/useInventoryManager"; // 添加背包管理器导入
 import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
@@ -57,6 +60,7 @@ import { selectAllSummons } from "@/store/slices/summonSlice";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
 import TowerSystem from "@/features/tower/components/TowerSystem";
 import TowerEntry from "@/features/tower/components/TowerEntry";
+import HomesteadView from '@/features/homestead/components/HomesteadView'; // 导入家园视图
 
 const App = () => {
   const dispatch = useDispatch();
@@ -64,13 +68,20 @@ const App = () => {
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
   
+  // 初始化背包系统 - 确保游戏启动时就加载背包数据
+  const inventoryState = useInventoryManager();
+  
   const {
     isSummonModalOpen,
     openSummonModal,
     closeSummonModal,
-    isInventoryOpen,
-    openInventoryModal,
-    closeInventoryModal,
+    // 移除旧的Redux背包状态管理
+    // isInventoryOpen,
+    // openInventoryModal,
+    // closeInventoryModal,
+    isInventoryOOPOpen,
+    openInventoryOOPModal,
+    closeInventoryOOPModal,
     isIncubatorOpen,
     openIncubatorModal,
     closeIncubatorModal,
@@ -96,6 +107,12 @@ const App = () => {
     isTowerModalOpen,
     openTowerModal,
     closeTowerModal,
+    isHomesteadModalOpen,
+    openHomesteadModal,
+    closeHomesteadModal,
+    isSummonEquipmentOpen,
+    openSummonEquipmentModal,
+    closeSummonEquipmentModal,
   } = useAppModals();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -112,12 +129,43 @@ const App = () => {
     const cleanup = initializeReduxIntegration();
     dispatch(initializePlayerQuests());
     console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
+    console.log("[App.jsx] 背包初始化状态:", {
+      isLoading: inventoryState.isLoading,
+      error: inventoryState.error,
+      gold: inventoryState.gold,
+      usedSlots: inventoryState.usedSlots,
+      capacity: inventoryState.capacity
+    });
     const loader = document.getElementById(LOADER_WRAPPER_ID);
     if (loader) {
       loader.style.display = 'none';
     }
     return cleanup;
-  }, [dispatch]);
+  }, [dispatch, inventoryState.isLoading]);
+
+  // 监听背包初始化完成
+  useEffect(() => {
+    if (!inventoryState.isLoading && !inventoryState.error) {
+      console.log("[App.jsx] 背包系统初始化完成:", {
+        金币: inventoryState.gold,
+        已用插槽: inventoryState.usedSlots,
+        总容量: inventoryState.capacity,
+        物品数量: inventoryState.items?.length || 0
+      });
+      
+      // 如果有初始物品，显示一个提示
+      if (inventoryState.usedSlots > 0) {
+        showResult("背包系统加载完成，发现已有物品", "success");
+      } else {
+        showResult("背包系统初始化完成，已添加新手物品", "info");
+      }
+    }
+    
+    if (inventoryState.error) {
+      console.error("[App.jsx] 背包系统初始化失败:", inventoryState.error);
+      showResult(`背包加载失败: ${inventoryState.error}`, "error");
+    }
+  }, [inventoryState.isLoading, inventoryState.error, inventoryState.usedSlots, showResult]);
 
   // No more handleSystemChange
 
@@ -163,15 +211,25 @@ const App = () => {
     simulateLoading();
   };
   
-  // Dummy button bar for now, can be integrated into GameMap or other UI element
-  const GameActionBar = () => (
+  // 更新操作栏，移除旧背包按钮，保留面向对象背包按钮并重命名
+  const GameActionBar = () => {
+    return (
     <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '5px' }}>
       <button onClick={openFormationModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#555', border: 'none', borderRadius: '3px' }}>阵型</button>
       <button onClick={openTowerModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#6b46c1', border: 'none', borderRadius: '3px' }}>封妖塔</button>
-      {/* Add other action buttons here */}
+      <button onClick={() => { openHomesteadModal(); }} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#069545', border: 'none', borderRadius: '3px' }}>家园</button>
+      {/* 重命名面向对象背包按钮为主背包 */}
+      <button onClick={openInventoryOOPModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#f59e0b', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
+        背包
+      </button>
+      {/* 召唤兽装备管理按钮 */}
+      <button onClick={openSummonEquipmentModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#8b5cf6', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
+        召唤兽装备
+      </button>
     </div>
-  );
+  ); };
 
+    console.log('[App.jsx] App component rendering. isHomesteadModalOpen:', isHomesteadModalOpen);
   return (
     <div
       style={{
@@ -216,7 +274,7 @@ const App = () => {
               onOpenSummonSystem={openSummonModal}
               onOpenIncubator={openIncubatorModal}
               onOpenPlayerInfo={openPlayerInfoModal}
-              onOpenInventory={openInventoryModal}
+              onOpenInventory={openInventoryOOPModal} // 替换为面向对象背包系统
               onOpenSettings={openSettingsModal}
               onOpenQuestLog={openQuestLogModal}
               onOpenMinimap={openMinimapModal}
@@ -313,10 +371,24 @@ const App = () => {
             />
           </CommonModal>
 
-          {/* 背包面板 */}
-          <InventoryPanel 
-            isOpen={isInventoryOpen}
-            onClose={closeInventoryModal}
+          {/* 新增：集成背包系统的召唤兽装备管理 */}
+          <CommonModal 
+            isOpen={isSummonEquipmentOpen} 
+            onClose={closeSummonEquipmentModal}
+            title="召唤兽装备管理 (集成背包系统)"
+            maxWidthClass="max-w-5xl"
+            centerContent={false}
+          >
+            <SummonSystem
+              toasts={toasts}
+              setToasts={setToasts}
+            />
+          </CommonModal>
+
+          {/* 面向对象背包系统 - 现在是主背包系统 */}
+          <InventoryModal
+            isOpen={isInventoryOOPOpen}
+            onClose={closeInventoryOOPModal}
             showToast={showResult}
           />
 
@@ -417,6 +489,13 @@ const App = () => {
           >
             <TowerSystem showToast={showResult} />
           </CommonModal>
+
+          {/* 家园系统模态框 */}
+          
+            <CommonModal isOpen={isHomesteadModalOpen} title={uiText.homestead?.title || "我的家园"} onClose={closeHomesteadModal}>
+              <HomesteadView uiText={uiText} toasts={toasts} setToasts={setToasts} />
+            </CommonModal>
+          
         </>
       )}
 

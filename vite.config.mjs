@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 01:35:04
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-31 04:48:53
+ * @LastEditTime: 2025-06-03 04:32:26
  */
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";

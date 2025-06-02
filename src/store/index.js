@@ -14,10 +14,12 @@ import saveReducer from '@/store/slices/saveSlice';
 import questReducer from '@/store/slices/questSlice';
 import mapReducer from '@/store/slices/mapSlice';
 import npcReducer from '@/store/slices/npcSlice';
+import dialogueReducer from '@/store/slices/dialogueSlice';
 import formationReducer from '@/store/slices/formationSlice';
 import battleReducer from '@/store/slices/battleSlice';
 import towerReducer from '@/store/slices/towerSlice';
 import playerReducer from '@/store/slices/playerSlice'; // 导入 playerReducer
+import homesteadReducer from '@/store/slices/homesteadSlice'; // 导入 homesteadReducer
 
 const store = configureStore({
   reducer: {
@@ -31,9 +33,11 @@ const store = configureStore({
     quests: questReducer,
     map: mapReducer,
     npcs: npcReducer,
+    dialogue: dialogueReducer,
     formation: formationReducer,
     battle: battleReducer,
     tower: towerReducer,
+    homestead: homesteadReducer, // 注册 homesteadReducer
   },
 });
 

@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-05-31 04:52:37
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-03 04:24:47
+ */
 const { contextBridge, ipcRenderer } = require('electron');
 
 /**
@@ -19,6 +25,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const listener = (_, result) => callback(result);
         ipcRenderer.on('load-game-reply', listener);
         return () => ipcRenderer.removeListener('load-game-reply', listener);
+    },
+
+    // Electron Store API - 用于游戏状态持久化
+    store: {
+        get: (key, defaultValue) => ipcRenderer.invoke('store-get', key, defaultValue),
+        set: (key, value) => ipcRenderer.invoke('store-set', key, value),
+        delete: (key) => ipcRenderer.invoke('store-delete', key),
+        clear: () => ipcRenderer.invoke('store-clear'),
+        has: (key) => ipcRenderer.invoke('store-has', key),
+        size: () => ipcRenderer.invoke('store-size'),
+        path: () => ipcRenderer.invoke('store-path')
     },
     
     // 获取应用信息

@@ -5,9 +5,10 @@
  * @LastEditTime: 2025-05-26 04:21:16
  */
 import { selectDialogueOption as npcSelectDialogueOption } from '../slices/npcSlice'; // Renamed for clarity
-import { acceptQuest as questAcceptQuest } from '../slices/questSlice'; // Renamed for clarity
-import { addToInventory as inventoryAddToInventory } from '../slices/inventorySlice'; // Renamed for clarity
+import { acceptQuest as questAcceptQuest, turnInQuest } from '../slices/questSlice'; // 移除不存在的addQuest导入
 import { dialogues as dialogueConfig } from '../../config/ui/dialogueConfig';
+import { setCurrentDialogue, setActiveQuest } from '../slices/dialogueSlice';
+import rewardManager from '../RewardManager'; // 导入奖励管理器
 // npcConfig is not directly used in this thunk, but good to keep if future logic needs it.
 // import { npcs as npcConfig } from '../../config/npcConfig'; 
 
@@ -66,26 +67,37 @@ export const handleDialogueOptionSelectThunk = (npcId, selectedOption) => async 
 
   // 4. Handle rewards defined on the current dialogue node (the one just completed)
   if (currentNode && currentNode.rewards) {
+    const rewardItems = [];
+    
     currentNode.rewards.forEach(reward => {
       switch (reward.type) {
         case 'ITEM':
           if (reward.itemId && reward.quantity) {
-            for (let i = 0; i < reward.quantity; i++) {
-              // addToInventory will find an empty slot if slotId is not provided
-              dispatch(inventoryAddToInventory({ itemId: reward.itemId })); 
-            }
-            console.log(`[DialogueThunk] Rewarded item: ${reward.itemId}, quantity: ${reward.quantity}`);
+            // 收集物品奖励，稍后统一分发
+            rewardItems.push({
+              id: reward.itemId,
+              quantity: reward.quantity || 1
+            });
+            console.log(`[DialogueThunk] 准备奖励物品: ${reward.itemId}, 数量: ${reward.quantity}`);
           }
           break;
         case 'GOLD':
-          // dispatch(inventoryAddGold(reward.amount)); // Assuming addGold action exists
-          console.log(`[DialogueThunk] Rewarded gold: ${reward.amount}`);
+          // 直接给予金币奖励
+          rewardManager.giveGoldReward(reward.amount, 'dialogue');
+          console.log(`[DialogueThunk] 获得金币: ${reward.amount}`);
           break;
         // Add more reward types (XP, FACTION_REP, etc.)
-        default:
-          break;
       }
     });
+
+    // 统一分发物品奖励
+    if (rewardItems.length > 0) {
+      rewardManager.giveItemRewards(rewardItems, 'dialogue').then(results => {
+        console.log('[DialogueThunk] 对话奖励已分发:', results);
+      }).catch(error => {
+        console.error('[DialogueThunk] 对话奖励分发失败:', error);
+      });
+    }
   }
 
   // 5. If the interaction ended as a result of selectDialogueOption (e.g., nextNode was null or action was END_INTERACTION)

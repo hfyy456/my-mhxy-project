@@ -1,6 +1,21 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const Store = require('electron-store');
 const isDev = process.env.NODE_ENV !== 'production';
+
+// 初始化Electron Store
+const store = new Store({
+    name: 'game-data',
+    defaults: {
+        gameState: null,
+        settings: {
+            language: 'zh-CN',
+            soundEnabled: true,
+            musicVolume: 0.8,
+            effectVolume: 0.8
+        }
+    }
+});
 
 /**
  * 创建主窗口
@@ -67,6 +82,73 @@ ipcMain.on('load-game', (event) => {
     console.log('加载游戏数据');
     // 这里可以实现从本地文件加载游戏数据的逻辑
     event.reply('load-game-reply', { success: true, data: {} });
+});
+
+// Electron Store IPC 处理程序
+ipcMain.handle('store-get', (event, key, defaultValue) => {
+    try {
+        return store.get(key, defaultValue);
+    } catch (error) {
+        console.error('Store get error:', error);
+        return defaultValue;
+    }
+});
+
+ipcMain.handle('store-set', (event, key, value) => {
+    try {
+        store.set(key, value);
+        return true;
+    } catch (error) {
+        console.error('Store set error:', error);
+        return false;
+    }
+});
+
+ipcMain.handle('store-delete', (event, key) => {
+    try {
+        store.delete(key);
+        return true;
+    } catch (error) {
+        console.error('Store delete error:', error);
+        return false;
+    }
+});
+
+ipcMain.handle('store-clear', (event) => {
+    try {
+        store.clear();
+        return true;
+    } catch (error) {
+        console.error('Store clear error:', error);
+        return false;
+    }
+});
+
+ipcMain.handle('store-has', (event, key) => {
+    try {
+        return store.has(key);
+    } catch (error) {
+        console.error('Store has error:', error);
+        return false;
+    }
+});
+
+ipcMain.handle('store-size', (event) => {
+    try {
+        return store.size;
+    } catch (error) {
+        console.error('Store size error:', error);
+        return 0;
+    }
+});
+
+ipcMain.handle('store-path', (event) => {
+    try {
+        return store.path;
+    } catch (error) {
+        console.error('Store path error:', error);
+        return '';
+    }
 });
 
 // 窗口控制功能

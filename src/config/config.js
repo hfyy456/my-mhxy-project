@@ -7,12 +7,18 @@
 import { summonConfig } from "@/config/summon/summonConfig";
 import { skillConfig } from "@/config/skill/skillConfig";
 import { SKILL_TYPES, EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
+import { HOMESTEAD_GENERAL_CONFIG, PLOT_TYPES } from "@/config/homestead/homesteadConfig";
+import { BUILDINGS, BUILDING_CATEGORIES } from "@/config/homestead/buildingConfig";
 // 此处可继续导入其他拆分的配置文件
 
 // 合并所有配置，可根据实际需求修改合并方式
 export {
   summonConfig,
   skillConfig,
+  HOMESTEAD_GENERAL_CONFIG,
+  PLOT_TYPES,
+  BUILDINGS,
+  BUILDING_CATEGORIES,
   // 此处可继续添加其他配置
 };
 

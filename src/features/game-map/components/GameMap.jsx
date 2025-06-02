@@ -29,6 +29,10 @@ import { WORLD_REGIONS } from "@/config/map/worldMapConfig";
 import { selectPlayerLevel } from "@/store/slices/playerSlice";
 import { initiateMapBattleAction } from "@/store/slices/battleSlice";
 import {
+  selectActiveHomesteadTimers,
+  completeBuildingConstruction,
+} from "@/store/slices/homesteadSlice"; // 家园系统计时器相关
+import {
   setPlayerPositionAction,
   selectPlayerPosition,
   setSelectedTileCoordinatesAction, // Import new action
@@ -43,6 +47,7 @@ import PixiAppEventHandler from "./PixiAppEventHandler"; // <--- IMPORT PixiAppE
 import SelectedTileMarker from "./SelectedTileMarker"; // <--- IMPORT SelectedTileMarker
 import WorldMapModal from "@/features/world-map/components/WorldMapModal"; // 导入世界地图组件
 import TileInfoPanel from "@/features/ui/components/TileInfoPanel"; // <--- 导入 TileInfoPanel
+import { findPathAStar } from "@/utils/pathfinding"; // <--- 导入A*寻路算法
 
 // Module-level extend call for components used in this file or its direct children if they expect these tags
 extend({
@@ -240,6 +245,41 @@ const GameMap = ({
   const dispatch = useDispatch();
   const playerPosition = useSelector(selectPlayerPosition);
   const playerLevel = useSelector(selectPlayerLevel);
+  const activeHomesteadTimers = useSelector(selectActiveHomesteadTimers);
+
+  // 处理家园系统计时器 (建筑、升级等)
+  useEffect(() => {
+    if (!Array.isArray(activeHomesteadTimers) || activeHomesteadTimers.length === 0) {
+      return; // 没有计时器需要处理或尚未加载
+    }
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      // 遍历计时器数组的副本，以防在 dispatch 过程中原数组被修改
+      [...activeHomesteadTimers].forEach(timer => {
+        if (now >= timer.completesAt) {
+          console.log(`家园计时器 ${timer.id} (类型: ${timer.type}) 已完成，实例ID: ${timer.buildingInstanceId}`);
+          switch (timer.type) {
+            case 'CONSTRUCTION':
+              dispatch(completeBuildingConstruction({ buildingInstanceId: timer.buildingInstanceId }));
+              break;
+            // 在此可以添加其他计时器类型，例如 'UPGRADE', 'PRODUCTION_READY' 等
+            // case 'UPGRADE':
+            //   dispatch(completeBuildingUpgrade({ buildingInstanceId: timer.buildingInstanceId }));
+            //   break;
+            default:
+              console.warn(`未处理的家园计时器类型: ${timer.type} (ID: ${timer.id})`);
+              // 如果需要，可以 dispatch removeTimer 来移除未处理或未知的计时器
+              // dispatch(removeTimer({ timerId: timer.id }));
+          }
+          // 注意: 具体的完成动作 (如 completeBuildingConstruction)
+          // 已经在其 reducer 内部负责从 activeTimers 列表中移除自身。
+        }
+      });
+    }, 1000); // 每秒检查一次
+
+    return () => clearInterval(intervalId); // 组件卸载或依赖变化时清除计时器
+  }, [activeHomesteadTimers, dispatch]); // useEffect 依赖项
   const currentRegionId = useSelector(selectCurrentRegionId); // 获取当前区域ID
   const currentMapData = useSelector(selectCurrentRegionMapData); // 获取当前区域地图数据
   

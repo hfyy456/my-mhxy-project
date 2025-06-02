@@ -53,6 +53,19 @@ export const uiText = {
     formationModal: "阵型设置"
   },
 
+  // 家园相关文本
+  homestead: {
+    title: "我的家园",
+    resourcesTitle: "家园资源",
+    plotsTitle: "家园地块",
+    selectBuildingTitle: "选择建筑 (地块 #{plotNumber})",
+    emptyPlot: "空地",
+    constructingStatus: "建造中... {time}s",
+    levelStatus: "等级 {level}",
+    insufficientResources: "资源不足!",
+    cancelButton: "取消"
+  },
+
   // 阵型特定文本 (New Section)
   formation: {
     frontRow: "前阵",

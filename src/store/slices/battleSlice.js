@@ -29,6 +29,7 @@ import { WORLD_REGIONS, selectEncounterForRegion } from '@/config/map/worldMapCo
 import { calculateSummonStats } from '@/features/battle/logic/summonUtils'; // 导入召唤兽属性计算函数
 import { generateUniqueId } from '@/utils/idUtils'; // 导入标准ID生成函数
 import { calculateRewards } from '@/features/battle/logic/battleRewards'; // 导入奖励计算函数
+import rewardManager from '@/store/RewardManager'; // 导入奖励管理器
 import { selectFormationGrid } from '@/store/slices/formationSlice'; // 导入阵型选择器
 import { selectSummonById } from '@/store/slices/summonSlice'; // 导入召唤兽选择器
 
@@ -871,6 +872,19 @@ const battleSlice = createSlice({
                 state.battleResult
               );
               state.rewards = rewards;
+
+              // 自动分发奖励到背包系统
+              if (state.battleResult === 'victory' && rewards) {
+                // 使用 setTimeout 异步执行奖励分发，避免在reducer中进行异步操作
+                setTimeout(async () => {
+                  try {
+                    const rewardResults = await rewardManager.giveRewards(rewards, 'battle');
+                    console.log('[Battle] 奖励已分发到背包系统:', rewardResults);
+                  } catch (error) {
+                    console.error('[Battle] 奖励分发失败:', error);
+                  }
+                }, 100);
+              }
 
               // 添加战斗结束日志
               state.battleLog.push({
