@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { eggConfig } from "@/config/summon/eggConfig";
 import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
@@ -10,8 +10,9 @@ import {
   cancelIncubation,
   selectIncubatingEggs,
   selectCompletedEggs,
+
 } from "@/store/slices/incubatorSlice";
-import { addSummon, selectAllSummons } from "@/store/slices/summonSlice";
+import { useSummonManager } from "@/hooks/useSummonManager";
 import { generateNewSummon } from "@/utils/summonUtils";
 import { summonConfig } from "@/config/summon/summonConfig";
 import { playerBaseConfig } from "@/config/character/playerConfig";
@@ -22,7 +23,7 @@ export const Incubator = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
   const incubatingEggs = useSelector(selectIncubatingEggs);
   const completedEggs = useSelector(selectCompletedEggs);
-  const allSummons = useSelector(selectAllSummons);
+  const { allSummons, createSummon } = useSummonManager();
   const [selectedEgg, setSelectedEgg] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [eggToCancel, setEggToCancel] = useState(null);
@@ -90,20 +91,25 @@ export const Incubator = ({ toasts, setToasts }) => {
 
     if (action.payload.result) {
       const { summonType, summonQuality } = action.payload.result;
-      const newSummon = generateNewSummon({
+      const newSummonData = generateNewSummon({
         summonSourceId: summonType,
         quality: summonQuality,
-        source: 'incubation',
-        dispatch
+        source: 'incubation'
       });
-      dispatch(addSummon(newSummon));
-      setErrorMessage(null);
       
-      // 获取召唤兽名称和品质显示名
-      const summonData = summonConfig[summonType];
-      const qualityDisplayName = getQualityDisplayName(summonQuality);
-      
-      showResult(`恭喜！获得了一只${qualityDisplayName}品质的${summonData.name}！`, "success");
+      // 使用OOP系统创建召唤兽
+      const result = createSummon(newSummonData);
+      if (result) {
+        setErrorMessage(null);
+        
+        // 获取召唤兽名称和品质显示名
+        const summonData = summonConfig[summonType];
+        const qualityDisplayName = getQualityDisplayName(summonQuality);
+        
+        showResult(`恭喜！获得了一只${qualityDisplayName}品质的${summonData.name}！`, "success");
+      } else {
+        showResult("创建召唤兽失败", "error");
+      }
     }
   };
 

@@ -2,25 +2,22 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:08:02
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-26 04:26:20
+ * @LastEditTime: 2025-06-04 05:43:12
  */
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { summonConfig } from "@/config/summon/summonConfig";
-import CommonModal from "@/features/ui/components/CommonModal";
-import {
-  selectAllSummons,
-  setCurrentSummon,
-} from "@/store/slices/summonSlice";
-import { getAllRaces } from "@/config/summon/raceConfig";
-import {
-  getPetTypeDisplayName,
-  getRaceTypeDisplayName,
-  getAttributeDisplayName,
-  getFiveElementDisplayName
-} from "@/config/ui/uiTextConfig";
+import React, { useState, useEffect } from "react";
+
+// 移除已删除的Redux召唤兽系统导入
+// import {
+//   addSummon,
+//   selectAllSummons,
+//   setCurrentSummon,
+// } from "../../../store/slices/summonSlice";
+import { useSummonManager } from "../../../hooks/useSummonManager"; // 使用OOP召唤兽系统
+import { summonConfig } from "@/config/config";
 import { skillConfig } from "@/config/skill/skillConfig";
-import { ATTRIBUTE_TYPES, FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
+import { getPetTypeDisplayName, getRaceTypeDisplayName, getFiveElementDisplayName, getAttributeDisplayName } from "@/config/ui/uiTextConfig";
+import { getAllRaces } from "@/config/summon/raceConfig";
+import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 
 // 加载召唤兽图片
 const images = import.meta.glob("@/assets/summons/*.png", {
@@ -28,12 +25,14 @@ const images = import.meta.glob("@/assets/summons/*.png", {
 });
 
 const PetCatalog = ({ isOpen, onClose }) => {
-  const dispatch = useDispatch();
-  const allSummons = useSelector(selectAllSummons);
-  const summonsList = Object.values(allSummons || {});
+  // const allSummons = useSelector(selectAllSummons); // 已移除Redux召唤兽系统
+  // const summonsList = Object.values(allSummons || {}); // 不再需要
   const summonEntries = Object.entries(summonConfig);
   const allRaces = getAllRaces();
   const [selectedRace, setSelectedRace] = useState("全部");
+  
+  // 使用OOP召唤兽管理系统
+  const { manager } = useSummonManager();
 
   const typeText = {
     法攻: "法术攻击型",
@@ -44,7 +43,8 @@ const PetCatalog = ({ isOpen, onClose }) => {
   };
 
   const handleSelectSummon = (summonId) => {
-    dispatch(setCurrentSummon(summonId));
+    // 使用OOP系统设置当前召唤兽
+    manager.setCurrentSummon(summonId);
     onClose();
   };
 

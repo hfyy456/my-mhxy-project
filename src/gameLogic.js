@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 03:01:24
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 01:10:04
+ * @LastEditTime: 2025-06-04 05:30:52
  */
 // gameLogic.js
 import {
@@ -11,9 +11,9 @@ import {
   qualityConfig,
   probabilityConfig,
   STANDARD_EQUIPMENT_SLOTS,
-  // levelExperienceRequirements // Not directly used here, summonSlice will handle
+  // levelExperienceRequirements // Not directly used here, OOP SummonManager will handle
 } from "@/config/config";
-import { summonEquipmentConfig } from "@/config/item/summonEquipmentConfig";
+import { summonEquipmentConfig, getEquipmentWithQualityEffects } from "@/config/item/summonEquipmentConfig";
 import { 
   SKILL_MODES,
   UNIQUE_ID_PREFIXES,
@@ -68,20 +68,24 @@ export const getRandomEquipment = () => {
   // 随机选择一个品质
   const randomQuality = getRandomQuality();
   
+  // 根据品质计算最终效果
+  const configWithQualityEffects = getEquipmentWithQualityEffects({
+    ...randomEquipmentConfig,
+    quality: randomQuality
+  });
+  
   // 返回给背包或召唤兽的初始装备数据结构 (纯数据对象)
-  // 注意：这个对象现在是纯数据，用于后续 dispatch(addItem(newEquipmentData))。
-  // finalEffects 将由 itemSlice.addItem reducer 计算。
   const newEquipmentData = {
     id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
-    name: randomEquipmentConfig.name, // 必须与 summonEquipmentConfig.js 中的 name 匹配
+    name: randomEquipmentConfig.name,
     quality: randomQuality,
-    level: 1, // 初始等级为1
+    level: 1,
     itemType: 'equipment',
-    // slotType, icon, description 将由 itemSlice.addItem 根据 name 从 baseConfig 填充
-    // 因此这里不需要显式提供，除非希望覆盖
-    slotType: randomCategory, // 也可以让 addItem 填充，但这里已知，可以提供
-    icon: randomEquipmentConfig.icon, // 提供基础信息，addItem 也可以从 baseConfig 获取
-    description: randomEquipmentConfig.description // 提供基础信息，addItem 也可以从 baseConfig 获取
+    slotType: randomEquipmentConfig.slotType,
+    icon: randomEquipmentConfig.icon,
+    description: randomEquipmentConfig.description,
+    // 重要：包含装备效果属性
+    effects: configWithQualityEffects.effects || {}
   };
 
   return newEquipmentData;

@@ -150,6 +150,7 @@ class GameStateManager extends EventEmitter {
 
   // 状态序列化
   serializeForStorage() {
+    console.log("[GameStateManager serializeForStorage] Serializing summons:", this.state.summons);
     return {
       summons: Array.from(this.state.summons.entries()).map(([id, summon]) => [id, summon.toJSON()]),
       inventory: {

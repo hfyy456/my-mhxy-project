@@ -2,14 +2,17 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 02:57:02
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-17 02:59:07
+ * @LastEditTime: 2025-06-04 05:43:47
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import gameStateManager from '../store/GameStateManager';
 // import GameManager from '@/game/GameManager'; // Removed GameManager
-import { selectCurrentSummonFullData, selectRefinementHistory } from '@/store/slices/summonSlice'; // Assuming history is in summonSlice
+// 使用OOP召唤兽系统替代Redux召唤兽系统
 // 如果 resultRecordList 需要保留, 则需要相应的 slice 和 selector
-// import { selectResultRecords } from '@/store/slices/resultRecordSlice'; 
+// import { selectResultRecords } from '@/store/slices/resultRecordSlice';
+import { useSelector } from 'react-redux';
+
+// 使用OOP召唤兽系统
 
 // 基础状态Hook
 export function useGameState() {

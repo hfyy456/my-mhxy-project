@@ -4,10 +4,11 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import inventoryManager from '../store/InventoryManager';
+import { EQUIPMENT_SLOT_TYPES } from '@/config/enumConfig';
 
 // 基础背包状态Hook
 export function useInventoryManager() {
-  const [state, setState] = useState(inventoryManager.getState());
+  const [state, setState] = useState(() => inventoryManager.getState());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,14 +49,26 @@ export function useInventoryManager() {
     };
 
     // 处理物品添加事件 - 强制刷新状态
-    const handleItemAdded = () => {
-      console.log('[useInventoryManager] 物品添加，强制刷新状态');
+    const handleItemAdded = ({ item }) => {
+      console.log(`[useInventoryManager] 物品已添加: ${item.name}`);
       setState(inventoryManager.getState());
     };
 
     // 处理物品堆叠事件 - 强制刷新状态
     const handleItemStacked = () => {
       console.log('[useInventoryManager] 物品堆叠，强制刷新状态');
+      setState(inventoryManager.getState());
+    };
+
+    // 处理物品移除事件 - 强制刷新状态
+    const handleItemRemoved = ({ item }) => {
+      console.log(`[useInventoryManager] 物品已移除: ${item.name}`);
+      setState(inventoryManager.getState());
+    };
+
+    // 处理物品使用事件 - 强制刷新状态
+    const handleItemUsed = ({ item, success }) => {
+      console.log(`[useInventoryManager] 物品使用: ${item.name} ${success ? '成功' : '失败'}`);
       setState(inventoryManager.getState());
     };
 
@@ -66,6 +79,8 @@ export function useInventoryManager() {
     inventoryManager.on('state_saved', handleStateSaved);
     inventoryManager.on('item_added', handleItemAdded);
     inventoryManager.on('item_stacked', handleItemStacked);
+    inventoryManager.on('item_removed', handleItemRemoved);
+    inventoryManager.on('item_used', handleItemUsed);
 
     // 清理事件监听器
     return () => {
@@ -75,6 +90,8 @@ export function useInventoryManager() {
       inventoryManager.off('state_saved', handleStateSaved);
       inventoryManager.off('item_added', handleItemAdded);
       inventoryManager.off('item_stacked', handleItemStacked);
+      inventoryManager.off('item_removed', handleItemRemoved);
+      inventoryManager.off('item_used', handleItemUsed);
     };
   }, []);
 
@@ -89,15 +106,14 @@ export function useInventoryManager() {
 // 背包操作Hook
 export function useInventoryActions() {
   return useMemo(() => ({
-    // 物品操作
-    addItem: (itemData, targetSlot = null) => inventoryManager.addItem(itemData, targetSlot),
-    removeItem: (slotIndex, quantity = null) => inventoryManager.removeItem(slotIndex, quantity),
-    moveItem: (fromSlot, toSlot) => inventoryManager.moveItem(fromSlot, toSlot),
-    useItem: (slotIndex, target = null) => inventoryManager.useItem(slotIndex, target),
+    // 物品操作 - 基于物品ID
+    addItem: (itemData) => inventoryManager.addItem(itemData),
+    removeItem: (itemId, quantity = null) => inventoryManager.removeItem(itemId, quantity),
+    useItem: (itemId, target = null) => inventoryManager.useItem(itemId, target),
     
-    // 装备操作
-    equipItem: (slotIndex, summonId) => inventoryManager.equipItem(slotIndex, summonId),
-    unequipItem: (slotIndex) => inventoryManager.unequipItem(slotIndex),
+    // 装备操作 - 基于物品ID
+    equipItem: (itemId, summonId) => inventoryManager.equipItem(itemId, summonId),
+    unequipItem: (summonId, slotType) => inventoryManager.unequipItem(summonId, slotType),
     
     // 金币操作
     addGold: (amount) => inventoryManager.addGold(amount),
@@ -105,16 +121,30 @@ export function useInventoryActions() {
     
     // 背包管理
     expandCapacity: (additionalSlots) => inventoryManager.expandCapacity(additionalSlots),
-    sortInventory: (sortType, order) => inventoryManager.sortInventory(sortType, order),
     
-    // 查询操作
+    // 查询操作 - 基于物品ID
     getItemById: (itemId) => inventoryManager.getItemById(itemId),
-    getItemBySlot: (slotIndex) => inventoryManager.getItemBySlot(slotIndex),
     searchItems: (query, filters) => inventoryManager.searchItems(query, filters),
     
     // 存档操作
     saveToStore: () => inventoryManager.saveToElectronStore(),
-    loadFromStore: () => inventoryManager.loadFromElectronStore()
+    loadFromStore: () => inventoryManager.loadFromElectronStore(),
+
+    // 获取可装备物品列表
+    getEquippableItems: (slotType = null, includeEquipped = false) => inventoryManager.getEquippableItems(slotType, includeEquipped),
+
+    // 检查是否可装备给召唤兽 - 基于物品ID
+    canEquipToSummon: async (itemId, summonId) => {
+      return await inventoryManager.canEquipToSummon(itemId, summonId);
+    },
+
+    // 获取召唤兽装备状态
+    getSummonEquipmentStatus: async (summonId) => {
+      return await inventoryManager.getSummonEquipmentStatus(summonId);
+    },
+
+    // 获取装备槽位类型显示名称
+    getSlotTypeDisplayName: (slotType) => inventoryManager.getSlotTypeDisplayName(slotType)
   }), []);
 }
 
@@ -208,67 +238,39 @@ export function useGold() {
   };
 }
 
-// 特定物品Hook
-export function useInventoryItem(slotIndex) {
-  const [item, setItem] = useState(inventoryManager.getItemBySlot(slotIndex));
-
-  useEffect(() => {
-    const updateItem = () => {
-      setItem(inventoryManager.getItemBySlot(slotIndex));
-    };
-
-    // 初始设置
-    updateItem();
-
-    // 监听变化
-    inventoryManager.on('inventory_changed', updateItem);
-    inventoryManager.on('item_added', updateItem);
-    inventoryManager.on('item_removed', updateItem);
-    inventoryManager.on('item_moved', updateItem);
-    
-    return () => {
-      inventoryManager.off('inventory_changed', updateItem);
-      inventoryManager.off('item_added', updateItem);
-      inventoryManager.off('item_removed', updateItem);
-      inventoryManager.off('item_moved', updateItem);
-    };
-  }, [slotIndex]);
-
-  return item;
-}
-
 // 背包容量Hook
 export function useInventoryCapacity() {
-  const [capacityInfo, setCapacityInfo] = useState(() => {
-    const state = inventoryManager.getState();
-    return {
-      capacity: state.capacity,
-      usedSlots: state.usedSlots,
-      availableSlots: state.availableSlots,
-      isFull: inventoryManager.isFull()
-    };
+  const [capacity, setCapacity] = useState({
+    total: inventoryManager.capacity,
+    used: inventoryManager.getUsedSlotsCount(),
+    available: inventoryManager.getAvailableSlotsCount()
   });
 
   useEffect(() => {
     const handleInventoryChange = (newState) => {
-      setCapacityInfo({
-        capacity: newState.capacity,
-        usedSlots: newState.usedSlots,
-        availableSlots: newState.availableSlots,
-        isFull: inventoryManager.isFull()
+      setCapacity({
+        total: newState.capacity,
+        used: newState.usedSlots,
+        available: newState.availableSlots
       });
     };
 
     inventoryManager.on('inventory_changed', handleInventoryChange);
-    inventoryManager.on('capacity_expanded', handleInventoryChange);
-    
+    inventoryManager.on('capacity_expanded', (data) => {
+      setCapacity(prev => ({
+        ...prev,
+        total: data.newCapacity,
+        available: data.newCapacity - prev.used
+      }));
+    });
+
     return () => {
       inventoryManager.off('inventory_changed', handleInventoryChange);
-      inventoryManager.off('capacity_expanded', handleInventoryChange);
+      inventoryManager.off('capacity_expanded', () => {});
     };
   }, []);
 
-  return capacityInfo;
+  return capacity;
 }
 
 // 背包搜索Hook
@@ -309,41 +311,36 @@ export function useInventorySearch() {
 // 背包拖拽Hook
 export function useInventoryDragDrop() {
   const [draggedItem, setDraggedItem] = useState(null);
-  const [dragFromSlot, setDragFromSlot] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragFromItemId, setDragFromItemId] = useState(null);
 
-  const startDrag = useCallback((slotIndex) => {
-    const item = inventoryManager.getItemBySlot(slotIndex);
+  const startDrag = useCallback((itemId) => {
+    const item = inventoryManager.getItemById(itemId);
     if (item) {
       setDraggedItem(item);
-      setDragFromSlot(slotIndex);
-      setIsDragging(true);
+      setDragFromItemId(itemId);
     }
   }, []);
 
-  const endDrag = useCallback((targetSlot) => {
-    if (isDragging && dragFromSlot !== null && targetSlot !== dragFromSlot) {
-      inventoryManager.moveItem(dragFromSlot, targetSlot);
-    }
-    
+  const endDrag = useCallback(() => {
     setDraggedItem(null);
-    setDragFromSlot(null);
-    setIsDragging(false);
-  }, [isDragging, dragFromSlot]);
-
-  const cancelDrag = useCallback(() => {
-    setDraggedItem(null);
-    setDragFromSlot(null);
-    setIsDragging(false);
+    setDragFromItemId(null);
   }, []);
+
+  const handleDrop = useCallback((targetItemId) => {
+    if (dragFromItemId && targetItemId && dragFromItemId !== targetItemId) {
+      console.log(`Moving item from ${dragFromItemId} to ${targetItemId}`);
+      // 实际的移动逻辑可以在这里实现，目前简化处理
+    }
+    endDrag();
+  }, [dragFromItemId, endDrag]);
 
   return {
     draggedItem,
-    dragFromSlot,
-    isDragging,
+    dragFromItemId,
     startDrag,
     endDrag,
-    cancelDrag
+    handleDrop,
+    isDragging: !!draggedItem
   };
 }
 
@@ -392,60 +389,59 @@ export function useInventoryBatchActions() {
 
 // 背包统计Hook
 export function useInventoryStats() {
-  const [stats, setStats] = useState(() => calculateStats());
+  const state = useInventoryManager();
 
-  function calculateStats() {
-    const state = inventoryManager.getState();
-    const items = inventoryManager.getItems();
+  return useMemo(() => {
+    const slots = state.slots || [];
+    const items = state.items || [];
     
-    const statsByType = {};
-    const statsByRarity = {};
+    // 基础统计
+    const totalSlots = state.capacity || 0;
+    const usedSlots = state.usedSlots || 0;
+    const availableSlots = state.availableSlots || 0;
+    const gold = state.gold || 0;
+
+    // 物品类型统计
+    const itemTypeStats = {};
+    const rarityStats = {};
     let totalValue = 0;
-    let equipmentCount = 0;
-    let consumableCount = 0;
 
     items.forEach(item => {
-      // 按类型统计
-      statsByType[item.type] = (statsByType[item.type] || 0) + item.quantity;
+      // 类型统计
+      itemTypeStats[item.type] = (itemTypeStats[item.type] || 0) + item.quantity;
       
-      // 按稀有度统计
-      statsByRarity[item.rarity] = (statsByRarity[item.rarity] || 0) + item.quantity;
+      // 稀有度统计
+      rarityStats[item.rarity] = (rarityStats[item.rarity] || 0) + 1;
       
       // 总价值
-      totalValue += item.value * item.quantity;
-      
-      // 分类计数
-      if (item.isEquipment) equipmentCount += item.quantity;
-      if (item.isConsumable) consumableCount += item.quantity;
+      totalValue += (item.value || 0) * item.quantity;
     });
 
+    // 装备统计
+    const equipmentStats = items
+      .filter(item => item.type === 'equipment')
+      .reduce((stats, item) => {
+        stats[item.slotType] = (stats[item.slotType] || 0) + 1;
+        stats.equipped = (stats.equipped || 0) + (item.isEquipped ? 1 : 0);
+        return stats;
+      }, {});
+
     return {
+      totalSlots,
+      usedSlots,
+      availableSlots,
+      usagePercentage: totalSlots > 0 ? (usedSlots / totalSlots * 100).toFixed(1) : 0,
+      gold,
       totalItems: items.length,
-      totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+      totalItemQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
       totalValue,
-      equipmentCount,
-      consumableCount,
-      statsByType,
-      statsByRarity,
-      usedSlots: state.usedSlots,
-      capacity: state.capacity,
-      gold: state.gold
+      itemTypeStats,
+      rarityStats,
+      equipmentStats,
+      isFull: usedSlots >= totalSlots,
+      isEmpty: usedSlots === 0
     };
-  }
-
-  useEffect(() => {
-    const handleInventoryChange = () => {
-      setStats(calculateStats());
-    };
-
-    inventoryManager.on('inventory_changed', handleInventoryChange);
-    
-    return () => {
-      inventoryManager.off('inventory_changed', handleInventoryChange);
-    };
-  }, []);
-
-  return stats;
+  }, [state]);
 }
 
 // 背包同步Hook（用于从Redux迁移数据）
@@ -501,13 +497,11 @@ export function useInventoryMigration() {
             value: reduxItem.value || 0,
             
             // 装备相关属性
-            isEquipment: reduxItem.itemType === 'equipment' || reduxItem.type === 'equipment',
             slotType: reduxItem.slotType || null,
             effects: reduxItem.finalEffects || reduxItem.effects || {},
             requirements: reduxItem.requirements || {},
             
             // 消耗品相关
-            isConsumable: reduxItem.itemType === 'consumable' || reduxItem.type === 'consumable',
             useEffect: reduxItem.useEffect || null,
             
             // 状态标记
@@ -697,44 +691,80 @@ export function useInventoryMigration() {
 
 // 召唤兽装备Hook
 export function useSummonEquipment() {
-  const [isEquipping, setIsEquipping] = useState(false);
-  const [isUnequipping, setIsUnequipping] = useState(false);
+  const [equipmentState, setEquipmentState] = useState({});
 
-  const equipToSummon = useCallback(async (slotIndex, summonId) => {
-    setIsEquipping(true);
+  useEffect(() => {
+    // 监听装备状态变化
+    const handleEquipmentApplied = ({ equipment, summonId }) => {
+      setEquipmentState(prev => ({
+        ...prev,
+        [summonId]: {
+          ...prev[summonId],
+          [equipment.slotType]: equipment
+        }
+      }));
+    };
+
+    const handleEquipmentRemoved = ({ equipment, summonId }) => {
+      setEquipmentState(prev => {
+        const newState = { ...prev };
+        if (newState[summonId]) {
+          delete newState[summonId][equipment.slotType];
+        }
+        return newState;
+      });
+    };
+
+    const handleInventoryChange = () => {
+      // 重新加载装备状态
+      setEquipmentState({});
+    };
+
+    inventoryManager.on('equipment_applied', handleEquipmentApplied);
+    inventoryManager.on('equipment_removed', handleEquipmentRemoved);
+    inventoryManager.on('inventory_changed', handleInventoryChange);
+
+    return () => {
+      inventoryManager.off('equipment_applied', handleEquipmentApplied);
+      inventoryManager.off('equipment_removed', handleEquipmentRemoved);
+      inventoryManager.off('inventory_changed', handleInventoryChange);
+    };
+  }, []);
+
+  const equipToSummon = useCallback(async (itemId, summonId) => {
     try {
-      const result = await inventoryManager.equipItemToSummon(slotIndex, summonId);
+      const result = await inventoryManager.equipItem(itemId, summonId);
       return result;
-    } finally {
-      setIsEquipping(false);
+    } catch (error) {
+      console.error('装备失败:', error);
+      return { success: false, error: error.message };
     }
   }, []);
 
-  const unequipFromSummon = useCallback(async (summonId, slotType, targetSlot = null) => {
-    setIsUnequipping(true);
+  const unequipFromSummon = useCallback(async (summonId, slotType) => {
     try {
-      const result = await inventoryManager.unequipItemFromSummon(summonId, slotType, targetSlot);
+      const result = await inventoryManager.unequipItem(summonId, slotType);
       return result;
-    } finally {
-      setIsUnequipping(false);
+    } catch (error) {
+      console.error('卸装失败:', error);
+      return { success: false, error: error.message };
     }
   }, []);
 
-  const getEquippableItems = useCallback((slotType = null) => {
-    return inventoryManager.getEquippableItems(slotType);
+  const canEquipToSummon = useCallback(async (itemId, summonId) => {
+    return await inventoryManager.canEquipToSummon(itemId, summonId);
   }, []);
 
-  const canEquipToSummon = useCallback(async (slotIndex, summonId) => {
-    return await inventoryManager.canEquipToSummon(slotIndex, summonId);
-  }, []);
+  const getSummonEquipment = useCallback((summonId) => {
+    return equipmentState[summonId] || {};
+  }, [equipmentState]);
 
   return {
+    equipmentState,
     equipToSummon,
     unequipFromSummon,
-    getEquippableItems,
     canEquipToSummon,
-    isEquipping,
-    isUnequipping
+    getSummonEquipment
   };
 }
 
@@ -766,13 +796,9 @@ export function useSummonManager() {
 
   const selectSummon = useCallback(async (summonId) => {
     try {
-      // 动态导入Redux actions
-      const [store, { setCurrentSummon }] = await Promise.all([
-        import('../store/index.js').then(m => m.default),
-        import('../store/slices/summonSlice.js')
-      ]);
-
-      await store.dispatch(setCurrentSummon(summonId));
+      // 使用OOP召唤兽系统
+      const summonManager = await import('../store/SummonManager.js').then(m => m.summonManagerInstance);
+      summonManager.setCurrentSummon(summonId);
       await loadSummons(); // 重新加载以获取最新状态
     } catch (error) {
       console.error('选择召唤兽失败:', error);
@@ -826,5 +852,350 @@ export function useEquipmentPanel() {
     setEquipmentFilter,
     openEquipmentModal,
     closeEquipmentModal
+  };
+}
+
+// 物品操作Hook
+export function useItemOperations() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const actions = useMemo(() => ({
+    // 使用物品
+    useItem: async (itemId, target = null) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const success = inventoryManager.useItem(itemId, target);
+        return { success };
+      } catch (error) {
+        setError(error.message);
+        return { success: false, error: error.message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+
+    // 移除物品
+    removeItem: async (itemId, quantity = null) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const removedItem = inventoryManager.removeItem(itemId, quantity);
+        return { success: !!removedItem, removedItem };
+      } catch (error) {
+        setError(error.message);
+        return { success: false, error: error.message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+
+    // 装备物品
+    equipItem: async (itemId, summonId) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await inventoryManager.equipItem(itemId, summonId);
+        return result;
+      } catch (error) {
+        setError(error.message);
+        return { success: false, error: error.message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+
+    // 快速使用物品（根据上下文自动选择目标）
+    quickUseItem: (itemId, targetContext = {}) => {
+      const item = inventoryManager.getItemById(itemId);
+      if (!item) {
+        return { success: false, error: '物品不存在' };
+      }
+
+      // 根据物品类型和上下文确定目标
+      let target = null;
+      if (item.type === 'consumable' && targetContext.summon) {
+        target = targetContext.summon;
+      } else if (item.type === 'equipment' && targetContext.summon) {
+        target = targetContext.summon;
+      }
+
+      return actions.useItem(itemId, target);
+    },
+
+    // 获取物品详细信息
+    getItemInfo: (itemId) => {
+      const item = inventoryManager.getItemById(itemId);
+      return item ? item.getDetailedInfo() : null;
+    }
+  }), []);
+
+  return {
+    ...actions,
+    isLoading,
+    error,
+    clearError: () => setError(null)
+  };
+}
+
+// 背包过滤和搜索hook
+export function useInventoryFilter() {
+  const [filters, setFilters] = useState({
+    type: '',
+    rarity: '',
+    searchQuery: ''
+  });
+
+  const actions = useInventoryActions();
+
+  const filteredItems = useMemo(() => {
+    if (!filters.searchQuery && !filters.type && !filters.rarity) {
+      return [];
+    }
+
+    const searchFilters = {};
+    if (filters.type) searchFilters.type = filters.type;
+    if (filters.rarity) searchFilters.rarity = filters.rarity;
+
+    return actions.searchItems(filters.searchQuery, searchFilters);
+  }, [filters, actions]);
+
+  return {
+    filters,
+    setFilters,
+    filteredItems,
+    clearFilters: () => setFilters({ type: '', rarity: '', searchQuery: '' })
+  };
+}
+
+// 召唤兽装备状态Hook
+export function useSummonEquipmentStatus(summonId) {
+  const [equipmentStatus, setEquipmentStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadEquipmentStatus = useCallback(async () => {
+    if (!summonId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await inventoryManager.getSummonEquipmentStatus(summonId);
+      if (result.success) {
+        setEquipmentStatus(result);
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [summonId]);
+
+  useEffect(() => {
+    loadEquipmentStatus();
+  }, [loadEquipmentStatus]);
+
+  // 监听装备变化事件
+  useEffect(() => {
+    const handleEquipmentChange = () => {
+      loadEquipmentStatus();
+    };
+
+    inventoryManager.on('item_equipped_to_summon', handleEquipmentChange);
+    inventoryManager.on('item_unequipped_from_summon', handleEquipmentChange);
+    
+    return () => {
+      inventoryManager.off('item_equipped_to_summon', handleEquipmentChange);
+      inventoryManager.off('item_unequipped_from_summon', handleEquipmentChange);
+    };
+  }, [loadEquipmentStatus]);
+
+  return {
+    equipmentStatus,
+    isLoading,
+    error,
+    reload: loadEquipmentStatus
+  };
+}
+
+// 装备槽位配置Hook
+export function useEquipmentSlotConfig() {
+  return useMemo(() => {
+    const slotConfig = Object.values(EQUIPMENT_SLOT_TYPES).map(slotType => ({
+      type: slotType,
+      displayName: inventoryManager.getSlotTypeDisplayName(slotType),
+      icon: getSlotTypeIcon(slotType),
+      description: getSlotTypeDescription(slotType)
+    }));
+
+    return {
+      slotTypes: EQUIPMENT_SLOT_TYPES,
+      slotConfig,
+      getSlotDisplayName: (slotType) => inventoryManager.getSlotTypeDisplayName(slotType),
+      getSlotIcon: getSlotTypeIcon,
+      getSlotDescription: getSlotTypeDescription
+    };
+  }, []);
+}
+
+// 获取装备槽位图标
+function getSlotTypeIcon(slotType) {
+  const icons = {
+    [EQUIPMENT_SLOT_TYPES.ACCESSORY]: "fa-gem",      // 饰品
+    [EQUIPMENT_SLOT_TYPES.RELIC]: "fa-scroll",       // 遗物
+    [EQUIPMENT_SLOT_TYPES.BLOODLINE]: "fa-dna",      // 血脉
+    [EQUIPMENT_SLOT_TYPES.RUNE]: "fa-magic"          // 符文
+  };
+  return icons[slotType] || "fa-square";
+}
+
+// 获取装备槽位描述
+function getSlotTypeDescription(slotType) {
+  const descriptions = {
+    [EQUIPMENT_SLOT_TYPES.ACCESSORY]: "装饰性物品，提供额外属性",
+    [EQUIPMENT_SLOT_TYPES.RELIC]: "古老的遗物，具有特殊效果",
+    [EQUIPMENT_SLOT_TYPES.BLOODLINE]: "血脉之力，提供种族特性",
+    [EQUIPMENT_SLOT_TYPES.RUNE]: "符文之力，增强基础属性"
+  };
+  return descriptions[slotType] || "";
+}
+
+// 装备对比Hook
+export function useEquipmentComparison() {
+  const [comparisonItems, setComparisonItems] = useState([]);
+
+  const addToComparison = useCallback((item) => {
+    setComparisonItems(prev => {
+      // 限制对比物品数量
+      const newItems = prev.filter(existingItem => existingItem.id !== item.id);
+      if (newItems.length >= 3) {
+        newItems.shift(); // 移除最旧的对比项
+      }
+      return [...newItems, item];
+    });
+  }, []);
+
+  const removeFromComparison = useCallback((itemId) => {
+    setComparisonItems(prev => prev.filter(item => item.id !== itemId));
+  }, []);
+
+  const clearComparison = useCallback(() => {
+    setComparisonItems([]);
+  }, []);
+
+  const compareAttributes = useMemo(() => {
+    if (comparisonItems.length < 2) return null;
+
+    const attributes = new Set();
+    comparisonItems.forEach(item => {
+      if (item.effects) {
+        Object.keys(item.effects).forEach(attr => attributes.add(attr));
+      }
+    });
+
+    const comparison = {};
+    attributes.forEach(attr => {
+      comparison[attr] = comparisonItems.map(item => ({
+        itemId: item.id,
+        itemName: item.name,
+        value: item.effects?.[attr] || 0
+      }));
+    });
+
+    return comparison;
+  }, [comparisonItems]);
+
+  return {
+    comparisonItems,
+    addToComparison,
+    removeFromComparison,
+    clearComparison,
+    compareAttributes,
+    canCompare: comparisonItems.length >= 2
+  };
+}
+
+// 装备推荐Hook
+export function useEquipmentRecommendation(summonId) {
+  const [recommendations, setRecommendations] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const generateRecommendations = useCallback(async () => {
+    if (!summonId) return;
+
+    setIsLoading(true);
+    try {
+      // 动态导入Redux store
+      const store = await import('../store/index.js').then(m => m.default);
+      const summon = store.getState().summons.allSummons[summonId];
+      
+      if (!summon) {
+        setRecommendations([]);
+        return;
+      }
+
+      // 获取背包中的所有装备
+      const allEquipment = inventoryManager.getEquippableItems();
+      
+      // 根据召唤兽属性推荐装备
+      const summonLevel = summon.level || 1;
+      const summonType = summon.petType || 'physical';
+      
+      const recommendedItems = allEquipment
+        .filter(item => {
+          // 过滤掉等级要求过高的装备
+          if (item.requirements?.level && item.requirements.level > summonLevel) {
+            return false;
+          }
+          return true;
+        })
+        .map(item => {
+          // 计算推荐分数
+          let score = 0;
+          
+          // 基础分数
+          score += (item.level || 1) * 10;
+          
+          // 根据召唤兽类型调整分数
+          if (item.effects) {
+            if (summonType === 'physical') {
+              score += (item.effects.physicalAttack || 0) * 2;
+              score += (item.effects.strength || 0) * 1.5;
+            } else if (summonType === 'magical') {
+              score += (item.effects.magicalAttack || 0) * 2;
+              score += (item.effects.intelligence || 0) * 1.5;
+            } else if (summonType === 'defense') {
+              score += (item.effects.physicalDefense || 0) * 1.5;
+              score += (item.effects.magicalDefense || 0) * 1.5;
+              score += (item.effects.constitution || 0) * 1.5;
+            }
+          }
+          
+          return { ...item, recommendScore: score };
+        })
+        .sort((a, b) => b.recommendScore - a.recommendScore)
+        .slice(0, 10); // 只保留前10个推荐
+
+      setRecommendations(recommendedItems);
+    } catch (error) {
+      console.error('生成装备推荐失败:', error);
+      setRecommendations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [summonId]);
+
+  useEffect(() => {
+    generateRecommendations();
+  }, [generateRecommendations]);
+
+  return {
+    recommendations,
+    isLoading,
+    regenerate: generateRecommendations
   };
 } 

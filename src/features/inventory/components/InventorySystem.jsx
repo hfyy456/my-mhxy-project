@@ -11,10 +11,13 @@ import {
   useInventoryCapacity,
   useInventorySearch,
   useInventoryDragDrop,
-  useInventoryStats
+  useInventoryStats,
+  useEquipmentSlotConfig
 } from '../../../hooks/useInventoryManager';
+import { useSummonManager } from '../../../hooks/useSummonManager';
 import { useDataClear } from '../../../hooks/useDataClear';
 import inventoryManager from '../../../store/InventoryManager';
+import { EQUIPMENT_SLOT_TYPES } from '@/config/enumConfig';
 
 // 背包格子组件
 function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, isDragTarget }) {
@@ -61,6 +64,11 @@ function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, i
               ⚔
             </div>
           )}
+          {item.isEquipped && (
+            <div className="absolute -top-1 -left-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center" title="已装备">
+              ✓
+            </div>
+          )}
         </>
       )}
     </div>
@@ -68,7 +76,9 @@ function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, i
 }
 
 // 物品详情组件
-function ItemDetails({ item, onUse, onEquip, onSplit }) {
+function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip }) {
+  const { getSlotDisplayName } = useEquipmentSlotConfig();
+  
   if (!item) {
     return (
       <div className="bg-slate-100 border border-slate-200 rounded-xl p-6 h-64 flex items-center justify-center">
@@ -102,6 +112,11 @@ function ItemDetails({ item, onUse, onEquip, onSplit }) {
         }`}>
           {item.rarity}
         </span>
+        {item.isEquipped && (
+          <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+            已装备
+          </span>
+        )}
       </div>
       
       <div className="space-y-2 text-sm text-slate-700 mb-4">
@@ -109,6 +124,12 @@ function ItemDetails({ item, onUse, onEquip, onSplit }) {
           <span className="font-medium">类型:</span>
           <span>{item.type}</span>
         </div>
+        {item.isEquipment && item.slotType && (
+          <div className="flex justify-between">
+            <span className="font-medium">装备槽位:</span>
+            <span className="text-blue-600 font-medium">{getSlotDisplayName(item.slotType)}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="font-medium">数量:</span>
           <span className="font-semibold">{item.quantity}</span>
@@ -117,6 +138,31 @@ function ItemDetails({ item, onUse, onEquip, onSplit }) {
           <div className="flex justify-between">
             <span className="font-medium">价值:</span>
             <span className="text-amber-600 font-semibold">{item.value.toLocaleString()} 金</span>
+          </div>
+        )}
+        {item.isEquipped && item.equippedBy && (
+          <div className="flex justify-between">
+            <span className="font-medium">装备于:</span>
+            <span className="text-green-600 font-semibold">召唤兽 {item.equippedBy}</span>
+          </div>
+        )}
+        {item.level && (
+          <div className="flex justify-between">
+            <span className="font-medium">等级:</span>
+            <span className="text-yellow-600 font-semibold">Lv.{item.level}</span>
+          </div>
+        )}
+        {item.isEquipment && item.effects && Object.keys(item.effects).length > 0 && (
+          <div className="mt-3">
+            <h4 className="font-medium text-slate-800 mb-2">属性加成:</h4>
+            <div className="bg-white bg-opacity-50 rounded-lg p-2">
+              {Object.entries(item.effects).map(([stat, value]) => (
+                <div key={stat} className="flex justify-between text-xs">
+                  <span className="text-slate-600">{stat}:</span>
+                  <span className="text-green-600 font-semibold">+{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {item.description && (
@@ -136,12 +182,21 @@ function ItemDetails({ item, onUse, onEquip, onSplit }) {
           </button>
         )}
         
-        {item.isEquipment && (
+        {item.isEquipment && !item.isEquipped && (
           <button
             onClick={() => onEquip(item)}
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
           >
             装备
+          </button>
+        )}
+        
+        {item.isEquipment && item.isEquipped && (
+          <button
+            onClick={() => onUnequip(item)}
+            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+          >
+            卸下
           </button>
         )}
         
@@ -166,8 +221,12 @@ function InventoryGrid() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
+  // 获取 SummonManager 的操作
+  const { operations: summonManagerOperations, currentSummonFullData } = useSummonManager();
+
   const handleSlotClick = (slotIndex) => {
-    const item = actions.getItemBySlot(slotIndex);
+    const slot = slots[slotIndex];
+    const item = slot?.itemId ? actions.getItemById(slot.itemId) : null;
     setSelectedItem(item);
     setSelectedSlot(slotIndex);
   };
@@ -181,15 +240,71 @@ function InventoryGrid() {
   };
 
   const handleUse = (item) => {
-    if (selectedSlot !== null) {
-      actions.useItem(selectedSlot);
+    if (item) {
+      actions.useItem(item.id);
       setSelectedItem(null);
     }
   };
 
-  const handleEquip = (item) => {
-    // 这里集成召唤兽装备系统
-    console.log('装备物品到召唤兽:', item);
+  const handleEquip = async (item) => {
+    if (!item) return;
+    
+    const currentSummonId = currentSummonFullData?.id; // 从 useSummonManager 获取当前召唤兽ID
+
+    if (!currentSummonId) {
+      console.error("没有选中的召唤兽来装备物品");
+      // TODO: 可能需要用户提示，例如弹窗选择召唤兽
+      alert("请先在召唤兽面板选择一个召唤兽！");
+      return;
+    }
+
+    if (!item.slotType) {
+      console.error("物品没有指定 slotType，无法装备:", item);
+      alert("物品信息错误，无法装备！");
+      return;
+    }
+
+    console.log(`[InventorySystem] Attempting to equip item ${item.name} (ID: ${item.id}, SlotType: ${item.slotType}) to summon ${currentSummonId}`);
+
+    try {
+      const result = await summonManagerOperations.equipItem(currentSummonId, item.id, item.slotType);
+      if (result) { // summon.equipItem 返回 true/false
+        console.log(`[InventorySystem] ${item.name} 装备成功到召唤兽 ${currentSummonId}`);
+        setSelectedItem(null); // 清除选中
+        // 可选：通知用户成功
+      } else {
+        console.error(`[InventorySystem] ${item.name} 装备到召唤兽 ${currentSummonId} 失败`);
+        // 可选：通知用户失败原因, result 可能包含更多信息，但这取决于 summonManagerOperations.equipItem 的返回值设计
+        alert("装备失败！请查看控制台获取更多信息。");
+      }
+    } catch (error) {
+      console.error("装备物品时出错:", error);
+      alert("装备过程中发生错误！");
+    }
+  };
+
+  const handleUnequip = async (item) => {
+    if (!item || !item.isEquipped || !item.equippedBy || !item.equippedSlot) {
+      console.error("物品状态不正确，无法卸下:", item);
+      return;
+    }
+    
+    console.log(`[InventorySystem] Attempting to unequip item ${item.name} (ID: ${item.id}) from summon ${item.equippedBy}, slot ${item.equippedSlot}`);
+
+    try {
+      const result = await summonManagerOperations.unequipItem(item.equippedBy, item.equippedSlot);
+      if (result) { // summon.unequipItem 返回 true/false
+        console.log(`[InventorySystem] ${item.name} 从召唤兽 ${item.equippedBy} 的槽位 ${item.equippedSlot} 卸下成功`);
+        setSelectedItem(null); // 清除选中
+        // 可选：通知用户成功
+      } else {
+        console.error(`[InventorySystem] ${item.name} 从召唤兽 ${item.equippedBy} 卸下失败`);
+        alert("卸下失败！请查看控制台获取更多信息。");
+      }
+    } catch (error) {
+      console.error("卸下物品时出错:", error);
+      alert("卸下过程中发生错误！");
+    }
   };
 
   const handleSplit = (item) => {
@@ -206,17 +321,20 @@ function InventoryGrid() {
         </div>
         <div className="bg-white border border-slate-200 rounded-b-xl p-4">
           <div className="grid grid-cols-10 gap-2">
-            {slots.map(slot => (
-              <InventorySlot
-                key={slot.index}
-                slotIndex={slot.index}
-                item={slot.isEmpty ? null : actions.getItemBySlot(slot.index)}
-                onSlotClick={handleSlotClick}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                isDragTarget={isDragging && selectedSlot !== slot.index}
-              />
-            ))}
+            {slots.map(slot => {
+              const item = slot?.itemId ? actions.getItemById(slot.itemId) : null;
+              return (
+                <InventorySlot
+                  key={slot.index}
+                  slotIndex={slot.index}
+                  item={item}
+                  onSlotClick={handleSlotClick}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  isDragTarget={isDragging && selectedSlot !== slot.index}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
@@ -232,6 +350,7 @@ function InventoryGrid() {
             onUse={handleUse}
             onEquip={handleEquip}
             onSplit={handleSplit}
+            onUnequip={handleUnequip}
           />
         </div>
       </div>
@@ -858,7 +977,7 @@ export default function InventorySystem() {
             强制刷新
           </button>
         </div>
-        
+
         {/* 最近添加的物品 */}
         {recentlyAdded.length > 0 && (
           <div className="mt-3 p-2 bg-green-100 border border-green-300 rounded">

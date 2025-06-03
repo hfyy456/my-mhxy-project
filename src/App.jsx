@@ -45,6 +45,7 @@ import {
 // import { setCurrentSummon } from "@/store/slices/summonSlice"; // Now used within useAppModals
 import { initializePlayerQuests } from "@/store/slices/questSlice";
 import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
+import { selectIsBattleActive } from "@/store/slices/battleSlice";
 // import { addItem } from "@/store/slices/itemSlice"; // Not used directly in App.jsx
 // import { addToInventory } from "@/store/slices/inventorySlice"; // Not used directly in App.jsx
 
@@ -55,12 +56,13 @@ import { uiText } from "@/config/ui/uiTextConfig";
 import { LOADER_WRAPPER_ID } from "@/config/config";
 import FormationSetup from "@/features/formation/components/FormationSetup";
 import BattleScreen from "@/features/battle/components/BattleScreen";
-import { selectIsBattleActive } from "@/store/slices/battleSlice";
-import { selectAllSummons } from "@/store/slices/summonSlice";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
 import TowerSystem from "@/features/tower/components/TowerSystem";
 import TowerEntry from "@/features/tower/components/TowerEntry";
 import HomesteadView from '@/features/homestead/components/HomesteadView'; // 导入家园视图
+import SummonManagerDemo from '@/components/SummonManagerDemo'; // 导入OOP召唤兽演示组件
+import DataClearPanel from '@/components/DataClearPanel'; // 导入数据清理面板
+import { useSummonManager } from '@/hooks/useSummonManager'; // 导入OOP召唤兽系统hook
 
 const App = () => {
   const dispatch = useDispatch();
@@ -71,6 +73,9 @@ const App = () => {
   // 初始化背包系统 - 确保游戏启动时就加载背包数据
   const inventoryState = useInventoryManager();
   
+  // 使用OOP召唤兽系统
+  const { allSummons } = useSummonManager();
+
   const {
     isSummonModalOpen,
     openSummonModal,
@@ -113,6 +118,9 @@ const App = () => {
     isSummonEquipmentOpen,
     openSummonEquipmentModal,
     closeSummonEquipmentModal,
+    isSummonOOPDemoOpen,
+    openSummonOOPDemoModal,
+    closeSummonOOPDemoModal,
   } = useAppModals();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -121,7 +129,11 @@ const App = () => {
 
   const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
   const isBattleActive = useSelector(selectIsBattleActive);
-  const summonsListObject = useSelector(selectAllSummons);
+
+  // 添加数据清理面板的状态管理
+  const [isDataClearPanelOpen, setIsDataClearPanelOpen] = useState(false);
+  const openDataClearPanel = () => setIsDataClearPanelOpen(true);
+  const closeDataClearPanel = () => setIsDataClearPanelOpen(false);
 
   useAutoSave();
 
@@ -226,6 +238,14 @@ const App = () => {
       <button onClick={openSummonEquipmentModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#8b5cf6', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
         召唤兽装备
       </button>
+      {/* OOP召唤兽演示按钮 */}
+      <button onClick={openSummonOOPDemoModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#dc2626', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
+        OOP召唤兽
+      </button>
+      {/* 数据清理管理按钮 */}
+      <button onClick={openDataClearPanel} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
+        数据清理
+      </button>
     </div>
   ); };
 
@@ -293,7 +313,7 @@ const App = () => {
                       import('@/config/character/enemyConfig').then(({ getEnemyTemplateById }) => {
                         import('@/config/summon/summonConfig').then(({ summonConfig }) => {
                           // 获取玩家的召唤兽和阵型
-                          const playerSummons = Object.values(summonsListObject || {}).reduce((acc, summon) => {
+                          const playerSummons = Object.values(allSummons || {}).reduce((acc, summon) => {
                             acc[summon.id] = summon;
                             return acc;
                           }, {});
@@ -495,6 +515,30 @@ const App = () => {
             <CommonModal isOpen={isHomesteadModalOpen} title={uiText.homestead?.title || "我的家园"} onClose={closeHomesteadModal}>
               <HomesteadView uiText={uiText} toasts={toasts} setToasts={setToasts} />
             </CommonModal>
+
+          {/* OOP召唤兽演示系统模态框 */}
+          <CommonModal
+            isOpen={isSummonOOPDemoOpen}
+            onClose={closeSummonOOPDemoModal}
+            title={uiText.titles.summonOOPDemoModal}
+            maxWidthClass="max-w-7xl"
+            centerContent={false}
+            fullScreen={false}
+          >
+            <SummonManagerDemo />
+          </CommonModal>
+
+          {/* 数据清理管理系统模态框 */}
+          <CommonModal
+            isOpen={isDataClearPanelOpen}
+            onClose={closeDataClearPanel}
+            title="数据清理管理系统"
+            maxWidthClass="max-w-6xl"
+            centerContent={false}
+            fullScreen={false}
+          >
+            <DataClearPanel />
+          </CommonModal>
           
         </>
       )}

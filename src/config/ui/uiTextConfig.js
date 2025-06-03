@@ -50,7 +50,8 @@ export const uiText = {
     npcPanelModal: "NPC 信息",
     questLogModal: "任务日志",
     towerModal: "封妖塔",
-    formationModal: "阵型设置"
+    formationModal: "阵型设置",
+    summonOOPDemoModal: "面向对象召唤兽管理系统演示"
   },
 
   // 家园相关文本

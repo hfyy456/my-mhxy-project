@@ -31,7 +31,6 @@ import { generateUniqueId } from '@/utils/idUtils'; // 导入标准ID生成函�
 import { calculateRewards } from '@/features/battle/logic/battleRewards'; // 导入奖励计算函数
 import rewardManager from '@/store/RewardManager'; // 导入奖励管理器
 import { selectFormationGrid } from '@/store/slices/formationSlice'; // 导入阵型选择器
-import { selectSummonById } from '@/store/slices/summonSlice'; // 导入召唤兽选择器
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;
@@ -84,7 +83,7 @@ export const initiateMapBattleAction = createAsyncThunk(
         for (let c = 0; c < formationGrid[r].length; c++) {
           const summonId = formationGrid[r][c];
           if (summonId) {
-            const summonDetails = selectSummonById(state, summonId);
+            const summonDetails = summonConfig[summonId];
             if (summonDetails) {
               // 将 summonDetails 转换为 BattleUnit 结构
               // 注意: 这里的属性映射需要根据 summonDetails 和 BattleUnit 的实际结构进行调整
@@ -325,7 +324,7 @@ const battleSlice = createSlice({
       // payload: { battleId, playerTeam: [summonId1, ...], enemyTeam: [enemyTemplateId1, ...], playerInitialFormation, enemyInitialFormation }
       // 1. 设置 isActive = true, battleId
       // 2. 根据 playerTeam 和 enemyTeam 创建 BattleUnit 对象，存入 battleUnits
-      //    - 玩家召唤兽: 从 summonSlice 获取数据，转换成 BattleUnit 结构
+      //    - 玩家召唤兽: 从 OOP SummonManager 获取数据，转换成 BattleUnit 结构
       //    - 敌人单位: 从 enemyConfig (需要创建) 获取数据，生成 BattleUnit 结构
       // 3. 初始化 playerFormation 和 enemyFormation，填入 battleUnitId
       // 4. 计算初始 turnOrder (通常基于速度)

@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentSummon } from "@/store/slices/summonSlice";
-import { useCurrentSummon, useSummons } from "@/store/reduxSetup";
+// 引入OOP召唤兽管理系统
+import { useSummonManager } from "@/hooks/useSummonManager";
 import { checkAndResetDailyData } from "@/store/slices/towerSlice";
 
 export const useAppModals = () => {
   const dispatch = useDispatch();
-  const summons = useSummons();
-  const currentSummon = useCurrentSummon();
+  // 使用OOP召唤兽管理系统
+  const { allSummons, currentSummonFullData, manager } = useSummonManager();
+  const summons = Object.values(allSummons || {}); // 将OOP系统的召唤兽转换为数组
+  const currentSummon = currentSummonFullData;
 
   const [isSummonModalOpen, setIsSummonModalOpen] = useState(false);
   const [isInventoryOOPOpen, setIsInventoryOOPOpen] = useState(false);
@@ -22,19 +24,21 @@ export const useAppModals = () => {
   const [isTowerModalOpen, setIsTowerModalOpen] = useState(false);
   const [isHomesteadModalOpen, setIsHomesteadModalOpen] = useState(false);
   const [isSummonEquipmentOpen, setIsSummonEquipmentOpen] = useState(false);
+  const [isSummonOOPDemoOpen, setIsSummonOOPDemoOpen] = useState(false);
 
   const openSummonModal = useCallback(() => {
     if (summons.length > 0) {
       if (!currentSummon) {
-        dispatch(setCurrentSummon(summons[0].id));
+        // 使用OOP系统设置当前召唤兽
+        manager.setCurrentSummon(summons[0].id);
       }
     } else {
       if (currentSummon) {
-        dispatch(setCurrentSummon(null));
+        manager.setCurrentSummon(null);
       }
     }
     setIsSummonModalOpen(true);
-  }, [dispatch, summons, currentSummon]);
+  }, [manager, summons, currentSummon]);
 
   const closeSummonModal = useCallback(() => setIsSummonModalOpen(false), []);
   
@@ -85,17 +89,25 @@ export const useAppModals = () => {
   const openSummonEquipmentModal = useCallback(() => {
     if (summons.length > 0) {
       if (!currentSummon) {
-        dispatch(setCurrentSummon(summons[0].id));
+        // 使用OOP系统设置当前召唤兽
+        manager.setCurrentSummon(summons[0].id);
       }
     } else {
       if (currentSummon) {
-        dispatch(setCurrentSummon(null));
+        manager.setCurrentSummon(null);
       }
     }
     setIsSummonEquipmentOpen(true);
-  }, [dispatch, summons, currentSummon]);
+  }, [manager, summons, currentSummon]);
 
   const closeSummonEquipmentModal = useCallback(() => setIsSummonEquipmentOpen(false), []);
+
+  // OOP召唤兽演示系统
+  const openSummonOOPDemoModal = useCallback(() => {
+    setIsSummonOOPDemoOpen(true);
+  }, []);
+
+  const closeSummonOOPDemoModal = useCallback(() => setIsSummonOOPDemoOpen(false), []);
 
   return {
     isSummonModalOpen,
@@ -136,5 +148,8 @@ export const useAppModals = () => {
     setIsSummonEquipmentOpen,
     openSummonEquipmentModal,
     closeSummonEquipmentModal,
+    isSummonOOPDemoOpen,
+    openSummonOOPDemoModal,
+    closeSummonOOPDemoModal,
   };
 }; 

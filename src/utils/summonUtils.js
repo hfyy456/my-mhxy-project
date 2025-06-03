@@ -20,6 +20,12 @@ import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from "@/co
  * @returns {Object} 派生属性计算结果
  */
 export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel, race) => {
+  console.log('[calculateDerivedAttributes] 输入参数:');
+  console.log('  basicAttributesWithPoints:', basicAttributesWithPoints);
+  console.log('  equippedItemsDataMap:', equippedItemsDataMap);
+  console.log('  currentLevel:', currentLevel);
+  console.log('  race:', race);
+
   const derived = {};
   const equipmentContributions = {}; // 装备提供的所有加成
   const equipmentBonusesToBasic = {}; // 装备对基础属性的加成
@@ -30,19 +36,38 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
   if (equippedItemsDataMap) {
     for (const slot in equippedItemsDataMap) {
       const item = equippedItemsDataMap[slot];
-      if (item && item.finalEffects) {
-        for (const effectKey in item.finalEffects) {
-          const value = item.finalEffects[effectKey];
+      console.log(`  [装备槽 ${slot}] 装备:`, item);
+      console.log(`  [装备槽 ${slot}] 装备完整结构:`, JSON.stringify(item, null, 2));
+      if (item && item.effects) {
+        console.log(`  [装备槽 ${slot}] effects:`, item.effects);
+        console.log(`  [装备槽 ${slot}] effects类型:`, typeof item.effects);
+        console.log(`  [装备槽 ${slot}] effects键:`, Object.keys(item.effects));
+        for (const effectKey in item.effects) {
+          const value = item.effects[effectKey];
+          console.log(`    处理效果 ${effectKey}: ${value} (类型: ${typeof value})`);
           if (finalBasicAttributes.hasOwnProperty(effectKey)) {
             finalBasicAttributes[effectKey] = (finalBasicAttributes[effectKey] || 0) + value;
             equipmentBonusesToBasic[effectKey] = (equipmentBonusesToBasic[effectKey] || 0) + value;
+            console.log(`      -> 添加到基础属性 ${effectKey}: ${value}`);
           }
           // 记录所有装备效果
           equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + value;
+          console.log(`      -> 添加到装备贡献 ${effectKey}: ${value}`);
+        }
+      } else {
+        console.log(`  [装备槽 ${slot}] 无装备或无效果`);
+        if (item) {
+          console.log(`  [装备槽 ${slot}] 装备存在但effects为:`, item.effects);
+          console.log(`  [装备槽 ${slot}] 装备的所有属性:`, Object.keys(item));
         }
       }
     }
   }
+
+  console.log('[calculateDerivedAttributes] 计算结果:');
+  console.log('  equipmentContributions:', equipmentContributions);
+  console.log('  equipmentBonusesToBasic:', equipmentBonusesToBasic);
+  console.log('  finalBasicAttributes:', finalBasicAttributes);
   
   // 应用种族加成
   if (race) {

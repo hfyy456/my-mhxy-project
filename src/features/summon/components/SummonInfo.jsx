@@ -1,45 +1,48 @@
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useEffect } from "react";
+// 移除Redux相关导入，使用OOP召唤兽管理系统
+import { useSummonManager } from "@/hooks/useSummonManager";
 import {
   skillConfig,
   qualityConfig,
   skillTypeConfig,
-  STANDARD_EQUIPMENT_SLOTS,
   summonConfig,
 } from "@/config/config";
 import {
-  summonEquipmentConfig,
-  equipmentQualityConfig,
-} from "@/config/item/summonEquipmentConfig";
-import { 
-  uiText, 
-  getAttributeDisplayName, 
+  uiText,
+  getQualityDisplayName,
+  getAttributeDisplayName,
   getSkillTypeDisplayName,
   getRaceTypeDisplayName,
-  getQualityDisplayName,
   getSkillModeDisplayName,
-  getFiveElementDisplayName
+  getFiveElementDisplayName,
 } from "@/config/ui/uiTextConfig";
+import { equipmentQualityConfig } from "@/config/item/summonEquipmentConfig";
 import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 import {
-  selectCurrentSummonFullData,
-  selectEquippedItemsForSummon,
-  addExperienceToSummon,
-  allocatePointToSummon,
-  resetAllocatedPointsForSummon,
-  learnSkill,
-  replaceSkill,
-  releaseSummon,
-} from "@/store/slices/summonSlice";
+  useEquipmentSlotConfig,
+  useInventoryActions,
+} from "@/hooks/useInventoryManager";
+import inventoryManager from "@/store/InventoryManager";
 
 // 修改ItemTooltip组件
 const ItemTooltip = ({ item, position }) => {
-  const itemQualityColorName = item.quality ? equipmentQualityConfig.colors[item.quality] || "normal" : "normal";
+  const itemQualityColorName = item.quality
+    ? equipmentQualityConfig.colors[item.quality] || "normal"
+    : "normal";
 
   // 格式化属性值的显示
   const formatAttributeValue = (stat, value) => {
     // 处理百分比属性
-    const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
+    const percentageStats = [
+      "critRate",
+      "critDamage",
+      "dodgeRate",
+      "fireResistance",
+      "waterResistance",
+      "thunderResistance",
+      "windResistance",
+      "earthResistance",
+    ];
     if (percentageStats.includes(stat)) {
       return `${(value * 100).toFixed(1)}%`;
     }
@@ -52,23 +55,31 @@ const ItemTooltip = ({ item, position }) => {
       className="fixed bg-black bg-opacity-90 border border-slate-700 rounded-lg shadow-2xl p-3 text-sm text-white z-[100] pointer-events-none transition-opacity duration-150 opacity-100 max-w-xs"
       style={{
         left: `${position.x}px`,
-        top: `${position.y}px`
+        top: `${position.y}px`,
       }}
     >
       <div className="flex justify-between items-center mb-2">
-        <span className={`text-${itemQualityColorName} font-medium`}>{item.name}</span>
-        <span className={`text-sm text-${itemQualityColorName}`}>({getQualityDisplayName(item.quality)})</span>
+        <span className={`text-${itemQualityColorName} font-medium`}>
+          {item.name}
+        </span>
+        <span className={`text-sm text-${itemQualityColorName}`}>
+          ({getQualityDisplayName(item.quality)})
+        </span>
       </div>
-      
+
       <p className="text-gray-300 text-xs mb-2">{item.description}</p>
-      
+
       {item.finalEffects && Object.keys(item.finalEffects).length > 0 && (
         <div className="mt-2 pt-2 border-t border-slate-700">
           <p className="text-slate-200 font-semibold mb-1 text-xs">属性加成:</p>
           {Object.entries(item.finalEffects).map(([stat, value]) => (
             <p key={stat} className="text-xs flex justify-between">
-              <span className="text-gray-400">{getAttributeDisplayName(stat)}</span>
-              <span className="text-green-400">+{formatAttributeValue(stat, value)}</span>
+              <span className="text-gray-400">
+                {getAttributeDisplayName(stat)}
+              </span>
+              <span className="text-green-400">
+                +{formatAttributeValue(stat, value)}
+              </span>
             </p>
           ))}
         </div>
@@ -92,29 +103,101 @@ const BASIC_ATTRIBUTE_KEYS = [
   { key: "luck", name: "运气" },
 ];
 
-const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, onOpenNicknameModal }) => {
-  const dispatch = useDispatch();
-  const summon = useSelector(selectCurrentSummonFullData);
-  const [isReleaseConfirmOpen, setIsReleaseConfirmOpen] = useState(false);
-  
-  // 获取装备槽数据
-  const equippedItems = useSelector(state => 
-    summon ? selectEquippedItemsForSummon(state, summon.id) : {}
-  );
-
-  // Destructure all necessary properties directly from the Summon instance
+const SummonInfo = ({
+  onOpenEquipmentSelectorForSlot,
+  onOpenSkillEditorForSlot,
+  onOpenNicknameModal,
+}) => {
+  // 使用OOP召唤兽管理系统替代Redux
   const {
-    id: summonId,
+    currentSummonFullData: summon,
+    getSummonById,
+    levelUpSummon,
+    allocatePoints,
+    resetPoints,
+    deleteSummon,
+    changeSummonNickname,
+    isLoading,
+    error
+  } = useSummonManager();
+  
+  const [isReleaseConfirmOpen, setIsReleaseConfirmOpen] = useState(false);
+
+  // 使用装备槽位配置Hook
+  const { slotConfig, getSlotDisplayName, getSlotIcon } =
+    useEquipmentSlotConfig();
+  const { getSummonEquipmentStatus } = useInventoryActions();
+
+  // 简化装备数据获取 - 直接从召唤兽实例获取装备数据
+  const [equippedItems, setEquippedItems] = React.useState({});
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+
+  useEffect(() => {
+    const loadEquippedItems = async () => {
+      if (!summon?.id) {
+        setEquippedItems({});
+        return;
+      }
+
+      try {
+        // 获取召唤兽实例
+        const summonInstance = getSummonById(summon.id);
+        if (!summonInstance) {
+          console.warn(`[SummonInfo] 找不到召唤兽: ${summon.id}`);
+          setEquippedItems({});
+          return;
+        }
+
+        // 直接从召唤兽实例获取装备数据
+        const equippedItemsData = await summonInstance.getEquippedItems();
+        setEquippedItems(equippedItemsData);
+        
+        console.log("[SummonInfo] 装备数据已加载:", equippedItemsData);
+      } catch (error) {
+        console.error("[SummonInfo] 加载装备数据失败:", error);
+        setEquippedItems({});
+      }
+    };
+
+    loadEquippedItems();
+  }, [summon?.id, getSummonById, refreshTrigger]);
+
+  // 监听装备变化事件并强制刷新
+  React.useEffect(() => {
+    const handleEquipmentChange = () => {
+      console.log('[SummonInfo] 装备变化事件触发，强制刷新数据');
+      setRefreshTrigger(prev => prev + 1);
+      
+      // 延迟一点再刷新，确保数据同步
+      setTimeout(() => {
+        setRefreshTrigger(prev => prev + 1);
+      }, 100);
+    };
+
+    // 监听InventoryManager的装备事件
+    inventoryManager.on("item_equipped_to_summon", handleEquipmentChange);
+    inventoryManager.on("item_unequipped_from_summon", handleEquipmentChange);
+    inventoryManager.on("inventory_changed", handleEquipmentChange);
+
+    return () => {
+      inventoryManager.off("item_equipped_to_summon", handleEquipmentChange);
+      inventoryManager.off("item_unequipped_from_summon", handleEquipmentChange);
+      inventoryManager.off("inventory_changed", handleEquipmentChange);
+    };
+  }, [summon?.id]);
+
+  // 从召唤兽实例获取数据，确保数据的准确性
+  const {
     summonSourceId,
     quality,
     level,
     experience,
     experienceToNextLevel,
-    skillSet = [], // Default to empty array if undefined
-    basicAttributes = {}, // Default to empty object
-    derivedAttributes = {}, // Default to empty object
-    equipmentContributions = {}, // Default to empty object
-    equipmentBonusesToBasic = {}, // Default to empty object
+    skillSet = [],
+    basicAttributes = {},
+    derivedAttributes = {},
+    equipmentContributions = {},
+    equipmentBonusesToBasic = {},
     potentialPoints = 0,
     allocatedPoints = {
       constitution: 0,
@@ -124,19 +207,29 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
       luck: 0,
     },
     nickname,
+    power,
   } = summon || {};
 
   // 添加调试日志
   React.useEffect(() => {
-    console.log("[SummonInfo] Received summon from Redux:", summon);
-    console.log("[SummonInfo] Equipped items:", equippedItems);
-  }, [summon, equippedItems]);
+    console.log("[SummonInfo] 召唤兽数据:", {
+      summon: summon,
+      equippedItems: equippedItems,
+      equipmentContributions: equipmentContributions,
+      equipmentBonusesToBasic: equipmentBonusesToBasic,
+      derivedAttributes: derivedAttributes,
+      power: power
+    });
+  }, [summon, equippedItems, equipmentContributions, equipmentBonusesToBasic, derivedAttributes, power]);
 
   const qualityIndex = qualityConfig.names.indexOf(quality);
-  const qualityColorName = quality ? `text-${qualityConfig.colors[quality]}` : "text-gray-400";
+  const qualityColorName = quality
+    ? `text-${qualityConfig.colors[quality]}`
+    : "text-gray-400";
 
   const imageUrl =
-    (summonSourceId && images[`/src/assets/summons/${summonSourceId}.png`]?.default) ||
+    (summonSourceId &&
+      images[`/src/assets/summons/${summonSourceId}.png`]?.default) ||
     images["/src/assets/summons/default.png"].default;
 
   // 计算经验百分比
@@ -155,29 +248,27 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   const handleEquipItem = (slotType) => {
     if (!summon) return;
     console.log("[SummonInfo] handleEquipItem called for slot:", slotType);
-    if (typeof onOpenEquipmentSelectorForSlot === 'function') {
+    if (typeof onOpenEquipmentSelectorForSlot === "function") {
       onOpenEquipmentSelectorForSlot(slotType);
     } else {
-      console.warn("[SummonInfo] onOpenEquipmentSelectorForSlot is not a function");
+      console.warn(
+        "[SummonInfo] onOpenEquipmentSelectorForSlot is not a function"
+      );
     }
   };
 
-  const displayEquipmentSlots = STANDARD_EQUIPMENT_SLOTS.map((slotType) => {
-    const iconMap = {
-      饰品: "fa-ring",
-      遗物: "fa-gem",
-      血脉: "fa-dna",
-      符文: "fa-circle-notch",
-    };
-    const defaultIcon = iconMap[slotType] || "fa-question-circle";
-    return {
-      type: slotType,
-      defaultIcon,
-      displayTypeName: uiText.equipmentSlots[slotType] || slotType,
-    };
-  });
+  // 使用正确的装备槽位配置
+  const displayEquipmentSlots = slotConfig.map((slotConfigItem) => ({
+    type: slotConfigItem.type,
+    defaultIcon: slotConfigItem.icon,
+    displayTypeName: slotConfigItem.displayName,
+    description: slotConfigItem.description,
+  }));
 
-  const displayName = summonConfig[summonSourceId]?.name || summonSourceId || uiText.general.unknown;
+  const displayName =
+    summonConfig[summonSourceId]?.name ||
+    summonSourceId ||
+    uiText.general.unknown;
 
   // 添加tooltip状态
   const [tooltipItem, setTooltipItem] = useState(null);
@@ -190,13 +281,21 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   }
 
   const handleLevelUp = () => {
-    if (!summon || !summonId) return;
-    if (summon.experience !== undefined && summon.experienceToNextLevel !== Infinity) {
-      const experienceNeeded = Math.max(0, (Number(summon.experienceToNextLevel) || 0) - (Number(summon.experience) || 0));
+    if (!summon || !summon.id) return;
+    if (
+      summon.experience !== undefined &&
+      summon.experienceToNextLevel !== Infinity
+    ) {
+      const experienceNeeded = Math.max(
+        0,
+        (Number(summon.experienceToNextLevel) || 0) -
+          (Number(summon.experience) || 0)
+      );
       if (experienceNeeded > 0) {
-        dispatch(addExperienceToSummon({ summonId, experienceAmount: experienceNeeded }));
+        // 使用OOP系统的升级方法，给予所需经验值
+        levelUpSummon(summon.id, experienceNeeded);
       } else {
-        dispatch(addExperienceToSummon({ summonId, experienceAmount: 1 }));
+        levelUpSummon(summon.id, 1);
       }
     } else if (summon.experienceToNextLevel === Infinity) {
       console.log("[SummonInfo] Summon is already at max level.");
@@ -204,25 +303,30 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   };
 
   const handleAllocatePoint = (attributeName, amount) => {
-    if (!summon || !summonId) return;
-    console.log("[SummonInfo] dispatching allocatePointToSummon:", {
-      summonId,
+    if (!summon || !summon.id) return;
+    console.log("[SummonInfo] 使用OOP系统分配属性点:", {
+      summonId: summon.id,
       attributeName,
       amount,
     });
-    dispatch(allocatePointToSummon({ summonId, attributeName, amount }));
+    // 使用OOP系统的分配点数方法，传递正确的参数
+    allocatePoints(summon.id, attributeName, amount);
   };
 
   const handleResetPoints = () => {
-    if (!summon || !summonId) {
-      console.error("[SummonInfo] Cannot reset points: summon or summonId is missing.");
+    if (!summon || !summon.id) {
+      console.error(
+        "[SummonInfo] Cannot reset points: summon or summon.id is missing."
+      );
       return;
     }
-    dispatch(resetAllocatedPointsForSummon({ summonId }));
+    // 使用OOP系统的重置点数方法
+    resetPoints(summon.id);
   };
 
   const handleReleaseConfirm = () => {
-    dispatch(releaseSummon(summon.id));
+    // 使用OOP系统的删除召唤兽方法
+    deleteSummon(summon.id);
     setIsReleaseConfirmOpen(false);
   };
 
@@ -230,28 +334,36 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
   const renderEquipmentSlots = () => {
     return displayEquipmentSlots.map((slot) => {
       const equippedItem = equippedItems[slot.type];
-      
-      const itemQuality = equippedItem?.quality || 'normal';
-      const qualityColorDetail = equipmentQualityConfig.colors[itemQuality] || equipmentQualityConfig.colors.normal;
+
+      const itemQuality = equippedItem?.quality || "normal";
+      const qualityColorDetail =
+        equipmentQualityConfig.colors[itemQuality] ||
+        equipmentQualityConfig.colors.normal;
 
       const borderColorClass = `border-${qualityColorDetail}`;
-      const iconColorClass = equippedItem ? `text-${qualityColorDetail}` : "text-slate-400";
-      const nameColorClass = equippedItem ? `text-${qualityColorDetail}` : "text-slate-300";
+      const iconColorClass = equippedItem
+        ? `text-${qualityColorDetail}`
+        : "text-slate-400";
+      const nameColorClass = equippedItem
+        ? `text-${qualityColorDetail}`
+        : "text-slate-300";
 
       return (
         <div
           key={slot.type}
           className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group`}
           onClick={() => handleEquipItem(slot.type)}
+          title={slot.description}
           onMouseEnter={(e) => {
             if (equippedItem) {
               const rect = e.currentTarget.getBoundingClientRect();
               const screenWidth = window.innerWidth;
               const tooltipWidth = 280; // 估算tooltip宽度
-              const x = rect.left + rect.width + tooltipWidth > screenWidth 
-                ? rect.left - tooltipWidth - 5 
-                : rect.left + rect.width + 5;
-              
+              const x =
+                rect.left + rect.width + tooltipWidth > screenWidth
+                  ? rect.left - tooltipWidth - 5
+                  : rect.left + rect.width + 5;
+
               let y = rect.top;
               const tooltipHeight = 150; // 估算tooltip高度
               if (rect.top + tooltipHeight > window.innerHeight) {
@@ -261,7 +373,10 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
 
               setTooltipPosition({ x, y });
               setTooltipItem(equippedItem);
-              tooltipTimeoutRef.current = setTimeout(() => setTooltipVisible(true), 300);
+              tooltipTimeoutRef.current = setTimeout(
+                () => setTooltipVisible(true),
+                300
+              );
             }
           }}
           onMouseLeave={() => {
@@ -270,16 +385,41 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
           }}
         >
           <div className="w-10 h-10 flex items-center justify-center mb-1 text-2xl">
-            <i className={`fas ${equippedItem && equippedItem.icon ? equippedItem.icon : slot.defaultIcon} ${iconColorClass}`}></i>
+            <i
+              className={`fas ${
+                equippedItem && equippedItem.icon
+                  ? equippedItem.icon
+                  : slot.defaultIcon
+              } ${iconColorClass}`}
+            ></i>
           </div>
-          <p className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}>
+          <p
+            className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}
+          >
             {equippedItem ? equippedItem.name : slot.displayTypeName}
           </p>
-          {/* Optionally, show a small level badge or quality indicator on the slot itself */}
+          {/* 显示装备等级和品质指示器 */}
           {equippedItem && (
-            <span className={`absolute top-1 right-1 text-[10px] px-1 rounded-sm bg-slate-900 bg-opacity-70 ${nameColorClass}`}>
-              Lv.{equippedItem.level || '-'}
+            <span
+              className={`absolute top-1 right-1 text-[10px] px-1 rounded-sm bg-slate-900 bg-opacity-70 ${nameColorClass}`}
+            >
+              Lv.{equippedItem.level || "-"}
             </span>
+          )}
+          {/* 显示装备状态指示器 */}
+          {equippedItem && (
+            <div
+              className={`absolute bottom-1 left-1 w-2 h-2 rounded-full bg-green-400`}
+              title="已装备"
+            />
+          )}
+          {/* 空槽位提示 */}
+          {!equippedItem && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                点击装备
+              </span>
+            </div>
           )}
         </div>
       );
@@ -293,11 +433,16 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
         <div className="md:col-span-5 flex flex-col gap-3">
           <div className="flex justify-center">
             <img
-                className={`w-60 h-60 object-cover border-2 ${quality ? `border-${qualityConfig.colors[quality]}` : 'border-slate-500'} shadow-lg rounded-lg transition-all duration-300`}
+              className={`w-60 h-60 object-cover border-2 ${
+                quality
+                  ? `border-${qualityConfig.colors[quality]}`
+                  : "border-slate-500"
+              } shadow-lg rounded-lg transition-all duration-300`}
               src={imageUrl}
               alt={name}
               onError={(e) => {
-                e.target.src = images["/src/assets/summons/default.png"].default;
+                e.target.src =
+                  images["/src/assets/summons/default.png"].default;
               }}
             />
           </div>
@@ -306,12 +451,12 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
 
             {/* Nickname Section */}
             <div className="flex justify-between items-center gap-2 mb-3">
-             <div>
-               <span className="text-xs text-gray-400 mr-1">昵称:</span>
-               <span className="text-lg font-semibold text-purple-300">
-                 {nickname || "未设置"}
-               </span>
-             </div>
+              <div>
+                <span className="text-xs text-gray-400 mr-1">昵称:</span>
+                <span className="text-lg font-semibold text-purple-300">
+                  {nickname || "未设置"}
+                </span>
+              </div>
               <button
                 onClick={() => onOpenNicknameModal(summon)}
                 className="text-xs p-1.5 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-md transition-colors leading-none"
@@ -321,40 +466,61 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
             </div>
 
             {/* Attribute Tags Section */}
-           <div className="flex flex-wrap justify-start items-stretch gap-x-2 gap-y-2 mb-2">
+            <div className="flex flex-wrap justify-start items-stretch gap-x-2 gap-y-2 mb-2">
               {/* Level Tag */}
-             <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
-               <i className="fas fa-star text-yellow-400 mr-2"></i>
-                <span className="text-xs font-semibold text-gray-100">{level || 1}</span>
+              <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
+                <i className="fas fa-star text-yellow-400 mr-2"></i>
+                <span className="text-xs font-semibold text-gray-100">
+                  {level || 1}
+                </span>
               </div>
-              
+
               {/* Quality Tag */}
-             <div className={`flex items-center ${qualityConfig.bgColors?.[quality] || 'bg-slate-600/50'} px-3 py-1.5 rounded-lg shadow`}>
-               <i className={`fas fa-gem ${qualityColorName} mr-2`}></i>
-               <span className={`text-xs font-semibold ${qualityConfig.textColors?.[quality] || qualityColorName}`}>
+              <div
+                className={`flex items-center ${
+                  qualityConfig.bgColors?.[quality] || "bg-slate-600/50"
+                } px-3 py-1.5 rounded-lg shadow`}
+              >
+                <i className={`fas fa-gem ${qualityColorName} mr-2`}></i>
+                <span
+                  className={`text-xs font-semibold ${
+                    qualityConfig.textColors?.[quality] || qualityColorName
+                  }`}
+                >
                   {getQualityDisplayName(quality)}
                 </span>
               </div>
-              
+
               {/* Race Tag */}
-             <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
-               <i className="fas fa-paw text-sky-400 mr-2"></i>
-               <span className="text-xs font-semibold text-gray-100 ">
+              <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
+                <i className="fas fa-paw text-sky-400 mr-2"></i>
+                <span className="text-xs font-semibold text-gray-100 ">
                   {getRaceTypeDisplayName(summon.race)}
                 </span>
               </div>
-              
+
               {/* Five Element Tag */}
-              {(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement) && (
-                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${FIVE_ELEMENT_COLORS[summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement] || 'bg-gray-500 text-white'}`}>
-                 <i className="fas fa-adjust mr-2"></i>
-                 <span className="text-xs font-semibold">
-                    {getFiveElementDisplayName(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement)}
+              {(summon.fiveElement ||
+                summonConfig[summon.summonSourceId]?.fiveElement) && (
+                <div
+                  className={`flex items-center px-3 py-1.5 rounded-lg shadow ${
+                    FIVE_ELEMENT_COLORS[
+                      summon.fiveElement ||
+                        summonConfig[summon.summonSourceId]?.fiveElement
+                    ] || "bg-gray-500 text-white"
+                  }`}
+                >
+                  <i className="fas fa-adjust mr-2"></i>
+                  <span className="text-xs font-semibold">
+                    {getFiveElementDisplayName(
+                      summon.fiveElement ||
+                        summonConfig[summon.summonSourceId]?.fiveElement
+                    )}
                   </span>
                 </div>
               )}
             </div>
-            
+
             <div className="mt-2 px-2">
               <div className="flex justify-between mb-0.5">
                 <span className="text-xs font-medium text-purple-300">
@@ -373,19 +539,21 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
               </div>
             </div>
           </div>
-          
+
           <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm flex-grow">
             <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
               <i className="fa-solid fa-star text-purple-400 mr-2"></i>
               {uiText.titles.coreAttributes}
             </h3>
             {/* 战力值展示 */}
-            {typeof summon.power === 'number' && (
+            {typeof summon.power === "number" && (
               <div className="flex justify-between items-center mb-2">
                 <span className="text-yellow-400 font-bold text-base flex items-center">
                   <i className="fas fa-fire-alt mr-2"></i>战力值
                 </span>
-                <span className="text-lg font-extrabold text-yellow-300 drop-shadow">{summon.power}</span>
+                <span className="text-lg font-extrabold text-yellow-300 drop-shadow">
+                  {summon.power}
+                </span>
               </div>
             )}
             <ul className="space-y-2 mb-2">
@@ -436,7 +604,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
         <div className="md:col-span-7 flex flex-col gap-3">
           <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
-              <i className="fa-solid fa-user-shield text-yellow-400 mr-2"></i>
+              <i className="fa-solid fa-star text-purple-400 mr-2"></i>
               {uiText.titles.equipmentBar}
             </h3>
             <div className="grid grid-cols-4 gap-4">
@@ -459,7 +627,8 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                 const allocatedVal = allocatedPoints[key] || 0;
                 const equipmentBonus = equipmentBonusesToBasic[key] || 0;
                 const currentBaseAttr = basicAttributes[key] || 0;
-                const totalVal = currentBaseAttr + allocatedVal + equipmentBonus;
+                const totalVal =
+                  currentBaseAttr + allocatedVal + equipmentBonus;
 
                 return (
                   <li
@@ -541,10 +710,12 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                     "w-20 h-20 rounded flex flex-col justify-center items-center p-1 shadow-md relative group cursor-pointer border-2";
 
                   const handleSkillSlotClick = () => {
-                    if (typeof onOpenSkillEditorForSlot === 'function') {
+                    if (typeof onOpenSkillEditorForSlot === "function") {
                       onOpenSkillEditorForSlot(i, skillId);
                     } else {
-                      console.warn("[SummonInfo] onOpenSkillEditorForSlot is not defined.");
+                      console.warn(
+                        "[SummonInfo] onOpenSkillEditorForSlot is not defined."
+                      );
                     }
                   };
 
@@ -578,15 +749,22 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                       </div>
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs bg-slate-800 text-white text-xs rounded-md py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none group-hover:pointer-events-auto shadow-lg border border-${colorForSkill} border-opacity-50">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <i className={`fa-solid ${iconToDisplay} text-${colorForSkill} text-lg`}></i>
-                          <p className={`font-bold text-${colorForSkill} text-sm`}>
+                          <i
+                            className={`fa-solid ${iconToDisplay} text-${colorForSkill} text-lg`}
+                          ></i>
+                          <p
+                            className={`font-bold text-${colorForSkill} text-sm`}
+                          >
                             {skillInfo.name}
                           </p>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-1 mb-2">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-${colorForSkill} bg-opacity-20 text-${colorForSkill}`}>
-                            {getSkillTypeDisplayName(skillInfo.type) || uiText.general.unknown}
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-${colorForSkill} bg-opacity-20 text-${colorForSkill}`}
+                          >
+                            {getSkillTypeDisplayName(skillInfo.type) ||
+                              uiText.general.unknown}
                           </span>
                           {skillInfo.mode && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300">
@@ -606,13 +784,18 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
                             </span>
                           )}
                         </div>
-                        
-                        <p className="text-gray-300 mb-1.5 leading-relaxed">{skillInfo.description}</p>
-                        
+
+                        <p className="text-gray-300 mb-1.5 leading-relaxed">
+                          {skillInfo.description}
+                        </p>
+
                         {skillInfo.damage && (
                           <p className="text-xs text-gray-400 flex items-center">
                             <i className="fas fa-fire-alt mr-1"></i>
-                            伤害: {typeof skillInfo.damage === 'function' ? '基于属性计算' : skillInfo.damage}
+                            伤害:{" "}
+                            {typeof skillInfo.damage === "function"
+                              ? "基于属性计算"
+                              : skillInfo.damage}
                           </p>
                         )}
                         {skillInfo.probability && (
@@ -633,10 +816,7 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
 
       {/* Tooltip Display */}
       {tooltipVisible && tooltipItem && (
-        <ItemTooltip 
-          item={tooltipItem} 
-          position={tooltipPosition}
-        />
+        <ItemTooltip item={tooltipItem} position={tooltipPosition} />
       )}
 
       {/* 释放确认对话框 */}
@@ -645,7 +825,8 @@ const SummonInfo = ({ onOpenEquipmentSelectorForSlot, onOpenSkillEditorForSlot, 
           <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold text-white mb-4">确认释放</h3>
             <p className="text-gray-300 mb-6">
-              确定要释放召唤兽 {summon.nickname || summon.name} 吗？此操作不可撤销。
+              确定要释放召唤兽 {summon.nickname || summon.name}{" "}
+              吗？此操作不可撤销。
             </p>
             <div className="flex justify-end space-x-4">
               <button

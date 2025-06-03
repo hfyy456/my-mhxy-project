@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { selectAllItemsWithSummonInfo } from '@/store/slices/itemSlice';
-import { selectAllSummons } from '@/store/slices/summonSlice';
 import { summonEquipmentConfig, equipmentQualityConfig } from '@/config/item/summonEquipmentConfig';
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from '@/config/ui/uiTextConfig';
-import { useInventoryManager } from '@/hooks/useInventoryManager';
+import { useInventoryManager, useEquipmentSlotConfig } from '@/hooks/useInventoryManager';
+import inventoryManager from '@/store/InventoryManager';
+import { useSummonManager } from '@/hooks/useSummonManager'; // 使用OOP召唤兽系统
 
 // Helper to format attribute values (similar to ItemTooltip)
 const formatAttributeValue = (stat, value) => {
@@ -22,65 +22,74 @@ const EquippableItemsModal = ({
   currentSummonId,
   onItemSelected,
 }) => {
-  const allItemsWithSummonInfo = useSelector(selectAllItemsWithSummonInfo);
-  const summonsMap = useSelector(selectAllSummons);
+  // 所有hooks必须在条件返回之前调用
+  // const summonsMap = useSelector(selectAllSummons); // 已移除Redux召唤兽系统
+  const { allSummons } = useSummonManager(); // 使用OOP召唤兽系统
   const inventoryState = useInventoryManager();
+  const { getSlotDisplayName } = useEquipmentSlotConfig();
 
   // -------- START DEBUG LOGS --------
   if (isOpen && slotType) {
     console.log('[EquippableItemsModal] Props:', { isOpen, slotType, currentSummonId });
-    console.log('[EquippableItemsModal] All items with summon info (after useSelector):', JSON.parse(JSON.stringify(allItemsWithSummonInfo)));
     console.log('[EquippableItemsModal] Inventory OOP state:', inventoryState);
-    const itemsForThisSlotType = allItemsWithSummonInfo.filter(item => item.slotType === slotType);
+    
+    // 打印所有装备的详细信息
+    const allEquipmentItems = inventoryState.items.filter(item => item.type === 'equipment');
+    console.log('[EquippableItemsModal] All equipment items:', allEquipmentItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      slotType: item.slotType,
+      type: item.type,
+      isEquipped: item.isEquipped,
+      equippedBy: item.equippedBy
+    })));
+    
+    const itemsForThisSlotType = inventoryState.items.filter(item => item.slotType === slotType);
     console.log(`[EquippableItemsModal] Items matching slotType "${slotType}" (with summon info):`, JSON.parse(JSON.stringify(itemsForThisSlotType)));
   }
   // -------- END DEBUG LOGS --------
 
-  if (!isOpen || !slotType) return null;
-
-  // Redux装备物品
-  const reduxEquippableItems = allItemsWithSummonInfo.filter(item => {
-    if (item.slotType !== slotType) return false;
-    return true;
-  });
-
-  // 修正：从插槽数据中获取背包系统的装备物品
-  const inventoryEquippableItems = inventoryState.slots
-    .filter(slot => !slot.isEmpty) // 过滤非空插槽
-    .map(slot => {
-      // 从items中找到对应的物品数据
-      const item = inventoryState.items.find(item => item.id === slot.itemId);
-      if (item && item.isEquipment && item.slotType === slotType) {
-        return {
-          ...item,
-          source: 'inventory', // 标记来源为背包系统
-          slotIndex: slot.index, // 添加插槽索引
-          // 适配显示格式
-          finalEffects: item.effects || {},
-          quality: item.quality || 'normal'
-        };
-      }
-      return null;
-    })
-    .filter(Boolean); // 移除null值
-
-  // 合并两个系统的装备物品
-  const allEquippableItems = [
-    ...reduxEquippableItems.map(item => ({ ...item, source: 'redux' })),
-    ...inventoryEquippableItems
-  ];
+  // InventoryManager装备物品（主要系统）
+  const inventoryEquippableItems = useMemo(() => {
+    if (!isOpen || !slotType) return [];
+    console.log(`[EquippableItemsModal] 正在获取slotType为 "${slotType}" 的装备`);
+    
+    // 使用直接导入的inventoryManager实例
+    const items = inventoryManager.getEquippableItems(slotType, true);
+    
+    console.log(`[EquippableItemsModal] Found ${items.length} equippable items for slotType: ${slotType}`);
+    console.log('[EquippableItemsModal] Items with equipment status:', items.map(item => ({
+      id: item.id,
+      name: item.name,
+      isEquipped: item.equipmentStatus?.isEquipped,
+      equippedBy: item.equipmentStatus?.equippedBy,
+      canEquip: item.equipmentStatus?.canEquip
+    })));
+    
+    return items;
+  }, [inventoryState, slotType, isOpen]);
 
   const getSummonName = (summonId) => {
-    const summon = summonsMap[summonId];
+    const summon = allSummons[summonId]; // 使用OOP召唤兽数据
     return summon ? (summon.nickname || summon.name) : '未知召唤兽';
   };
+
+  // 获取当前已装备的物品
+  const currentEquippedItem = useMemo(() => {
+    return inventoryEquippableItems.find(
+      item => item.equipmentStatus?.isEquipped && item.equipmentStatus?.equippedBy === currentSummonId
+    );
+  }, [inventoryEquippableItems, currentSummonId]);
+
+  // 现在在所有hooks调用之后进行条件渲染
+  if (!isOpen || !slotType) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 p-6 rounded-lg shadow-xl w-full max-w-2xl text-white">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-sky-400">
-            为 {uiText.equipmentSlots[slotType] || slotType} 选择装备
+            为 {getSlotDisplayName(slotType)} 选择装备
           </h3>
           <button
             onClick={onClose}
@@ -91,40 +100,71 @@ const EquippableItemsModal = ({
           </button>
         </div>
 
-        {allEquippableItems.length === 0 ? (
+        {/* 当前装备状态显示 */}
+        {currentEquippedItem && (
+          <div className="mb-4 p-3 bg-slate-700 rounded-lg border-l-4 border-green-500">
+            <div className="flex items-center mb-2">
+              <i className="fas fa-check-circle text-green-400 mr-2"></i>
+              <span className="text-green-400 font-semibold">当前装备</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className={`font-semibold text-${equipmentQualityConfig.colors[currentEquippedItem.quality] || 'normal'}`}>
+                {currentEquippedItem.name}
+              </span>
+              {currentEquippedItem.level && (
+                <span className="text-xs text-yellow-400">Lv.{currentEquippedItem.level}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {inventoryEquippableItems.length === 0 ? (
           <div className="text-slate-400 text-center py-4">
             <p>没有适合该槽位的可用装备。</p>
             <p className="text-xs mt-2 text-slate-500">
-              试试在背包中添加一些装备，或从商店购买装备物品。
+              试试在背包中添加一些{getSlotDisplayName(slotType)}装备，或从商店购买装备物品。
             </p>
           </div>
         ) : (
           <ul className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-            {allEquippableItems.map(item => {
+            {inventoryEquippableItems
+              .sort((a, b) => {
+                // 排序：当前装备在前，然后按品质和等级排序
+                if (a.equipmentStatus?.isEquipped && a.equipmentStatus?.equippedBy === currentSummonId) return -1;
+                if (b.equipmentStatus?.isEquipped && b.equipmentStatus?.equippedBy === currentSummonId) return 1;
+                
+                // 按品质排序
+                const qualityOrder = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1, normal: 0 };
+                const aQuality = qualityOrder[a.quality] || 0;
+                const bQuality = qualityOrder[b.quality] || 0;
+                if (aQuality !== bQuality) return bQuality - aQuality;
+                
+                // 按等级排序
+                return (b.level || 0) - (a.level || 0);
+              })
+              .map(item => {
               const itemQualityColorName = item.quality ? equipmentQualityConfig.colors[item.quality] || 'normal' : 'normal';
               
-              const isEquippedByOther = item.isEquipped && item.equippedBy && item.equippedBy !== currentSummonId;
-              const equippedBySummonName = isEquippedByOther ? getSummonName(item.equippedBy) : null;
+              const isEquippedByOther = item.equipmentStatus?.isEquipped && item.equipmentStatus?.equippedBy && item.equipmentStatus?.equippedBy !== currentSummonId;
+              const isEquippedByCurrent = item.equipmentStatus?.isEquipped && item.equipmentStatus?.equippedBy === currentSummonId;
+              const equippedBySummonName = isEquippedByOther ? getSummonName(item.equipmentStatus.equippedBy) : null;
 
               return (
                 <li
-                  key={`${item.source}-${item.id}`}
+                  key={item.id}
                   onClick={() => onItemSelected(item)}
-                  className={`p-3 bg-slate-700 hover:bg-slate-600 rounded-md cursor-pointer transition-all duration-150 border-l-4 border-${itemQualityColorName} relative`}
+                  className={`p-3 ${isEquippedByCurrent ? 'bg-green-800/50' : 'bg-slate-700'} hover:bg-slate-600 rounded-md cursor-pointer transition-all duration-150 border-l-4 border-${itemQualityColorName} relative`}
                 >
-                  <div className="absolute top-2 right-2">
-                    {item.source === 'inventory' ? (
-                      <span className="bg-amber-600 text-white text-xs px-2 py-1 rounded-full" title="来自面向对象背包系统">
-                        OOP
-                      </span>
-                    ) : (
-                      <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full" title="来自Redux系统">
-                        Redux
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {/* 当前装备标记 */}
+                    {isEquippedByCurrent && (
+                      <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full" title="当前装备">
+                        ✓
                       </span>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center pr-12">
+                  <div className="flex justify-between items-center pr-16">
                     <div>
                       <span className={`font-semibold text-${itemQualityColorName} mr-2`}>{item.name}</span>
                       <span className="text-xs text-slate-400">({getQualityDisplayName(item.quality)})</span>
@@ -136,10 +176,10 @@ const EquippableItemsModal = ({
                   </div>
                   {item.description && <p className="text-xs text-slate-300 mt-1 mb-2">{item.description}</p>}
                   
-                  {item.finalEffects && Object.keys(item.finalEffects).length > 0 && (
+                  {item.effects && Object.keys(item.effects).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-slate-600">
                       <p className="text-slate-300 font-semibold text-xs mb-1">属性加成:</p>
-                      {Object.entries(item.finalEffects).map(([stat, value]) => (
+                      {Object.entries(item.effects).map(([stat, value]) => (
                         <div key={stat} className="text-xs flex justify-between">
                           <span className="text-gray-400">{getAttributeDisplayName(stat)}:</span>
                           <span className="text-green-400">+{formatAttributeValue(stat, value)}</span>
@@ -148,34 +188,14 @@ const EquippableItemsModal = ({
                     </div>
                   )}
 
-                  {item.source === 'inventory' && (
-                    <>
-                      {item.isEquipped && item.equippedBy && (
-                        <p className="text-xs text-yellow-400 mt-2">
-                          (已装备于: {item.equippedBy})
-                        </p>
-                      )}
-                      {item.slotIndex !== undefined && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          背包位置: 第{item.slotIndex + 1}格
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  {item.source === 'redux' && (
-                    <>
-                      {isEquippedByOther && (
-                        <p className="text-xs text-yellow-400 mt-2">
-                          (已装备于: {equippedBySummonName || getSummonName(item.equippedBy) || '未知召唤兽'})
-                        </p>
-                      )}
-                      {item.isEquipped && item.equippedBy === currentSummonId && (
-                        <p className="text-xs text-green-400 mt-2">
-                          (已装备于当前召唤兽{item.equippedOnSlot ? `的${uiText.equipmentSlots[item.equippedOnSlot] || item.equippedOnSlot}槽位` : ''})
-                        </p>
-                      )}
-                    </>
+                  {/* 装备状态信息 */}
+                  {item.equipmentStatus?.isEquipped && item.equipmentStatus?.equippedBy && (
+                    <p className="text-xs text-yellow-400 mt-2">
+                      {isEquippedByCurrent 
+                        ? '(当前召唤兽装备中)' 
+                        : `(已装备于: ${equippedBySummonName})`
+                      }
+                    </p>
                   )}
                 </li>
               );

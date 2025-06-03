@@ -2,49 +2,67 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:06:55
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-01 04:41:39
+ * @LastEditTime: 2025-06-04 05:49:35
  */
-import React, { useEffect, useCallback, useState, useMemo } from "react";
+import React, { useEffect, useCallback, useState, useMemo, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SummonInfo from "./SummonInfo";
 import SummonCatalog from "./SummonCatalog";
-import SummonList from "./SummonList";
 import HistoryModal from "../../history/components/HistoryModal";
 import EquippableItemsModal from "./EquippableItemsModal";
 import CrossSummonEquipConfirmModal from "./CrossSummonEquipConfirmModal";
 import SummonFusionModal from "./SummonFusionModal";
 import { useSummonSystem } from "../hooks/useSummonSystem";
-import { 
-  setCurrentSummon,
-  addSummon,
-  learnSkill,
-  replaceSkill,
-  addRefinementHistoryItem,
-  selectCurrentSummonFullData,
-  selectAllSummons,
-  updateSummonNickname,
-  fuseSummons
-} from "../../../store/slices/summonSlice";
-import { addItems, selectAllItemsArray, selectItemEquipInfo } from "../../../store/slices/itemSlice";
+// 引入OOP召唤兽管理系统
+import {
+  useSummonManager,
+  useCurrentSummon,
+  useSummonList,
+  useSummonStats,
+  useSummonOperations
+} from "@/hooks/useSummonManager";
+
 import { useInventoryActions } from "../../../hooks/useInventoryManager";
 import { uiText } from "@/config/ui/uiTextConfig";
 import { summonConfig } from "@/config/config";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import NicknameModal from "./NicknameModal";
 import { generateUniqueId } from "@/utils/idUtils";
-import { manageEquipItemThunk, manageUnequipItemThunk } from "../../../store/thunks/equipmentThunks";
-import store from "@/store"; // Import the store instance
 import inventoryManager from "@/store/InventoryManager";
+import { generateNewSummon } from "@/utils/summonUtils";
+import { SUMMON_SOURCES } from "@/config/enumConfig";
 
 const SummonSystem = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
-  const currentSummon = useSelector(selectCurrentSummonFullData);
-  const summonsListObject = useSelector(selectAllSummons);
-  const allItems = useSelector(selectAllItemsArray);
+  // 使用Redux系统获取玩家等级
   const playerLevel = useSelector(state => state.player?.level || 1);
-  
-  const summonsList = useMemo(() => Object.values(summonsListObject || {}), [summonsListObject]);
   const maxSummons = playerBaseConfig.getMaxSummonsByLevel(playerLevel);
+  
+  // 使用OOP召唤兽管理系统替代Redux
+  const {
+    allSummons,
+    currentSummonId,
+    currentSummonFullData,
+    isLoading,
+    error,
+    levelUpSummon,
+    allocatePoints,
+    resetPoints,
+    learnSkill: oopLearnSkill,
+    forgetSkill,
+    changeSummonNickname,
+    createSummon,
+    deleteSummon,
+    cloneSummon,
+    clearError,
+    manager,
+    equipItem,
+    unequipItem
+  } = useSummonManager();
+
+  // 获取当前召唤兽和召唤兽列表（使用OOP系统的数据）
+  const currentSummon = currentSummonFullData;
+  const summonsList = useMemo(() => Object.values(allSummons || {}), [allSummons]);
   
   const {
     historyList,
@@ -96,19 +114,21 @@ const SummonSystem = ({ toasts, setToasts }) => {
   const handleNicknameConfirm = useCallback((nickname) => {
     if (selectedSummonForNickname) {
       if (tempSummonData) {
-        const updatedSummonPayload = {
+        // 使用OOP系统创建召唤兽
+        const result = createSummon({
           ...tempSummonData.summonPayload,
           nickname
-        };
-        dispatch(addSummon(updatedSummonPayload));
-        dispatch(setCurrentSummon(updatedSummonPayload.id));
-        dispatch(addRefinementHistoryItem(tempSummonData.historyItem));
+        });
+        if (result) {
+          // 同步到Redux历史记录
+       //   dispatch(addRefinementHistoryItem(tempSummonData.historyItem));
+          // 设置为当前召唤兽
+          manager.setCurrentSummon(result.id);
+        }
         setTempSummonData(null);
       } else {
-        dispatch(updateSummonNickname({ 
-          id: selectedSummonForNickname.id, 
-          nickname 
-        }));
+        // 使用OOP系统更新昵称
+        changeSummonNickname(selectedSummonForNickname.id, nickname);
       }
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
@@ -118,7 +138,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
     }
     setSelectedSummonForNickname(null);
     setIsNicknameModalOpen(false);
-  }, [selectedSummonForNickname, tempSummonData, dispatch, setToasts]);
+  }, [selectedSummonForNickname, tempSummonData, createSummon, changeSummonNickname, manager, dispatch, setToasts]);
 
   const handleRefineMonster = useCallback(async () => {
     const { refineMonster } = await import('../../../gameLogic');
@@ -133,8 +153,6 @@ const SummonSystem = ({ toasts, setToasts }) => {
       }
       const result = refineMonster(playerLevel);
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
-        dispatch(addItems(result.newlyCreatedItems));
-        
         // 改进物品添加逻辑 - 使用异步并行处理
         const itemAddPromises = result.newlyCreatedItems.map(async (item) => {
           try {
@@ -143,7 +161,6 @@ const SummonSystem = ({ toasts, setToasts }) => {
               name: item.name,
               type: item.itemType || 'equipment',
               subType: item.subType,
-              rarity: inventoryManager.mapQualityToRarity(item.quality),
               quality: item.quality,
               description: item.description,
               value: item.sellPrice || 100,
@@ -152,7 +169,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
               effects: item.effects || {},
               level: item.level || 1,
               quantity: 1,
-              maxStack: 1, // 装备不能堆叠
+              maxStack: 1,
               stackable: false,
               source: 'refineMonster',
               createdAt: Date.now()
@@ -194,7 +211,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
               message: `无法添加物品：${item.name} (${reason === 'inventory_full' ? '背包已满' : reason})`,
               type: 'warning'
             }]);
-          });
+        });
         }
 
         if (result.requireNickname) {
@@ -208,52 +225,47 @@ const SummonSystem = ({ toasts, setToasts }) => {
             historyItem: result.historyItem
           });
         } else {
-          dispatch(addSummon(result.newSummonPayload));
-          dispatch(setCurrentSummon(result.newSummonPayload.id));
-          dispatch(addRefinementHistoryItem(result.historyItem));
+          // 直接使用OOP系统创建召唤兽
+          const oopResult = createSummon(result.newSummonPayload);
+          if (oopResult) {
+            // dispatch(addRefinementHistoryItem(result.historyItem));
+            manager.setCurrentSummon(oopResult.id);
+          }
         }
-        
-        // 根据添加结果生成消息
-        let message = "炼妖成功！获得了新的召唤兽";
-        if (successItems.length > 0) {
-          const itemNames = successItems.map(r => r.item.name).join('、');
-          message += `和初始装备：${itemNames}！物品已添加到背包！`;
-        }
-        if (failedItems.length > 0) {
-          message += ` 但有${failedItems.length}个物品因背包已满未能添加。`;
-        }
-        
-        setToasts(prev => [...prev, {
-          id: generateUniqueId('toast'),
-          message,
-          type: successItems.length > 0 ? 'success' : 'warning'
+
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'), 
+          message: `炼妖成功！${result.requireNickname ? '请为新召唤兽设置昵称。' : ''}`, 
+          type: 'success'
         }]);
-      } else {
-        throw new Error(result.message || "炼妖失败，未能返回完整的召唤兽、物品或历史数据");
       }
     } catch (error) {
       console.error("[SummonSystem] 炼妖失败:", error);
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
-        message: `炼妖失败: ${error.message}`,
+        message: `炼妖失败: ${error.message || '未知错误'}`,
         type: 'error'
       }]);
     }
-  }, [dispatch, setToasts, summonsList.length, maxSummons, playerLevel, inventoryActions]);
-  
-  const handleFusion = useCallback((newSummon, summonId1, summonId2) => {
+  }, [summonsList.length, maxSummons, playerLevel, inventoryActions, setToasts, createSummon, dispatch, manager]);
+
+  const handleFusion = useCallback(async (summon1Id, summon2Id) => {
     try {
-      // 执行召唤兽合成
-      dispatch(fuseSummons({
-        newSummon,
-        summonId1,
-        summonId2
-      }));
+      // 这里可以集成现有的合成逻辑，或者使用Redux的合成功能
+      const result = await dispatch(fuseSummons({ summon1Id, summon2Id }));
+      const newSummon = result.payload;
       
-      // 设置当前选中的召唤兽为新合成的召唤兽
-      dispatch(setCurrentSummon(newSummon.id));
-      
-      // 显示成功提示
+      // 使用OOP系统创建合成后的召唤兽
+      const oopResult = createSummon(newSummon);
+      if (oopResult) {
+        // 删除原有的两个召唤兽
+        deleteSummon(summon1Id);
+        deleteSummon(summon2Id);
+        // 设置为当前召唤兽
+        manager.setCurrentSummon(oopResult.id);
+      }
+
+      setIsFusionModalOpen(false);
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
         message: `合成成功！获得了新的召唤兽「${summonConfig[newSummon.summonSourceId]?.name || '未知召唤兽'}」`,
@@ -267,21 +279,22 @@ const SummonSystem = ({ toasts, setToasts }) => {
         type: 'error'
       }]);
     }
-  }, [dispatch, setToasts]);
+  }, [dispatch, createSummon, deleteSummon, manager, setToasts]);
 
+  // 当召唤兽列表变化时，设置当前召唤兽
   useEffect(() => {
     if (summonsList && summonsList.length > 0) {
       if (!currentSummon && summonsList[0]?.id) {
-        dispatch(setCurrentSummon(summonsList[0].id));
+        manager.setCurrentSummon(summonsList[0].id);
       }
     } else {
       if (currentSummon) {
-         dispatch(setCurrentSummon(null));
+        manager.setCurrentSummon(null);
       }
     }
-  }, [summonsList, currentSummon, dispatch]);
+  }, [summonsList, currentSummon, manager]);
 
-  const handleItemSelectedForEquip = useCallback(async (itemToEquip) => {
+  const handleEquipItem = useCallback(async (itemToEquip) => {
     if (!currentSummon || !selectedSlotForEquipping) {
       console.error("Cannot equip item: current summon or slot type is missing.");
       setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备失败：缺少召唤兽或槽位信息", type: 'error' }]);
@@ -289,94 +302,66 @@ const SummonSystem = ({ toasts, setToasts }) => {
       return;
     }
 
-    if (itemToEquip.source === 'inventory') {
-      try {
-        const result = await inventoryManager.equipItemToSummon(
-          itemToEquip.slotIndex, 
-          currentSummon.id
-        );
-        
-        if (result.success) {
-          setToasts(prev => [...prev, { 
-            id: generateUniqueId('toast'), 
-            message: result.message, 
-            type: 'success' 
-          }]);
-        } else {
-          setToasts(prev => [...prev, { 
-            id: generateUniqueId('toast'), 
-            message: result.error, 
-            type: 'error' 
-          }]);
-        }
-      } catch (error) {
-        console.error('背包系统装备失败:', error);
-        setToasts(prev => [...prev, { 
-          id: generateUniqueId('toast'), 
-          message: `装备失败: ${error.message}`, 
-          type: 'error' 
-        }]);
-      }
-      
+    if (typeof equipItem !== 'function') {
+      console.error("[SummonSystem handleEquipItem] FATAL: equipItem is not a function! Value:", equipItem);
+      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备系统错误：操作模块未正确加载", type: 'error' }]);
       setIsEquipmentSelectorOpen(false);
-      setSelectedSlotForEquipping(null);
       return;
     }
 
-    const itemId = itemToEquip.id;
-    const currentState = store.getState(); // Get current state from the store
-    const equipInfo = selectItemEquipInfo(currentState, itemId); // Use current state
-
-    // Use fresh equipInfo for decisions
-    if (equipInfo.isEquipped && equipInfo.equippedBySummonId && equipInfo.equippedBySummonId !== currentSummon.id) {
-      const originalSummon = summonsListObject[equipInfo.equippedBySummonId]; // Use ID from fresh equipInfo
-      if (originalSummon) {
-        setCrossEquipDetails({
-          itemToEquip: itemToEquip, // itemToEquip is still the object we intend to move
-          originalSummon: originalSummon,
-          targetSummon: currentSummon,
-          slotType: selectedSlotForEquipping
-        });
-        setShowCrossEquipConfirm(true);
+    try {
+      const result = await equipItem(currentSummon.id, itemToEquip.id, selectedSlotForEquipping);
+      if (result) {
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'), 
+          message: `${itemToEquip.name} 装备成功!`,
+          type: 'success' 
+        }]);
       } else {
-        // Original summon not found, but item is marked as equipped by someone else. 
-        // This indicates a potential data inconsistency. For safety, attempt direct equip to current.
-        console.warn(`Item ${itemToEquip.name} (ID: ${itemId}) equipInfo indicates it is equipped by summon ${equipInfo.equippedBySummonId}, but that summon was not found. Attempting to equip directly to ${currentSummon.id}.`);
-        await dispatch(manageEquipItemThunk({ summonId: currentSummon.id, itemIdToEquip: itemId, slotType: selectedSlotForEquipping }));
-        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: `${itemToEquip.name} 已装备。`, type: 'success' }]);
+        setToasts(prev => [...prev, { 
+          id: generateUniqueId('toast'), 
+          message: `${itemToEquip.name} 装备失败。`,
+          type: 'error' 
+        }]);
       }
-    } else if (equipInfo.isEquipped && equipInfo.equippedBySummonId === currentSummon.id) {
-      // Item is already equipped to the current summon. 
-      // Check if it's in the same slot; if so, it's a no-op. If different, it's a move (currently not handled, treated as no-op).
-      if (equipInfo.equippedOnSlot === selectedSlotForEquipping) {
-        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: `${itemToEquip.name} 已装备于当前召唤兽的此槽位。`, type: 'info' }]);
-      } else {
-        // Potentially a move from another slot on the same summon. For now, inform user.
-        // A more advanced system might handle this as a slot-to-slot move.
-        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: `${itemToEquip.name} 已装备于当前召唤兽的其他槽位。如需更换槽位，请先卸下。`, type: 'info' }]);
-      }
-    } else { // Item is not equipped, or some inconsistent state not caught above.
-      await dispatch(manageEquipItemThunk({ summonId: currentSummon.id, itemIdToEquip: itemId, slotType: selectedSlotForEquipping }));
-      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: `${itemToEquip.name} 已成功装备到 ${selectedSlotForEquipping}`, type: 'success' }]);
+    } catch (error) {
+      console.error('[SummonSystem] 装备物品时出错:', error);
+      setToasts(prev => [...prev, { 
+        id: generateUniqueId('toast'), 
+        message: `装备失败: ${error.message || '未知错误'}`,
+        type: 'error' 
+      }]);
     }
+    
     setIsEquipmentSelectorOpen(false);
     setSelectedSlotForEquipping(null);
-  }, [currentSummon, selectedSlotForEquipping, dispatch, setToasts, summonsListObject]);
+  }, [currentSummon, selectedSlotForEquipping, setToasts, equipItem]);
 
   const handleConfirmCrossEquip = async () => {
     if (!crossEquipDetails) return;
     const { itemToEquip, originalSummon, targetSummon, slotType } = crossEquipDetails;
 
-    try {
-      await dispatch(manageUnequipItemThunk({ summonId: originalSummon.id, slotType: itemToEquip.slotType }));
-      await dispatch(manageEquipItemThunk({ summonId: targetSummon.id, itemIdToEquip: itemToEquip.id, slotType: slotType }));
+    if (typeof equipItem !== 'function') {
+      console.error("[SummonSystem handleConfirmCrossEquip] FATAL: equipItem is not a function! Value:", equipItem);
+      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备系统错误", type: 'error' }]);
+      setShowCrossEquipConfirm(false);
+      setCrossEquipDetails(null);
+      return;
+    }
 
-      setToasts(prev => [...prev, {
-        id: generateUniqueId('toast'),
-        message: `${itemToEquip.name} 已从 ${originalSummon.name} 卸下并装备给 ${targetSummon.name}`,
-        type: 'success'
-      }]);
+    try {
+      const result = await equipItem(targetSummon.id, itemToEquip.id, slotType);
+      if (result) {
+        setToasts(prev => [...prev, {
+          id: generateUniqueId('toast'),
+          message: `${itemToEquip.name} 已从 ${originalSummon.name} 转装给 ${targetSummon.name}`,
+          type: 'success'
+        }]);
+      } else {
+        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "跨召唤兽装备失败。", type: 'error' }]);
+      }
     } catch (error) {
+      console.error("[SummonSystem] 跨召唤兽装备失败:", error);
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
         message: `跨召唤兽装备失败: ${error.message || '未知错误'}`,
@@ -392,36 +377,51 @@ const SummonSystem = ({ toasts, setToasts }) => {
     if (currentSummon && selectedSlotForEquipping) {
       const summonIdToUpdate = currentSummon.id;
 
+      if (typeof unequipItem !== 'function') {
+        console.error("[SummonSystem handleUnequipItem] FATAL: unequipItem is not a function! Value:", unequipItem);
+        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "卸装系统错误", type: 'error' }]);
+        setSelectedSlotForEquipping(null);
+        return;
+      }
+
       try {
-        const result = await dispatch(manageUnequipItemThunk({ summonId: summonIdToUpdate, slotType: selectedSlotForEquipping })).unwrap();
+        const result = await unequipItem(summonIdToUpdate, selectedSlotForEquipping);
+        if (result) {
+          setToasts(prev => [...prev, {
+            id: generateUniqueId('toast'),
+            message: `从 ${currentSummon.name || '当前召唤兽'} 的 ${selectedSlotForEquipping} 槽位卸装成功。`,
+            type: 'success'
+          }]);
+        } else {
+          setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "卸装失败。", type: 'error' }]);
+        }
+      } catch (error) {
+        console.error("[SummonSystem] 卸装失败:", error);
         setToasts(prev => [...prev, {
           id: generateUniqueId('toast'),
-          message: `${result.unequippedItem ? allItems.find(i=>i.id === result.unequippedItem)?.name : selectedSlotForEquipping} 上的物品已卸下`,
-          type: 'success'
-        }]);
-      } catch (error) {
-         setToasts(prev => [...prev, {
-          id: generateUniqueId('toast'),
-          message: `卸下物品失败: ${error.payload || error.message || '未知错误'}`,
+          message: `卸装失败: ${error.message || '未知错误'}`,
           type: 'error'
         }]);
       }
     }
-    setIsEquipmentSelectorOpen(false);
+    
     setSelectedSlotForEquipping(null);
   };
 
   const handleConfirmSkillChange = (skillNameToLearnOrReplace) => {
     if (currentSummon && selectedSkillSlotIndex !== null) {
       if (currentSkillForSlot) {
-        dispatch(replaceSkill({ summonId: currentSummon.id, newSkillName: skillNameToLearnOrReplace, slotIndexToReplace: selectedSkillSlotIndex }));
+        // 先遗忘旧技能，再学习新技能
+        forgetSkill(currentSummon.id, currentSkillForSlot);
+        oopLearnSkill(currentSummon.id, skillNameToLearnOrReplace);
         setToasts(prev => [...prev, { 
           id: generateUniqueId('toast'),
           message: `技能 ${currentSkillForSlot}已被替换为 ${skillNameToLearnOrReplace}`, 
           type: 'success' 
         }]);
       } else {
-        dispatch(learnSkill({ summonId: currentSummon.id, skillName: skillNameToLearnOrReplace, slotIndex: selectedSkillSlotIndex }));
+        // 直接学习新技能
+        oopLearnSkill(currentSummon.id, skillNameToLearnOrReplace);
         setToasts(prev => [...prev, { 
           id: generateUniqueId('toast'),
           message: `已学习技能 ${skillNameToLearnOrReplace}`, 
@@ -488,7 +488,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
                 summonsList.map(summon => (
                   <button
                     key={summon.id}
-                    onClick={() => dispatch(setCurrentSummon(summon.id))}
+                    onClick={() => manager.setCurrentSummon(summon.id)}
                     className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-all duration-150 flex items-center 
                                 ${currentSummon?.id === summon.id 
                                   ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white font-medium shadow-md border border-amber-500/50' 
@@ -564,7 +564,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           }}
           slotType={selectedSlotForEquipping}
           currentSummonId={currentSummon.id}
-          onItemSelected={handleItemSelectedForEquip}
+          onItemSelected={handleEquipItem}
         />
       )}
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectFormationGrid, setSummonInSlot, selectTotalSummonsInFormation } from '@/store/slices/formationSlice';
-import { useSummons, useSummonById } from '@/store/reduxSetup'; // Assuming useSummons provides array of summon objects
+import { useSummonManager } from '@/hooks/useSummonManager';
+import { formationDataManager } from '../utils/FormationDataManager'; // 导入数据管理器
 import { FORMATION_ROWS, FORMATION_COLS } from '@/config/config';
-import { summonConfig } from '@/config/summon/summonConfig'; // To get summon names or images
-import { uiText } from '@/config/ui/uiTextConfig'; // <-- Import uiText
-import { TOAST_TYPES } from '@/config/enumConfig'; // Import TOAST_TYPES
+import { summonConfig } from '@/config/summon/summonConfig';
+import { uiText } from '@/config/ui/uiTextConfig';
+import { TOAST_TYPES } from '@/config/enumConfig';
 
 const MAX_SUMMONS_IN_FORMATION = 5;
 
@@ -13,103 +14,66 @@ const FormationSetup = (props) => {
   const { showToast } = props;
   const dispatch = useDispatch();
   const formationGrid = useSelector(selectFormationGrid);
-  const totalSummonsInFormation = useSelector(selectTotalSummonsInFormation); // Get total count
-  const summonsAsObject = useSummons(); // Get the object from Redux
-  const allPlayerSummons = useMemo(() => summonsAsObject ? Object.values(summonsAsObject) : [], [summonsAsObject]); // Convert to array
+  const totalSummonsInFormation = useSelector(selectTotalSummonsInFormation);
+  
+  // 使用面向对象的召唤兽管理系统
+  const { 
+    state: summonManagerState, 
+    isLoading: summonManagerLoading, 
+    error: summonManagerError 
+  } = useSummonManager();
+  
+  // 从OOP管理器获取召唤兽数据
+  const allPlayerSummons = useMemo(() => {
+    if (!summonManagerState?.summonsData) return [];
+    return Object.values(summonManagerState.summonsData);
+  }, [summonManagerState?.summonsData]);
 
   const [selectedSummonId, setSelectedSummonId] = useState(null);
-  const [summonDetailsCache, setSummonDetailsCache] = useState({});
-
+  
   // State for drag and drop visual feedback
-  const [draggedItem, setDraggedItem] = useState(null); // Stores info about the item being dragged
-  const [draggedOverSlot, setDraggedOverSlot] = useState(null); // {row, col} of slot being dragged over
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [draggedOverSlot, setDraggedOverSlot] = useState(null);
 
-  // Helper to check if a summon is currently in the formation grid
-  const isSummonInGrid = useCallback((summonIdToCheck) => {
-    if (!formationGrid || !summonIdToCheck) return false;
-    for (const row of formationGrid) {
-      if (row.includes(summonIdToCheck)) {
-        return true;
-      }
-    }
-    return false;
+  // 使用数据管理器计算阵型分析
+  const formationAnalysis = useMemo(() => {
+    return formationDataManager.analyzeFormation(formationGrid, allPlayerSummons);
+  }, [formationGrid, allPlayerSummons]);
+
+  // 使用数据管理器的方法
+  const getSummonDisplayInfo = useCallback((summonId) => {
+    return formationDataManager.getSummonDisplayInfo(summonId, allPlayerSummons);
+  }, [allPlayerSummons]);
+
+  const isSummonInGrid = useCallback((summonId) => {
+    return formationDataManager.isSummonInGrid(formationGrid, summonId);
   }, [formationGrid]);
 
-  // Cache summon details to avoid repeated lookups if useSummonById is expensive
-  // or if allPlayerSummons doesn't immediately contain all details needed for display.
-  useEffect(() => {
-    const newCache = { ...summonDetailsCache };
-    let cacheUpdated = false;
-    if (formationGrid && allPlayerSummons) { // Added null check for allPlayerSummons just in case
-      formationGrid.forEach(row => {
-        row.forEach(summonIdInGrid => { // Renamed summonId to summonIdInGrid for clarity
-          if (summonIdInGrid && !newCache[summonIdInGrid]) {
-            const summon = allPlayerSummons.find(s => s.id === summonIdInGrid); // allPlayerSummons is now an array
-            if (summon) {
-              newCache[summonIdInGrid] = summon;
-              cacheUpdated = true;
-            }
-          }
-        });
-      });
-    }
-    if (cacheUpdated) {
-      setSummonDetailsCache(newCache);
-    }
-  }, [formationGrid, allPlayerSummons, summonDetailsCache]);
-
-  const getSummonDisplayInfo = (summonId) => {
-    if (!summonId) return { name: '空', id: null, level: null }; // Added level here
-    // Ensure allPlayerSummons is treated as an array here too if find is used
-    const summon = summonDetailsCache[summonId] || (allPlayerSummons ? allPlayerSummons.find(s => s.id === summonId) : null);
-    if (!summon) return { name: '未知召唤兽', id: summonId, level: 'N/A' }; // Added level here
-    const basePetInfo = summonConfig[summon.summonSourceId];
-    return {
-      id: summon.id, // Make sure to return id
-      name: summon.nickname || basePetInfo?.name || '召唤兽',
-      level: summon.level, // Ensure level is returned
-    };
-  };
-
   const handleDragStart = (e, itemType, summonData, fromRow = null, fromCol = null) => {
-    const dragPayload = {
-      id: summonData.id,
-      type: itemType, // 'list' or 'grid'
-      originalRow: fromRow,
-      originalCol: fromCol,
-      name: summonData.name // For display or other purposes if needed
-    };
+    const dragPayload = formationDataManager.createDragPayload(itemType, summonData, fromRow, fromCol);
     e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
     setDraggedItem(dragPayload);
     e.dataTransfer.effectAllowed = 'move';
-    // Visual feedback for the source item (optional, browser provides ghost)
-    // e.currentTarget.style.opacity = '0.5'; 
   };
 
   const handleDragEnd = (e) => {
     setDraggedItem(null);
     setDraggedOverSlot(null);
-    // Reset opacity if changed in onDragStart
-    // e.currentTarget.style.opacity = '1';
   };
 
   const handleDragOver = (e) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
   };
 
   const handleDragEnter = (e, row, col) => {
     e.preventDefault();
-    if (draggedItem) { // Only highlight if an item is being dragged
-        setDraggedOverSlot({ row, col });
+    if (draggedItem) {
+      setDraggedOverSlot({ row, col });
     }
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-    // Only clear if leaving the specific cell to another or outside
-    // This can be tricky if moving quickly between cells. A common approach is to clear onDragEnd for the whole grid.
-    // For now, let's try clearing it. If it flickers, we might adjust.
-    // setDraggedOverSlot(null); 
   };
 
   const handleDropOnGrid = (e, targetRow, targetCol) => {
@@ -118,67 +82,47 @@ const FormationSetup = (props) => {
     if (!droppedItemData) return;
 
     const { id: summonIdToPlace, type: sourceType, originalRow, originalCol } = droppedItemData;
-    const summonCurrentlyInTargetSlot = formationGrid[targetRow][targetCol];
 
-    // If trying to place a summon from the list into a slot that would exceed the MAX count,
-    // AND the summon to place is NOT already in the grid, AND the target slot is NOT already occupied by this same summon,
-    // AND the target slot IS occupied by a DIFFERENT summon (meaning it is a replacement of a different summon)
-    // OR the target slot is EMPTY
-    // THEN, if totalSummonsInFormation is already at MAX, and this is a new summon being added (not a move of an existing one, and not replacing itself)
-    // and the target is empty (meaning it's an add not a replace), then block.
-    // The new logic allows replacement even if full.
+    // 使用数据管理器验证放置
+    const validation = formationDataManager.validateSummonPlacement(
+      formationGrid, 
+      summonIdToPlace, 
+      targetRow, 
+      targetCol, 
+      sourceType
+    );
 
-    if (sourceType === 'list') {
-        const isPlacingSummonAlreadyInGrid = isSummonInGrid(summonIdToPlace);
-        // If the formation is full, AND we are trying to add a NEW summon (not in grid yet)
-        // AND the target slot is EMPTY (meaning it's not a replacement, but an addition to an empty slot)
-        // THEN, we should block it.
-        if (totalSummonsInFormation >= MAX_SUMMONS_IN_FORMATION && 
-            !isPlacingSummonAlreadyInGrid && 
-            summonCurrentlyInTargetSlot === null) {
-            showToast(uiText.formation.maxSummonsReached, TOAST_TYPES.WARNING);
-            setDraggedItem(null);
-            setDraggedOverSlot(null);
-            return;
-        }
+    if (!validation.canPlace) {
+      showToast(validation.reason, TOAST_TYPES.WARNING);
+      setDraggedItem(null);
+      setDraggedOverSlot(null);
+      return;
     }
 
-    // 1. Clear all previous grid locations of this specific summonIdToPlace (ensures uniqueness)
+    // Clear all previous grid locations of this specific summonIdToPlace
     let alreadyInTargetSlotAndIsSameSummon = false;
     formationGrid.forEach((rowItems, r_idx) => {
       rowItems.forEach((currentSid, c_idx) => {
         if (currentSid === summonIdToPlace) {
           if (r_idx === targetRow && c_idx === targetCol) {
-            alreadyInTargetSlotAndIsSameSummon = true; // Dragged to its own spot
+            alreadyInTargetSlotAndIsSameSummon = true;
           } else {
-            dispatch(setSummonInSlot({ row: r_idx, col: c_idx, summonId: null })); // Clear old spot
+            dispatch(setSummonInSlot({ row: r_idx, col: c_idx, summonId: null }));
           }
         }
       });
     });
 
-    // 2. If dragging from a grid cell (move within grid), clear the original cell if it wasn't the target
     if (sourceType === 'grid' && (originalRow !== targetRow || originalCol !== targetCol)) {
-        // Only clear if it wasn't the cell that contained summonIdToPlace and was already cleared by the loop above.
-        // This ensures if we drag from slot A to B, slot A becomes empty.
-        if (!(originalRow === targetRow && originalCol === targetCol) && formationGrid[originalRow][originalCol] === summonIdToPlace) {
-             // This condition means the original slot was where summonIdToPlace was, and it's not the target.
-             // The loop above would have cleared it IF summonIdToPlace was indeed in originalRow, originalCol.
-             // However, the loop only clears if currentSid === summonIdToPlace. What if we drag from an empty cell originally?
-             // The most straightforward is: if we started dragging from a grid cell, and it's not the target cell, that original cell should become null,
-             // unless it was already going to be the target of summonIdToPlace (which means it was a drag to self, handled by alreadyInTargetSlotAndIsSameSummon)
-             // Let's simplify: if we are moving from a grid cell, and it's not to the same cell, dispatch null for the original.
-             // The uniqueness check for summonIdToPlace handles its part.
-             dispatch(setSummonInSlot({ row: originalRow, col: originalCol, summonId: null }));
-        }
+      if (!(originalRow === targetRow && originalCol === targetCol) && formationGrid[originalRow][originalCol] === summonIdToPlace) {
+        dispatch(setSummonInSlot({ row: originalRow, col: originalCol, summonId: null }));
+      }
     }
     
-    // 3. Place the summon in the new target slot, unless it was a drag to its own existing spot.
     if (!alreadyInTargetSlotAndIsSameSummon) {
-        dispatch(setSummonInSlot({ row: targetRow, col: targetCol, summonId: summonIdToPlace }));
+      dispatch(setSummonInSlot({ row: targetRow, col: targetCol, summonId: summonIdToPlace }));
     }
 
-    // 4. Clear list selection if item came from list
     if (sourceType === 'list') {
       setSelectedSummonId(null);
     }
@@ -189,37 +133,37 @@ const FormationSetup = (props) => {
 
   const handleSelectSummonFromList = (summonId) => {
     setSelectedSummonId(summonId);
-    // console.log(`Selected summon ${summonId} for placement.`);
   };
 
   const handleGridSlotClick = (row, col) => {
     const currentSummonInSlot = formationGrid[row][col];
     if (selectedSummonId) {
-      const isSelectedSummonAlreadyInGrid = isSummonInGrid(selectedSummonId);
-      const currentSummonInTargetSlot = formationGrid[row][col];
+      // 使用数据管理器验证放置
+      const validation = formationDataManager.validateSummonPlacement(
+        formationGrid, 
+        selectedSummonId, 
+        row, 
+        col, 
+        'list'
+      );
 
-      // If formation is full, AND we are trying to add a NEWLY selected summon (not in grid yet)
-      // AND the target slot is EMPTY (meaning it's not a replacement)
-      // THEN, block it.
-      if (totalSummonsInFormation >= MAX_SUMMONS_IN_FORMATION && 
-          !isSelectedSummonAlreadyInGrid && 
-          currentSummonInTargetSlot === null) {
-          showToast(uiText.formation.maxSummonsReached, TOAST_TYPES.WARNING);
-          setSelectedSummonId(null); 
-          return;
+      if (!validation.canPlace) {
+        showToast(validation.reason, TOAST_TYPES.WARNING);
+        setSelectedSummonId(null); 
+        return;
       }
 
       // Clear any existing instance of selectedSummonId before placing it
       formationGrid.forEach((rItems, r_idx) => {
         rItems.forEach((sId, c_idx) => {
           if (sId === selectedSummonId) {
-            if (r_idx !== row || c_idx !== col) { // Don't clear if it's the target slot itself initially
-                 dispatch(setSummonInSlot({ row: r_idx, col: c_idx, summonId: null }));
+            if (r_idx !== row || c_idx !== col) {
+              dispatch(setSummonInSlot({ row: r_idx, col: c_idx, summonId: null }));
             }
           }
         });
       });
-      // Place the selected summon
+      
       dispatch(setSummonInSlot({ row, col, summonId: selectedSummonId }));
       setSelectedSummonId(null); 
     } else if (currentSummonInSlot) {
@@ -323,11 +267,32 @@ const FormationSetup = (props) => {
         borderColor: '#7f9cf5', // Lighter indigo border
         color: '#e0e0e0', // Lighter text for contrast
         // You could add an icon or ::after pseudo-element with CSS if not using inline styles for everything
-    }
+    },
+    analysisPanel: {
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: '#555',
+      padding: '10px',
+      marginBottom: '20px',
+      backgroundColor: '#2c3e50',
+    },
   };
 
   return (
     <div style={styles.container}>
+      {/* 添加阵型分析信息显示 */}
+      <div style={styles.analysisPanel}>
+        <h4 style={{color: '#fff', marginBottom: '10px'}}>阵型分析</h4>
+        <div style={{color: '#ccc', fontSize: '0.9em'}}>
+          <div>总战力: <span style={{color: '#ffd700'}}>{formationAnalysis.totalPower}</span></div>
+          <div>平均战力: <span style={{color: '#90EE90'}}>{formationAnalysis.averagePower}</span></div>
+          <div>召唤兽数量: {formationAnalysis.totalSummons}/{formationAnalysis.maxSummons}</div>
+          <div>前排: {formationAnalysis.positionAnalysis.front.length} | 
+               中排: {formationAnalysis.positionAnalysis.mid.length} | 
+               后排: {formationAnalysis.positionAnalysis.back.length}</div>
+        </div>
+      </div>
+      
       <div style={styles.gridContainer}>
         {formationGrid && formationGrid.map((rowItems, rowIndex) =>
           rowItems.map((summonIdInCell, colIndex) => {
@@ -335,19 +300,15 @@ const FormationSetup = (props) => {
             const isBeingDraggedOver = draggedOverSlot && draggedOverSlot.row === rowIndex && draggedOverSlot.col === colIndex;
             const currentCellItemIsDragged = draggedItem && draggedItem.type === 'grid' && draggedItem.originalRow === rowIndex && draggedItem.originalCol === colIndex;
 
-            let positionStyle = {};
-            if (FORMATION_COLS === 3) { // Assuming 3 columns for specific styling
-                if (colIndex === 2) positionStyle = styles.frontRowCell; // Rightmost = Front
-                else if (colIndex === 1) positionStyle = styles.midRowCell; // Middle = Mid
-                else if (colIndex === 0) positionStyle = styles.backRowCell; // Leftmost = Back
-            }
+            // 使用数据管理器获取位置样式
+            const positionStyle = formationDataManager.getPositionStyle(colIndex);
 
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
                 style={{
                   ...styles.gridCell,
-                  ...positionStyle, // Apply position-specific style
+                  ...positionStyle,
                   ...(isBeingDraggedOver ? styles.gridCellDraggingOver : {}),
                   boxShadow: summonIdInCell ? '0 2px 8px rgba(0,0,0,0.18)' : '0 1px 2px rgba(0,0,0,0.08)',
                   borderRadius: '14px',
@@ -381,9 +342,20 @@ const FormationSetup = (props) => {
                     )}
                     {summonIdInCell && (
                       <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%'}}>
-                        <img src={summonConfig[summonInfo.id]?.icon || '/assets/summons/default.png'} alt="icon" style={{width:48,height:48,borderRadius:8,marginBottom:4,boxShadow:'0 1px 4px #0004'}} />
-                        <div style={{fontWeight:'bold',fontSize:'1.1em',color:'#fff',textShadow:'0 1px 2px #0008'}}>{summonInfo.name}</div>
-                        <div style={{fontSize:'0.9em',color:'#c3e6fc'}}>Lv.{summonInfo.level}</div>
+                        <img 
+                          src={summonConfig[summonInfo.id]?.icon || '/assets/summons/default.png'} 
+                          alt="icon" 
+                          style={{width:48,height:48,borderRadius:8,marginBottom:4,boxShadow:'0 1px 4px #0004'}} 
+                        />
+                        <div style={{fontWeight:'bold',fontSize:'1.1em',color:'#fff',textShadow:'0 1px 2px #0008'}}>
+                          {summonInfo.name}
+                        </div>
+                        <div style={{fontSize:'0.9em',color:'#c3e6fc'}}>
+                          Lv.{summonInfo.level}
+                        </div>
+                        <div style={{fontSize:'0.8em',color:'#ffd700'}}>
+                          战力: {summonInfo.power}
+                        </div>
                         <button
                           style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,0.5)',border:'none',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:2}}
                           title="移除该召唤兽"
@@ -405,36 +377,61 @@ const FormationSetup = (props) => {
         <p style={{color: '#ccc', marginBottom: '10px'}}>
           {uiText.formation.summonCount.replace('{count}', totalSummonsInFormation)}
         </p>
+        {summonManagerLoading && (
+          <p style={{color: '#ffd700'}}>加载召唤兽数据中...</p>
+        )}
+        {summonManagerError && (
+          <p style={{color: '#ff6b6b'}}>加载召唤兽数据失败: {summonManagerError.message}</p>
+        )}
         {allPlayerSummons && allPlayerSummons.length > 0 ? (
-          allPlayerSummons.map(summon => {
-            const displayName = summon.nickname || (summonConfig[summon.summonSourceId] ? summonConfig[summon.summonSourceId].name : '召唤兽');
-            const displayLevel = summon.level || 'N/A';
+          allPlayerSummons.map(summonInstance => {
+            // 使用召唤兽实例的方法获取显示信息
+            const basePetInfo = summonInstance.getConfig();
+            const displayName = summonInstance.nickname || basePetInfo?.name || '召唤兽';
+            const displayLevel = summonInstance.level || 'N/A';
+            const displayPower = summonInstance.power || 0;
 
-            const isSelected = selectedSummonId === summon.id;
-            const isBeingDragged = draggedItem && draggedItem.type === 'list' && draggedItem.id === summon.id;
-            const isInFormation = isSummonInGrid(summon.id);
+            const isSelected = selectedSummonId === summonInstance.id;
+            const isBeingDragged = draggedItem && draggedItem.type === 'list' && draggedItem.id === summonInstance.id;
+            const isInFormation = isSummonInGrid(summonInstance.id);
             
             let listItemStyle = styles.summonListItem;
             if (isInFormation && !isBeingDragged) {
-                listItemStyle = { ...listItemStyle, ...styles.summonListItemInFormation };
+              listItemStyle = { ...listItemStyle, ...styles.summonListItemInFormation };
             }
             if (isSelected && !isBeingDragged && !isInFormation) {
-                 listItemStyle = styles.selectedSummonListItem;
+              listItemStyle = styles.selectedSummonListItem;
             }
             if (isBeingDragged) {
-                listItemStyle = {...styles.summonListItem, ...styles.draggingItem};
+              listItemStyle = {...styles.summonListItem, ...styles.draggingItem};
             }
 
             return (
               <div
-                key={summon.id}
+                key={summonInstance.id}
                 style={listItemStyle}
-                onClick={() => handleSelectSummonFromList(summon.id)}
+                onClick={() => handleSelectSummonFromList(summonInstance.id)}
                 draggable={true}
-                onDragStart={(e) => handleDragStart(e, 'list', {id: summon.id, name: displayName, level: displayLevel })}
+                onDragStart={(e) => handleDragStart(e, 'list', {
+                  id: summonInstance.id, 
+                  name: displayName, 
+                  level: displayLevel,
+                  power: displayPower
+                })}
                 onDragEnd={handleDragEnd}
               >
-                {displayName} ({uiText.labels.level || '等级:'} {displayLevel}) {isInFormation ? "(已上阵)" : ""}
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div>
+                    <div>{displayName}</div>
+                    <div style={{fontSize: '0.9em', opacity: 0.8}}>
+                      {uiText.labels.level || '等级:'} {displayLevel}
+                    </div>
+                  </div>
+                  <div style={{textAlign: 'right', fontSize: '0.8em'}}>
+                    <div style={{color: '#ffd700'}}>战力: {displayPower}</div>
+                    {isInFormation ? <div style={{color: '#90EE90'}}>(已上阵)</div> : null}
+                  </div>
+                </div>
               </div>
             );
           })
@@ -442,9 +439,9 @@ const FormationSetup = (props) => {
           <p>{uiText.notifications.noSummonData}</p>
         )}
         {selectedSummonId && !draggedItem && ( 
-            <p style={{ marginTop: '10px', color: '#00bcd4' }}>
-                已选择: {getSummonDisplayInfo(selectedSummonId).name}. 点击格子放置或拖拽放置。
-            </p>
+          <p style={{ marginTop: '10px', color: '#00bcd4' }}>
+            已选择: {getSummonDisplayInfo(selectedSummonId).name}. 点击格子放置或拖拽放置。
+          </p>
         )}
       </div>
     </div>

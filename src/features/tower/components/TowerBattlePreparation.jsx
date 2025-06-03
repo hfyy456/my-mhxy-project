@@ -2,21 +2,26 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-01 05:46:30
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-01 05:46:30
+ * @LastEditTime: 2025-06-04 05:48:44
  * @FilePath: \my-mhxy-project\src\features\tower\components\TowerBattlePreparation.jsx
  * @Description: 封妖塔战斗准备组件
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { selectAllSummons } from '@/store/slices/summonSlice';
-import { selectFormationGrid } from '@/store/slices/formationSlice';
+import { useSelector, useDispatch } from 'react-redux';
+
+// import { selectAllSummons } from '@/store/slices/summonSlice'; // 已移除Redux召唤兽系统
+import { useSummonManager } from '@/hooks/useSummonManager'; // 使用OOP召唤兽系统
 import { FIVE_ELEMENTS } from '@/config/enumConfig';
 
 // 封妖塔战斗准备组件
 const TowerBattlePreparation = ({ floor, floorConfig, onCancel, onStartBattle }) => {
-  const allSummons = useSelector(selectAllSummons);
-  const formationGrid = useSelector(selectFormationGrid);
+  // 使用OOP召唤兽系统
+  const { allSummons } = useSummonManager();
+  const summonsList = Object.values(allSummons || {}); // 转换为数组
+  
+  // 使用formation slice的选择器
+  const formationGrid = useSelector(state => state.formation?.grid || Array(3).fill(null).map(() => Array(3).fill(null)));
   
   // 由于没有formations选择器，我们创建一个简单的formations数组
   const formations = [{
@@ -47,13 +52,13 @@ const TowerBattlePreparation = ({ floor, floorConfig, onCancel, onStartBattle })
     const summonIds = formationGrid.flat().filter(Boolean);
     
     // 根据ID获取召唤兽对象
-    const summons = summonIds.map(id => allSummons.find(s => s.id === id)).filter(Boolean);
+    const summons = summonIds.map(id => summonsList.find(s => s.id === id)).filter(Boolean);
     setSelectedSummons(summons);
-  }, [formationGrid, allSummons]);
+  }, [formationGrid, summonsList]);
   
   // 过滤可用的召唤兽（考虑五行限制）
   useEffect(() => {
-    let filtered = [...allSummons];
+    let filtered = [...summonsList];
     
     // 如果有五行限制，过滤掉受限制的五行召唤兽
     if (hasFiveElementRestriction && restrictedElements.length > 0) {
@@ -61,7 +66,7 @@ const TowerBattlePreparation = ({ floor, floorConfig, onCancel, onStartBattle })
     }
     
     setAvailableSummons(filtered);
-  }, [allSummons, hasFiveElementRestriction, restrictedElements]);
+  }, [summonsList, hasFiveElementRestriction, restrictedElements]);
   
   // 验证阵容是否符合要求
   const validateFormation = () => {

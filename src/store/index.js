@@ -5,9 +5,6 @@
  * @LastEditTime: 2025-05-20 01:13:35
  */
 import { configureStore } from '@reduxjs/toolkit';
-import summonReducer from '@/store/slices/summonSlice';
-import itemReducer from '@/store/slices/itemSlice';
-import inventoryReducer from '@/store/slices/inventorySlice';
 import incubatorReducer from '@/store/slices/incubatorSlice';
 import summonCatalogReducer from '@/store/slices/summonCatalogSlice';
 import saveReducer from '@/store/slices/saveSlice';
@@ -24,9 +21,6 @@ import homesteadReducer from '@/store/slices/homesteadSlice'; // 导入 homestea
 const store = configureStore({
   reducer: {
     player: playerReducer, // 注册 playerReducer
-    summons: summonReducer,
-    items: itemReducer,
-    inventory: inventoryReducer,
     incubator: incubatorReducer,
     summonCatalog: summonCatalogReducer,
     saves: saveReducer,

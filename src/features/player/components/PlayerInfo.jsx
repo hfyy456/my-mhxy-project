@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { selectAllSummons } from "@/store/slices/summonSlice";
+import { useSummonManager } from "@/hooks/useSummonManager";
 import {
   selectUnlockProgress,
   selectQualityCounts,
@@ -10,7 +10,8 @@ import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { qualityConfig } from "@/config/config";
 
 export const PlayerInfo = () => {
-  const allSummons = useSelector(selectAllSummons);
+  // 使用OOP召唤兽系统
+  const { allSummons } = useSummonManager();
 
   const playerLevel = 1; // TODO: playerLevel should come from playerSlice
   const playerExperience = 450; // TODO: playerExperience should come from playerSlice
@@ -21,7 +22,7 @@ export const PlayerInfo = () => {
       : 0;
 
   const maxSummons = playerBaseConfig.getMaxSummonsByLevel(playerLevel);
-  const currentSummonCount = Object.keys(allSummons).length;
+  const currentSummonCount = Object.keys(allSummons || {}).length; // 修复：使用OOP召唤兽数据
   const unlockProgress = useSelector(selectUnlockProgress);
   const qualityCounts = useSelector(selectQualityCounts);
 

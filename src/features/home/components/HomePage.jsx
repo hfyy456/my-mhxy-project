@@ -1,19 +1,39 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { resetSummonState } from '@/store/slices/summonSlice';
-import { resetItemsState } from '@/store/slices/itemSlice';
-import { resetInventory } from '@/store/slices/inventorySlice';
+//import { resetSummonState } from '@/store/slices/summonSlice';
+// 已移除：背包和物品系统已迁移到面向对象的InventoryManager
+// import { resetItemsState } from '@/store/slices/itemSlice';
+// import { resetInventory } from '@/store/slices/inventorySlice';
 import SaveManager from '@/features/save/components/SaveManager';
 
 const HomePage = ({ onStartGame, toasts, setToasts, onOpenSettings }) => {
   const dispatch = useDispatch();
   const [showLoadGame, setShowLoadGame] = useState(false);
 
-  const handleNewGame = () => {
-    // 重置所有游戏状态
-    dispatch(resetSummonState());
-    dispatch(resetItemsState());
-    dispatch(resetInventory());
+  const handleNewGame = async () => {
+    // 重置召唤兽状态
+   // dispatch(resetSummonState());
+    
+    // 重置背包系统状态 - 使用InventoryManager
+    try {
+      // 动态导入InventoryManager避免循环依赖
+      const { inventoryManager } = await import('@/store/InventoryManager');
+      
+      // 清空背包并重置为初始状态
+      inventoryManager.slots.clear();
+      inventoryManager.items.clear();
+      inventoryManager.gold = 0;
+      inventoryManager.capacity = 100;
+      inventoryManager.initializeSlots();
+      
+      // 触发状态更新事件
+      inventoryManager.emit('inventory_changed', inventoryManager.getState());
+      
+      console.log('[HomePage] 背包系统已重置');
+    } catch (error) {
+      console.error('[HomePage] 重置背包系统失败:', error);
+    }
+    
     onStartGame();
   };
 

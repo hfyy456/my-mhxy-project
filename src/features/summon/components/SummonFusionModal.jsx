@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { summonConfig } from "@/config/config";
-import { selectAllSummons } from "../../../store/slices/summonSlice";
+// import { selectAllSummons } from "../../../store/slices/summonSlice"; // 已移除Redux召唤兽系统
 import { generateUniqueId } from "@/utils/idUtils";
 import { FIVE_ELEMENTS } from "@/config/enumConfig";
 import { getSkillById } from "@/config/skill/skillConfig";
+import { useSummonManager } from "../../../hooks/useSummonManager"; // 使用OOP召唤兽系统
 
 const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
-  const summonsListObject = useSelector(selectAllSummons);
-  const summonsList = useMemo(() => Object.values(summonsListObject || {}), [summonsListObject]);
+  // const summonsListObject = useSelector(selectAllSummons); // 已移除Redux召唤兽系统
+  // const summonsList = useMemo(() => Object.values(summonsListObject || {}), [summonsListObject]);
+  
+  // 使用OOP召唤兽系统
+  const { allSummons } = useSummonManager();
+  const summonsList = useMemo(() => Object.values(allSummons || {}), [allSummons]);
   
   const [selectedSummon1, setSelectedSummon1] = useState(null);
   const [selectedSummon2, setSelectedSummon2] = useState(null);

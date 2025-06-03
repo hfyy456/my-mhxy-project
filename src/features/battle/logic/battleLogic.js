@@ -61,7 +61,7 @@ import { summonConfig } from '@/config/summon/summonConfig'; // 用于获取召�
 
 /**
  * Creates a battle unit from player's summon data.
- * @param {Object} summonData - The summon object from summonSlice (should have id, summonSourceId, nickname, level, derivedAttributes, skillSet, etc.)
+ * @param {Object} summonData - The summon object from OOP SummonManager (should have id, summonSourceId, nickname, level, derivedAttributes, skillSet, etc.)
  * @param {BattleUnitPosition} position - Position in the player's battle formation.
  * @param {Object} summonConfig - Global summon configuration object.
  * @returns {BattleUnit}
@@ -242,9 +242,9 @@ export const determineInitialTurnOrder = (allUnits) => {
 /**
  * Prepares all data needed for the setupBattle action payload.
  * @param {string} battleId - A unique ID for this battle session.
- * @param {Object} playerSummonsData - Object keyed by summonId, values are summon objects from summonSlice.
+ * @param {Object} playerSummonsData - Object keyed by summonId, values are summon objects from OOP SummonManager.
  * @param {string[][]} playerInitialFormationGrid - 3x3 grid with player summonIds or null.
- * @param {Object[]} enemyTemplates - Array of enemy template objects from enemyConfig.
+ * @param {Object[]} enemyTemplates - Array of enemy template objects from enemyConfig.js.
  * @param {string[][]} enemyInitialFormationGrid - 3x3 grid with enemy templateIds or null.
  * @param {Object} globalSummonConfig - The summonConfig object.
  * @param {Object} globalEnemyConfig - The enemyConfig object (used to fetch templates by ID).
