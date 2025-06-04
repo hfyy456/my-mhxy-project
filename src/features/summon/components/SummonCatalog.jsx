@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:08:02
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-04 05:43:12
+ * @LastEditTime: 2025-06-05 05:59:24
  */
 import React, { useState, useEffect } from "react";
 
@@ -13,10 +13,9 @@ import React, { useState, useEffect } from "react";
 //   setCurrentSummon,
 // } from "../../../store/slices/summonSlice";
 import { useSummonManager } from "../../../hooks/useSummonManager"; // 使用OOP召唤兽系统
-import { summonConfig } from "@/config/config";
+import { summonConfig, qualityConfig } from "@/config/config"; // Added qualityConfig
 import { skillConfig } from "@/config/skill/skillConfig";
-import { getPetTypeDisplayName, getRaceTypeDisplayName, getFiveElementDisplayName, getAttributeDisplayName } from "@/config/ui/uiTextConfig";
-import { getAllRaces } from "@/config/summon/raceConfig";
+import { getPetTypeDisplayName, getFiveElementDisplayName, getAttributeDisplayName, getQualityDisplayName } from "@/config/ui/uiTextConfig"; // Added getQualityDisplayName, removed getRaceTypeDisplayName
 import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
 
 // 加载召唤兽图片
@@ -28,8 +27,6 @@ const PetCatalog = ({ isOpen, onClose }) => {
   // const allSummons = useSelector(selectAllSummons); // 已移除Redux召唤兽系统
   // const summonsList = Object.values(allSummons || {}); // 不再需要
   const summonEntries = Object.entries(summonConfig);
-  const allRaces = getAllRaces();
-  const [selectedRace, setSelectedRace] = useState("全部");
   
   // 使用OOP召唤兽管理系统
   const { manager } = useSummonManager();
@@ -48,10 +45,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const filteredPets =
-    selectedRace === "全部"
-      ? summonEntries
-      : summonEntries.filter(([_, summon]) => summon.race === selectedRace);
+  const filteredPets = summonEntries; // Simplified, no race filtering
 
   if (!isOpen) return null;
 
@@ -70,31 +64,7 @@ const PetCatalog = ({ isOpen, onClose }) => {
         </div>
 
         <div className="p-4 border-b border-slate-700 bg-slate-700/60">
-          <div className="flex flex-wrap gap-2 items-center">
-            <button
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                selectedRace === "全部"
-                  ? "bg-purple-600 hover:bg-purple-500 text-white shadow-md"
-                  : "bg-slate-600 text-slate-300 hover:bg-slate-500 hover:text-white"
-              }`}
-              onClick={() => setSelectedRace("全部")}
-            >
-              全部
-            </button>
-            {allRaces.map((race) => (
-              <button
-                key={race}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                  selectedRace === race
-                    ? "bg-purple-600 hover:bg-purple-500 text-white shadow-md"
-                    : "bg-slate-600 text-slate-300 hover:bg-slate-500 hover:text-white"
-                }`}
-                onClick={() => setSelectedRace(race)}
-              >
-                {getRaceTypeDisplayName(race)}
-              </button>
-            ))}
-          </div>
+          {/* Removed Race Filter Buttons */}
         </div>
 
         <div className="overflow-y-auto p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -146,11 +116,22 @@ const PetCatalog = ({ isOpen, onClose }) => {
                       <div className="mb-1.5"> 
                         <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${summonInfo.color?.split('-')[0]}-600 text-${summonInfo.color?.split('-')[0]}-100`}>{getPetTypeDisplayName(summonInfo.type)}</span>
                       </div>
-                      <div className="mb-1.5">
-                        <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-600 text-slate-100">{getRaceTypeDisplayName(summonInfo.race)}</span>
-                      </div>
+                      {/* Added Quality Display */}
+                      {summonInfo.quality && (
+                        <div className="mb-1.5">
+                          <span 
+                            className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+                              qualityConfig.bgColors?.[summonInfo.quality] || 'bg-slate-600'
+                            } ${
+                              qualityConfig.textColors?.[summonInfo.quality] || 'text-slate-100'
+                            }`}
+                          >
+                            {getQualityDisplayName(summonInfo.quality)}
+                          </span>
+                        </div>
+                      )}
                       <div>
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${FIVE_ELEMENT_COLORS[summonInfo.fiveElement] || 'bg-gray-500 text-white'}`}>{getFiveElementDisplayName(summonInfo.fiveElement)}</span>
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${FIVE_ELEMENT_COLORS[summonInfo.fiveElement]?.bgColor || 'bg-gray-500'} ${FIVE_ELEMENT_COLORS[summonInfo.fiveElement]?.textColor || 'text-white'}`}>{getFiveElementDisplayName(summonInfo.fiveElement)}</span>
                       </div>
                     </div>
                   </div>

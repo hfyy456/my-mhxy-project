@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 19:04:44
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-02 02:11:20
+ * @LastEditTime: 2025-06-05 03:57:26
  */
 import { qualityConfig } from '@/config/config';
 import { EQUIPMENT_SLOT_TYPES, EQUIPMENT_EFFECT_TYPES, QUALITY_TYPES } from '../enumConfig';

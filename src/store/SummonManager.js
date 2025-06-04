@@ -20,6 +20,8 @@ import {
   getExperienceForLevel,
 } from "@/utils/summonUtils";
 import { EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
+import equipmentRelationshipManagerInstance from "./EquipmentRelationshipManager";
+import inventoryManagerInstance from "./InventoryManager";
 
 // ===========================================
 // 召唤兽类 - 基础召唤兽实现
@@ -38,13 +40,16 @@ class Summon {
     this.experience = data.experience || 0;
     this.quality = data.quality || "normal";
     this.fiveElement = data.fiveElement || "none";
-    // DEBUG: Log received equippedItemIds
-    console.log(
-      `[Summon constructor] ID: ${this.id}, Nickname: ${
-        this.nickname || "N/A"
-      }, received data.equippedItemIds:`,
-      JSON.parse(JSON.stringify(data.equippedItemIds || {}))
-    );
+    this.natureType = data.natureType || "wild";
+    this.personalityId = data.personalityId || "neutral";
+
+    // DEBUG: Log removed equippedItemIds reference
+    // console.log(
+    //   `[Summon constructor] ID: ${this.id}, Nickname: ${
+    //     this.nickname || "N/A"
+    //   }, received data.equippedItemIds:`,
+    //   JSON.parse(JSON.stringify(data.equippedItemIds || {}))
+    // );
 
     // 基础属性 (五维)
     this.basicAttributes = {
@@ -82,11 +87,11 @@ class Summon {
     this.skillSet = data.skillSet || [];
     this.skillLevels = data.skillLevels || {};
 
-    // 装备系统
-    this.equippedItemIds = {};
-    STANDARD_EQUIPMENT_SLOTS.forEach((slot) => {
-      this.equippedItemIds[slot] = data.equippedItemIds?.[slot] || null;
-    });
+    // 装备系统 - equippedItemIds 已移除
+    // this.equippedItemIds = {};
+    // STANDARD_EQUIPMENT_SLOTS.forEach((slot) => {
+    //   this.equippedItemIds[slot] = data.equippedItemIds?.[slot] || null;
+    // });
 
     // 状态和元数据
     this.createdAt = data.createdAt || Date.now();
@@ -162,36 +167,47 @@ class Summon {
   async getEquippedItems() {
     const items = {};
 
-    // DEBUG: Log current this.equippedItemIds
-    console.log(
-      `[Summon getEquippedItems] ID: ${this.id}, Nickname: ${
-        this.nickname || "N/A"
-      }, current this.equippedItemIds:`,
-      JSON.parse(JSON.stringify(this.equippedItemIds || {}))
-    );
+    // DEBUG: Log removed equippedItemIds reference
+    // console.log(
+    //   `[Summon getEquippedItems] ID: ${this.id}, Nickname: ${
+    //     this.nickname || "N/A"
+    //   }, current this.equippedItemIds:`,
+    //   JSON.parse(JSON.stringify(this.equippedItemIds || {}))
+    // );
 
     try {
-      // 直接从equippedItemIds获取装备ID，然后从InventoryManager获取物品数据
-      const inventoryManager = (await import("./InventoryManager.js")).default;
+      // 从 EquipmentRelationshipManager 获取装备信息
+      const equippedSlotMap =
+        equipmentRelationshipManagerInstance.getSummonEquipment(this.id); // { slotType: itemId }
 
-      for (const [slotType, itemId] of Object.entries(this.equippedItemIds)) {
+      for (const [slotType, itemId] of Object.entries(equippedSlotMap)) {
         if (itemId) {
-          const item = inventoryManager.getItemById(itemId);
+          const item = inventoryManagerInstance.getItemById(itemId);
           items[slotType] = item;
         } else {
-          items[slotType] = null;
+          items[slotType] = null; // Should not happen if manager is clean
         }
       }
+      // Ensure all standard slots are present in the returned object, even if null
+      STANDARD_EQUIPMENT_SLOTS.forEach((slot) => {
+        if (!items.hasOwnProperty(slot)) {
+          items[slot] = null;
+        }
+      });
 
-      console.log(`[Summon] ${this.nickname || this.id} 装备数据:`, items);
+      console.log(
+        `[Summon] ${this.nickname || this.id} 装备数据 (from ERM):`,
+        items
+      );
       return items;
     } catch (error) {
-      console.warn(`[Summon] 获取装备数据失败:`, error);
+      console.warn(`[Summon] 获取装备数据失败 (from ERM):`, error);
       // 返回基础结构
-      for (const slotType of Object.keys(this.equippedItemIds)) {
-        items[slotType] = null;
-      }
-      return items;
+      const defaultItems = {};
+      STANDARD_EQUIPMENT_SLOTS.forEach((slot) => {
+        defaultItems[slot] = null;
+      });
+      return defaultItems;
     }
   }
 
@@ -343,67 +359,17 @@ class Summon {
     return true;
   }
 
-  // 装备物品
-  async equipItem(itemId, slotType) {
-    if (!this.manager) {
-      // console.error(`[Summon] 没有管理器引用，无法装备物品`); // Keep this for critical errors
-      return false;
-    }
-    // console.log(`[Summon.equipItem] Called with itemId: ${itemId}, slotType: ${slotType}`); // REMOVE
+  // 装备物品 - 此方法已废弃，装备操作由 EquipmentRelationshipManager 处理
+  // async equipItem(itemId, slotType) {
+  //   console.warn(`[Summon] equipItem() is deprecated for Summon ID: ${this.id}, Item ID: ${itemId}. Use EquipmentRelationshipManager.`);
+  //   return false; // Deprecated functionality
+  // }
 
-    try {
-      const result = await this.manager.equipItemToSummon(
-        itemId,
-        this.id,
-        slotType
-      );
-      // console.log(`[Summon.equipItem] Result from manager:`, result); // REMOVE
-
-      if (result && result.success) {
-        // console.log(`[Summon.equipItem] Equipping item to slot: ${slotType}`); // REMOVE
-        this.equippedItemIds[slotType] = itemId;
-        // console.log(`[Summon.equipItem] Updated equippedItemIds:`, JSON.parse(JSON.stringify(this.equippedItemIds))); // REMOVE
-
-        this.updatedAt = Date.now();
-        await this.recalculateAllAttributes();
-        this.notifyChange("item_equipped", { itemId, slotType });
-        // console.log(`[Summon.equipItem] Successfully equipped and recalculated.`); // REMOVE
-        return true;
-      } else {
-        // console.warn(`[Summon.equipItem] Equip failed or result was not successful. Result:`, result); // REMOVE but consider logging actual result if needed for future debug
-        return false;
-      }
-    } catch (error) {
-      // console.error(`[Summon] 装备物品失败:`, error); // Keep this for critical errors
-      return false;
-    }
-  }
-
-  // 卸下装备
-  async unequipItem(slotType) {
-    if (!this.manager) {
-      console.error(`[Summon] 没有管理器引用，无法卸下装备`);
-      return false;
-    }
-
-    try {
-      const result = await this.manager.unequipItemFromSummon(
-        this.id,
-        slotType
-      );
-      if (result.success) {
-        this.equippedItemIds[slotType] = null;
-        this.updatedAt = Date.now();
-        await this.recalculateAllAttributes();
-        this.notifyChange("item_unequipped", { slotType });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error(`[Summon] 卸下装备失败:`, error);
-      return false;
-    }
-  }
+  // 卸下装备 - 此方法已废弃，卸载操作由 EquipmentRelationshipManager 处理
+  // async unequipItem(slotType) {
+  //   console.warn(`[Summon] unequipItem() is deprecated for Summon ID: ${this.id}, Slot: ${slotType}. Use EquipmentRelationshipManager.`);
+  //   return false; // Deprecated functionality
+  // }
 
   // 设置昵称
   setNickname(nickname) {
@@ -448,14 +414,14 @@ class Summon {
 
   // 序列化
   toJSON() {
-    const currentEquippedIds = { ...this.equippedItemIds };
-    // RE-ADD DEBUG Log: Log equippedItemIds when toJSON is called
-    console.log(
-      `[Summon toJSON] ID: ${this.id}, Nickname: ${
-        this.nickname || "N/A"
-      }, current this.equippedItemIds for serialization:`,
-      JSON.parse(JSON.stringify(currentEquippedIds))
-    );
+    // const currentEquippedIds = { ...this.equippedItemIds };
+    // RE-ADD DEBUG Log: Log removed equippedItemIds reference
+    // console.log(
+    //   `[Summon toJSON] ID: ${this.id}, Nickname: ${
+    //     this.nickname || "N/A"
+    //   }, current this.equippedItemIds for serialization:`,
+    //   JSON.parse(JSON.stringify(currentEquippedIds))
+    // );
 
     return {
       id: this.id,
@@ -465,6 +431,8 @@ class Summon {
       experience: this.experience,
       quality: this.quality,
       fiveElement: this.fiveElement,
+      natureType: this.natureType,
+      personalityId: this.personalityId,
       basicAttributes: { ...this.basicAttributes },
       allocatedPoints: { ...this.allocatedPoints },
       potentialPoints: this.potentialPoints,
@@ -474,7 +442,7 @@ class Summon {
       power: this.power,
       skillSet: [...this.skillSet],
       skillLevels: { ...this.skillLevels },
-      equippedItemIds: currentEquippedIds,
+      // equippedItemIds: currentEquippedIds, // 已移除
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -654,40 +622,12 @@ class SummonManager extends EventEmitter {
     };
   }
 
-  // 装备物品到召唤兽
-  async equipItemToSummon(itemId, summonId, slotType) {
-    try {
-      // 获取InventoryManager实例
-      const { inventoryManager } = await import("./InventoryManager");
-      return await inventoryManager.equipItem(itemId, summonId);
-    } catch (error) {
-      console.error("[SummonManager] 装备物品失败:", error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // 从召唤兽卸下装备
-  async unequipItemFromSummon(summonId, slotType) {
-    try {
-      // 获取InventoryManager实例
-      const { inventoryManager } = await import("./InventoryManager");
-      return await inventoryManager.unequipItem(summonId, slotType);
-    } catch (error) {
-      console.error("[SummonManager] 卸下装备失败:", error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // 获取召唤兽装备状态
+  // 获取召唤兽装备状态 - 此方法已废弃，使用 EquipmentRelationshipManager 的 useSummonEquipmentStatus
   async getSummonEquipmentStatus(summonId) {
-    try {
-      // 获取InventoryManager实例
-      const { inventoryManager } = await import("./InventoryManager");
-      return await inventoryManager.getSummonEquipmentStatus(summonId);
-    } catch (error) {
-      console.error("[SummonManager] 获取装备状态失败:", error);
-      return { success: false, error: error.message };
-    }
+    console.warn(
+      `[SummonManager] getSummonEquipmentStatus() is deprecated for Summon ID: ${summonId}. Use useSummonEquipmentStatus hook.`
+    );
+    return {}; // Deprecated functionality
   }
 
   // 重新计算召唤兽属性
@@ -734,23 +674,23 @@ class SummonManager extends EventEmitter {
         const stateToSave = this.serializeForStorage();
 
         // DEBUG: Log the state object just before it's written to Electron Store
-        console.log(
-          "[SummonManager saveToElectronStore] State being saved to Electron Store:",
-          JSON.parse(JSON.stringify(stateToSave))
-        );
+        // console.log(
+        //   "[SummonManager saveToElectronStore] State being saved to Electron Store:",
+        //   JSON.parse(JSON.stringify(stateToSave))
+        // );
         // Specifically log equippedItemIds for the first summon, if any
-        if (
-          stateToSave.summons &&
-          stateToSave.summons.length > 0 &&
-          stateToSave.summons[0][1]
-        ) {
-          console.log(
-            "[SummonManager saveToElectronStore] First summon's equippedItemIds in stateToSave:",
-            JSON.parse(
-              JSON.stringify(stateToSave.summons[0][1].equippedItemIds || {})
-            )
-          );
-        }
+        // if (
+        //   stateToSave.summons &&
+        //   stateToSave.summons.length > 0 &&
+        //   stateToSave.summons[0][1]
+        // ) {
+        //   console.log(
+        //     "[SummonManager saveToElectronStore] First summon's equippedItemIds in stateToSave:",
+        //     JSON.parse(
+        //       JSON.stringify(stateToSave.summons[0][1].equippedItemIds || {})
+        //     )
+        //   );
+        // }
 
         await window.electronAPI.store.set("summonState", stateToSave);
         this.emit("state_saved");
@@ -802,7 +742,10 @@ class SummonManager extends EventEmitter {
       id,
       summon.toJSON(),
     ]);
-    console.log("[SummonManager serializeForStorage] Serializing summons:", summons);
+    console.log(
+      "[SummonManager serializeForStorage] Serializing summons:",
+      summons
+    );
     return {
       summons: summons,
       currentSummonId: this.currentSummonId,
@@ -820,11 +763,11 @@ class SummonManager extends EventEmitter {
 
     if (savedState.summons) {
       savedState.summons.forEach(([id, summonData]) => {
-        // DEBUG: Log summonData before creating Summon instance
-        console.log(
-          `[SummonManager deserializeFromStorage] Processing summonId: ${id}. summonData.equippedItemIds before createSummon:`,
-          JSON.parse(JSON.stringify(summonData.equippedItemIds || {}))
-        );
+        // DEBUG: Log removed equippedItemIds reference
+        // console.log(
+        //   `[SummonManager deserializeFromStorage] Processing summonId: ${id}. summonData.equippedItemIds before createSummon:`,
+        //   JSON.parse(JSON.stringify(summonData.equippedItemIds || {}))
+        // );
 
         const summon = SummonFactory.createSummon(summonData);
         summon.setManager(this);

@@ -2,17 +2,18 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-26 04:04:47
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-01 03:01:09
+ * @LastEditTime: 2025-06-05 03:56:12
  */
-import { raceConfig } from "./raceConfig";
+// import { raceConfig } from "./raceConfig"; // Removed raceConfig import
 import { skillConfig } from "../skill/skillConfig";
 import {
   PET_TYPES,
-  RACE_TYPES,
+  // RACE_TYPES, // Removed RACE_TYPES import
   GROWTH_RATE_TIERS,
   COLOR_TYPES,
   ATTRIBUTE_TYPES,
   FIVE_ELEMENTS,
+  QUALITY_TYPES, // Added QUALITY_TYPES import
 } from "../enumConfig";
 
 // 攻击距离说明：
@@ -25,6 +26,7 @@ export const summonConfig = {
     id: "ghost",
     name: "幽灵",
     fiveElement: FIVE_ELEMENTS.METAL,
+    quality: QUALITY_TYPES.RARE, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -34,7 +36,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: COLOR_TYPES.BLUE,
-    race: RACE_TYPES.NETHER,
+    // race: RACE_TYPES.NETHER, // Removed race
     attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
@@ -54,6 +56,7 @@ export const summonConfig = {
     id: "heavenGuard",
     name: "持国巡守",
     fiveElement: FIVE_ELEMENTS.EARTH,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -63,7 +66,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: COLOR_TYPES.AMBER,
-    race: RACE_TYPES.WARRIOR,
+    // race: RACE_TYPES.WARRIOR, // Removed race
     attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
@@ -83,6 +86,7 @@ export const summonConfig = {
     id: "thunderBird",
     name: "雷鸟人",
     fiveElement: FIVE_ELEMENTS.WOOD,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.03,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -92,7 +96,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.SPEED,
     color: COLOR_TYPES.YELLOW,
-    race: RACE_TYPES.SPIRIT,
+    // race: RACE_TYPES.SPIRIT, // Removed race
     attackRange: 4, // 攻击距离为4，可以从第1排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [80, 180],
@@ -112,6 +116,7 @@ export const summonConfig = {
     id: "vampire",
     name: "吸血鬼",
     fiveElement: FIVE_ELEMENTS.WATER,
+    quality: QUALITY_TYPES.RARE, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.045,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -121,7 +126,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.DEFENSE,
     color: COLOR_TYPES.GREEN,
-    race: RACE_TYPES.NETHER,
+    // race: RACE_TYPES.NETHER, // Removed race
     attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [200, 300],
@@ -141,6 +146,7 @@ export const summonConfig = {
     id: "mechanicalBird",
     name: "机关鸟",
     fiveElement: FIVE_ELEMENTS.FIRE,
+    quality: QUALITY_TYPES.RARE, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -150,7 +156,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: "orange-500",
-    race: RACE_TYPES.MACHINE,
+    // race: RACE_TYPES.MACHINE, // Removed race
     attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
@@ -170,6 +176,7 @@ export const summonConfig = {
     id: "catSpirit",
     name: "猫灵",
     fiveElement: FIVE_ELEMENTS.METAL,
+    quality: QUALITY_TYPES.RARE, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -179,7 +186,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: "pink-500",
-    race: RACE_TYPES.SPIRIT,
+    // race: RACE_TYPES.SPIRIT, // Removed race
     attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
@@ -199,6 +206,7 @@ export const summonConfig = {
     id: "wildLeopard",
     name: "狂豹",
     fiveElement: FIVE_ELEMENTS.EARTH,
+    quality: QUALITY_TYPES.NORMAL, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.043,
@@ -208,7 +216,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: "brown-500",
-    race: RACE_TYPES.BEAST,
+    // race: RACE_TYPES.BEAST, // Removed race
     attackRange: 4, // 攻击距离为4，可以从第1排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [110, 210],
@@ -228,6 +236,7 @@ export const summonConfig = {
     id: "yaksha",
     name: "夜叉",
     fiveElement: FIVE_ELEMENTS.WATER,
+    quality: QUALITY_TYPES.RARE, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.045,
@@ -237,7 +246,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: "cyan-500",
-    race: RACE_TYPES.NETHER,
+    // race: RACE_TYPES.NETHER, // Removed race
     attackRange: 2, // 攻击距离为2，可以从第3排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
@@ -257,6 +266,7 @@ export const summonConfig = {
     id: "dragonSnake",
     name: "蛟龙",
     fiveElement: FIVE_ELEMENTS.WOOD,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -266,7 +276,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: "teal-500",
-    race: RACE_TYPES.BEAST,
+    // race: RACE_TYPES.BEAST, // Removed race
     attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [100, 200],
@@ -286,6 +296,7 @@ export const summonConfig = {
     id: "phoenix",
     name: "凤凰",
     fiveElement: FIVE_ELEMENTS.FIRE,
+    quality: QUALITY_TYPES.LEGENDARY, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -295,7 +306,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: "orange-600",
-    race: RACE_TYPES.CELESTIAL,
+    // race: RACE_TYPES.CELESTIAL, // Removed race
     attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [110, 210],
@@ -315,6 +326,7 @@ export const summonConfig = {
     id: "mistFairy",
     name: "雾中仙",
     fiveElement: FIVE_ELEMENTS.WATER,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -324,7 +336,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.SUPPORT,
     color: "purple-600",
-    race: RACE_TYPES.CELESTIAL,
+    // race: RACE_TYPES.CELESTIAL, // Removed race
     attackRange: 5, // 攻击距离为5，可以从第1排攻击到第6排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [150, 250],
@@ -344,6 +356,7 @@ export const summonConfig = {
     id: "spiritCrane",
     name: "灵鹤",
     fiveElement: FIVE_ELEMENTS.METAL,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
@@ -353,7 +366,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: "blue-600",
-    race: RACE_TYPES.CELESTIAL,
+    // race: RACE_TYPES.CELESTIAL, // Removed race
     attackRange: 3, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
@@ -373,6 +386,7 @@ export const summonConfig = {
     id: "starFairy",
     name: "星灵仙子",
     fiveElement: FIVE_ELEMENTS.WOOD,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     type: PET_TYPES.MAGICAL,
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.035,
@@ -382,7 +396,7 @@ export const summonConfig = {
       [ATTRIBUTE_TYPES.LUCK]: 0.023,
     },
     color: "pink-600",
-    race: RACE_TYPES.CELESTIAL,
+    // race: RACE_TYPES.CELESTIAL, // Removed race
     attackRange: 4, // 攻击距离为3，可以从第2排攻击到第5排
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
@@ -402,6 +416,7 @@ export const summonConfig = {
     id: "mountainKing",
     name: "山君",
     fiveElement: FIVE_ELEMENTS.EARTH,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.038,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.047,
@@ -411,7 +426,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: "orange-500",
-    race: RACE_TYPES.BEAST,
+    // race: RACE_TYPES.BEAST, // Removed race
     attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [140, 240],
@@ -431,6 +446,7 @@ export const summonConfig = {
     id: "blackTortoise",
     name: "玄武",
     fiveElement: FIVE_ELEMENTS.WATER,
+    quality: QUALITY_TYPES.LEGENDARY, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.05,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
@@ -440,7 +456,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.DEFENSE,
     color: "blue-900",
-    race: RACE_TYPES.BEAST,
+    // race: RACE_TYPES.BEAST, // Removed race
     attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [220, 320],
@@ -460,6 +476,7 @@ export const summonConfig = {
     id: "judge",
     name: "判官",
     fiveElement: FIVE_ELEMENTS.METAL,
+    quality: QUALITY_TYPES.EPIC, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.036,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.03,
@@ -469,7 +486,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.MAGICAL,
     color: "purple-800",
-    race: RACE_TYPES.NETHER,
+    // race: RACE_TYPES.NETHER, // Removed race
     attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [130, 230],
@@ -489,6 +506,7 @@ export const summonConfig = {
     id: "thief",
     name: "盗贼",
     fiveElement: FIVE_ELEMENTS.METAL,
+    quality: QUALITY_TYPES.NORMAL, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.03,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.035,
@@ -498,7 +516,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: COLOR_TYPES.GREEN,
-    race: RACE_TYPES.SPIRIT,
+    // race: RACE_TYPES.SPIRIT, // Removed race
     attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [90, 190],
@@ -518,6 +536,7 @@ export const summonConfig = {
     id: "ruffian",
     name: "恶霸",
     fiveElement: FIVE_ELEMENTS.EARTH,
+    quality: QUALITY_TYPES.NORMAL, // Added quality
     growthRates: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: 0.04,
       [ATTRIBUTE_TYPES.STRENGTH]: 0.042,
@@ -527,7 +546,7 @@ export const summonConfig = {
     },
     type: PET_TYPES.PHYSICAL,
     color: COLOR_TYPES.BROWN,
-    race: RACE_TYPES.WARRIOR,
+    // race: RACE_TYPES.WARRIOR, // Removed race
     attackRange: 2,
     basicAttributeRanges: {
       [ATTRIBUTE_TYPES.CONSTITUTION]: [120, 220],
@@ -542,5 +561,90 @@ export const summonConfig = {
     initialSkillCountStdDev: 1,
     background:
       "横行街头的地痞流氓，依仗蛮力欺压弱小。",
+  },
+  seaTurtle: {
+    id: "seaTurtle",
+    name: "大海龟",
+    fiveElement: FIVE_ELEMENTS.WATER,
+    quality: QUALITY_TYPES.EPIC, // Added quality
+    growthRates: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: 0.055,
+      [ATTRIBUTE_TYPES.STRENGTH]: 0.025,
+      [ATTRIBUTE_TYPES.AGILITY]: 0.015,
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: 0.035,
+      [ATTRIBUTE_TYPES.LUCK]: 0.025,
+    },
+    type: PET_TYPES.DEFENSE,
+    color: "teal-600",
+    // race: RACE_TYPES.BEAST, // Removed race
+    attackRange: 2,
+    basicAttributeRanges: {
+      [ATTRIBUTE_TYPES.CONSTITUTION]: [180, 280],
+      [ATTRIBUTE_TYPES.STRENGTH]: [80, 180],
+      [ATTRIBUTE_TYPES.AGILITY]: [40, 140],
+      [ATTRIBUTE_TYPES.INTELLIGENCE]: [120, 220],
+      [ATTRIBUTE_TYPES.LUCK]: [90, 190],
+    },
+    guaranteedInitialSkills: ["turtle_shell"],
+    initialSkillPool: ["water_escape", "defense_boost", "divine_protection", "water_healing"],
+    initialSkillCountMean: 2,
+    initialSkillCountStdDev: 1,
+    background:
+      "游弋在深海中的古老生灵，经历了千百年的岁月洗礼。它的龟壳坚如磐石，承载着海洋的智慧与力量。虽然行动缓慢，但拥有极强的防御能力和水系法术，是战场上的守护者。在合成失败的混沌中，它会神秘地出现，为主人带来意外的惊喜。",
   }
+};
+
+/**
+ * 根据召唤兽类型获取调整后的成长率
+ * @param {string} summonSourceId - 召唤兽ID
+ * @param {string} natureType - 召唤兽类型 (wild/baby/mutant)
+ * @returns {Object} 调整后的成长率对象
+ */
+export const getAdjustedGrowthRates = (summonSourceId, natureType = 'wild') => {
+  const summonData = summonConfig[summonSourceId];
+  if (!summonData || !summonData.growthRates) {
+    return {};
+  }
+
+  // 动态导入召唤兽类型配置
+  import('../enumConfig').then(({ SUMMON_NATURE_TYPES, SUMMON_NATURE_CONFIG }) => {
+    const currentNatureType = natureType || SUMMON_NATURE_TYPES.WILD;
+    const natureConfig = SUMMON_NATURE_CONFIG[currentNatureType] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
+    
+    const adjustedGrowthRates = {};
+    Object.keys(summonData.growthRates).forEach(attr => {
+      adjustedGrowthRates[attr] = summonData.growthRates[attr] * natureConfig.growthRateMultiplier;
+    });
+    
+    return adjustedGrowthRates;
+  });
+
+  // 临时返回原成长率，实际使用时需要异步处理
+  return summonData.growthRates;
+};
+
+/**
+ * 同步版本：根据召唤兽类型获取调整后的成长率
+ * @param {string} summonSourceId - 召唤兽ID
+ * @param {string} natureType - 召唤兽类型 (wild/baby/mutant)
+ * @param {Object} natureConfig - 召唤兽类型配置对象
+ * @returns {Object} 调整后的成长率对象
+ */
+export const getAdjustedGrowthRatesSync = (summonSourceId, natureType = 'wild', natureConfig) => {
+  const summonData = summonConfig[summonSourceId];
+  if (!summonData || !summonData.growthRates) {
+    return {};
+  }
+
+  if (!natureConfig) {
+    // 如果没有传入配置，返回原成长率
+    return summonData.growthRates;
+  }
+
+  const adjustedGrowthRates = {};
+  Object.keys(summonData.growthRates).forEach(attr => {
+    adjustedGrowthRates[attr] = summonData.growthRates[attr] * natureConfig.growthRateMultiplier;
+  });
+  
+  return adjustedGrowthRates;
 };

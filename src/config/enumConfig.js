@@ -1,12 +1,56 @@
 // 种族类型
-export const RACE_TYPES = {
-  CELESTIAL: "celestial",    // 仙灵：修炼成仙的生物
-  NETHER: "nether",       // 冥灵：来自幽冥的生物
-  BEAST: "beast",        // 瑞兽：祥瑞神兽
-  SPIRIT: "spirit",       // 精怪：天地精灵
-  MACHINE: "machine",      // 机关：人造生物
-  WARRIOR: "warrior",       // 神兵：天庭战士
-  ANCIENT_BEAST: "ancient_beast" // 上古神兽
+// export const RACE_TYPES = {
+//   CELESTIAL: "celestial",    // 仙灵：修炼成仙的生物
+//   NETHER: "nether",       // 冥灵：来自幽冥的生物
+//   BEAST: "beast",        // 瑞兽：祥瑞神兽
+//   SPIRIT: "spirit",       // 精怪：天地精灵
+//   MACHINE: "machine",      // 机关：人造生物
+//   WARRIOR: "warrior",       // 神兵：天庭战士
+//   ANCIENT_BEAST: "ancient_beast" // 上古神兽
+// };
+
+// 召唤兽类型（野生、宝宝、变异）
+export const SUMMON_NATURE_TYPES = {
+  WILD: "wild",         // 野生：正常属性，有初始等级，潜力点较少
+  BABY: "baby",         // 宝宝：更好的基础属性和成长，0级开始，更多潜力点
+  MUTANT: "mutant"      // 变异：最佳属性和成长，0级开始，最多潜力点
+};
+
+// 召唤兽类型配置
+export const SUMMON_NATURE_CONFIG = {
+  [SUMMON_NATURE_TYPES.WILD]: {
+    name: "野生",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+    borderColor: "border-gray-300",
+    baseAttributeMultiplier: 1.0,      // 基础属性倍数
+    growthRateMultiplier: 1.0,         // 成长率倍数
+    initialLevelRange: [5, 15],        // 初始等级范围
+    potentialPointsBonus: 0,           // 潜力点额外奖励
+    description: "在野外自然生长的召唤兽，属性正常"
+  },
+  [SUMMON_NATURE_TYPES.BABY]: {
+    name: "宝宝",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-300",
+    baseAttributeMultiplier: 1.15,     // 基础属性提升15%
+    growthRateMultiplier: 1.1,         // 成长率提升10%
+    initialLevelRange: [0, 0],         // 0级开始
+    potentialPointsBonus: 20,          // 额外20点潜力点
+    description: "刚出生的幼体召唤兽，潜力巨大，需要精心培养"
+  },
+  [SUMMON_NATURE_TYPES.MUTANT]: {
+    name: "变异",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    borderColor: "border-purple-400",
+    baseAttributeMultiplier: 1.3,      // 基础属性提升30%
+    growthRateMultiplier: 1.2,         // 成长率提升20%
+    initialLevelRange: [0, 0],         // 0级开始
+    potentialPointsBonus: 40,          // 额外40点潜力点
+    description: "发生基因变异的特殊召唤兽，拥有超越常规的天赋"
+  }
 };
 
 // 宠物类型
@@ -76,13 +120,13 @@ export const SKILL_AREA_TYPES = {
 };
 
 // 种族特性类型
-export const RACE_TRAIT_TYPES = {
-  COMBAT: "combat",
-  MAGIC: "magic",
-  DEFENSE: "defense",
-  UTILITY: "utility",
-  PASSIVE: "passive"
-};
+// export const RACE_TRAIT_TYPES = {
+//   COMBAT: "combat",
+//   MAGIC: "magic",
+//   DEFENSE: "defense",
+//   UTILITY: "utility",
+//   PASSIVE: "passive"
+// };
 
 // 成长率评级
 export const GROWTH_RATE_TIERS = {

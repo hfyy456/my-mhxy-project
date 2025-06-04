@@ -35,7 +35,35 @@ export function useInventoryManager() {
     };
 
     const handleError = (errorData) => {
-      setError(errorData.message);
+      // 过滤非关键错误，只传播真正的错误
+      const criticalErrors = [
+        "背包已满",
+        "找不到召唤兽", 
+        "装备需要等级",
+        "无效的装备槽位类型"
+      ];
+      
+      const nonCriticalErrors = [
+        "该部位没有装备",
+        "物品未装备或缺少装备信息"
+      ];
+      
+      if (nonCriticalErrors.some(err => errorData.message.includes(err))) {
+        console.warn('[useInventoryManager] 非关键错误:', errorData.message);
+        // 非关键错误不设置到state中，只记录日志
+        return;
+      }
+      
+      if (criticalErrors.some(err => errorData.message.includes(err)) || 
+          errorData.type === "add_item_failed" || 
+          errorData.type === "save_failed" || 
+          errorData.type === "load_failed") {
+        console.error('[useInventoryManager] 关键错误:', errorData.message);
+        setError(errorData.message);
+      } else {
+        console.log('[useInventoryManager] 一般错误:', errorData.message);
+        // 一般错误也不传播到UI层
+      }
     };
 
     const handleStateLoaded = (loadedState) => {
@@ -111,10 +139,6 @@ export function useInventoryActions() {
     removeItem: (itemId, quantity = null) => inventoryManager.removeItem(itemId, quantity),
     useItem: (itemId, target = null) => inventoryManager.useItem(itemId, target),
     
-    // 装备操作 - 基于物品ID
-    equipItem: (itemId, summonId) => inventoryManager.equipItem(itemId, summonId),
-    unequipItem: (summonId, slotType) => inventoryManager.unequipItem(summonId, slotType),
-    
     // 金币操作
     addGold: (amount) => inventoryManager.addGold(amount),
     removeGold: (amount) => inventoryManager.removeGold(amount),
@@ -132,16 +156,6 @@ export function useInventoryActions() {
 
     // 获取可装备物品列表
     getEquippableItems: (slotType = null, includeEquipped = false) => inventoryManager.getEquippableItems(slotType, includeEquipped),
-
-    // 检查是否可装备给召唤兽 - 基于物品ID
-    canEquipToSummon: async (itemId, summonId) => {
-      return await inventoryManager.canEquipToSummon(itemId, summonId);
-    },
-
-    // 获取召唤兽装备状态
-    getSummonEquipmentStatus: async (summonId) => {
-      return await inventoryManager.getSummonEquipmentStatus(summonId);
-    },
 
     // 获取装备槽位类型显示名称
     getSlotTypeDisplayName: (slotType) => inventoryManager.getSlotTypeDisplayName(slotType)

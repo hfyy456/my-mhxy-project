@@ -152,7 +152,7 @@ const EquippableItemsModal = ({
               return (
                 <li
                   key={item.id}
-                  onClick={() => onItemSelected(item)}
+                  onClick={() => onItemSelected(item.id)}
                   className={`p-3 ${isEquippedByCurrent ? 'bg-green-800/50' : 'bg-slate-700'} hover:bg-slate-600 rounded-md cursor-pointer transition-all duration-150 border-l-4 border-${itemQualityColorName} relative`}
                 >
                   <div className="absolute top-2 right-2 flex gap-1">

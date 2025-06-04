@@ -13,7 +13,8 @@ import {
 import { useInventoryActions, useInventoryItems } from '@/hooks/useInventoryManager';
 import { skillConfig } from '@/config/skill/skillConfig';
 import { generateNewSummon } from '@/utils/summonUtils';
-import { SUMMON_SOURCES } from '@/config/enumConfig';
+import { getSummonNatureTypeDisplayName } from '@/config/ui/uiTextConfig';
+import { SUMMON_SOURCES, SUMMON_NATURE_TYPES } from '@/config/enumConfig';
 
 const SummonManagerDemo = () => {
   const [selectedTab, setSelectedTab] = useState('list');
@@ -63,18 +64,23 @@ const SummonManagerDemo = () => {
     // 使用现有的召唤兽类型
     const availableSummonTypes = ['ghost', 'heavenGuard', 'thunderBird', 'vampire', 'mechanicalBird', 'catSpirit', 'wildLeopard'];
     const randomSummonType = availableSummonTypes[Math.floor(Math.random() * availableSummonTypes.length)];
+    const qualities = ['normal', 'rare', 'epic', 'legendary', 'mythic'];
+    const randomQuality = qualities[Math.floor(Math.random() * qualities.length)];
+    const natureTypes = Object.values(SUMMON_NATURE_TYPES);
+    const randomNatureType = natureTypes[Math.floor(Math.random() * natureTypes.length)];
     
     // 使用现有的generateNewSummon函数
     const summonData = generateNewSummon({
       summonSourceId: randomSummonType,
-      quality: 'normal',
+      quality: randomQuality,
+      natureType: randomNatureType,
       source: SUMMON_SOURCES.MANUAL, // 使用手动来源
       dispatch: null // 暂时不使用dispatch
     });
 
     const result = createSummon(summonData);
     if (result) {
-      console.log(`[Demo] 创建了召唤兽:`, result);
+      console.log(`[Demo] 创建了${getSummonNatureTypeDisplayName(randomNatureType)}召唤兽:`, result);
       setSelectedSummonId(result.id);
     }
   };
@@ -120,9 +126,21 @@ const SummonManagerDemo = () => {
         <h3 className="font-bold text-lg">
           {summon.nickname || summon.id}
         </h3>
-        <span className="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800">
-          召唤兽
-        </span>
+        <div className="flex flex-col items-end space-y-1">
+          <span className="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800">
+            召唤兽
+          </span>
+          {summon.natureType && (
+            <span className={`px-2 py-1 rounded text-xs font-bold ${
+              summon.natureType === 'wild' ? 'bg-gray-100 text-gray-700' :
+              summon.natureType === 'baby' ? 'bg-blue-100 text-blue-700' :
+              summon.natureType === 'mutant' ? 'bg-purple-100 text-purple-700' :
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {getSummonNatureTypeDisplayName(summon.natureType)}
+            </span>
+          )}
+        </div>
       </div>
       
       <div className="text-sm text-gray-600 space-y-1">
@@ -131,6 +149,11 @@ const SummonManagerDemo = () => {
         <p>经验: {summon.experience}</p>
         <p>潜力点: {summon.potentialPoints}</p>
         <p>技能数: {summon.skillSet?.length || 0}</p>
+        {summon.natureType && (
+          <p className="text-xs text-gray-500">
+            类型: {getSummonNatureTypeDisplayName(summon.natureType)}
+          </p>
+        )}
       </div>
 
       <div className="mt-2 flex space-x-2">
@@ -515,6 +538,19 @@ const SummonManagerDemo = () => {
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             创建召唤兽
+          </button>
+          <button
+            onClick={() => {
+              console.log('=== 开始召唤兽类型系统测试 ===');
+              if (window.summonNatureTest) {
+                window.summonNatureTest.runAllTests();
+              } else {
+                console.error('测试函数未加载，请刷新页面重试');
+              }
+            }}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            运行类型测试
           </button>
         </div>
       </div>

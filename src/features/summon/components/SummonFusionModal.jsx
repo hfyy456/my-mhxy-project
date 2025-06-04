@@ -52,7 +52,6 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
       name: baseSummonConfig.name,
       level: Math.max(1, Math.floor((summon1.level + summon2.level) / 3)),
       basicAttributes: { ...baseSummon.basicAttributes },
-      race: baseSummonConfig.race,
       fiveElement: baseSummonConfig.fiveElement,
       // 计算继承的技能
       inheritedSkills: calculateInheritedSkills(baseSummon, secondarySummon),

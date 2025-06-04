@@ -167,7 +167,8 @@ const TowerBattlePreparation = ({ floor, floorConfig, onCancel, onStartBattle })
                 <div>
                   <div className="font-bold">{summon.name}</div>
                   <div className="text-sm text-gray-400">
-                    Lv.{summon.level} · {FIVE_ELEMENTS[summon.fiveElement]} · {summon.race}
+                    {/* Lv.{summon.level} · {FIVE_ELEMENTS[summon.fiveElement]} · {summon.race} */}
+                    Lv.{summon.level} · {FIVE_ELEMENTS[summon.fiveElement]}
                   </div>
                 </div>
               </div>

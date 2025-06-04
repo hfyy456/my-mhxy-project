@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:06:55
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-04 05:49:35
+ * @LastEditTime: 2025-06-05 05:52:47
  */
 import React, { useEffect, useCallback, useState, useMemo, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,6 +12,8 @@ import HistoryModal from "../../history/components/HistoryModal";
 import EquippableItemsModal from "./EquippableItemsModal";
 import CrossSummonEquipConfirmModal from "./CrossSummonEquipConfirmModal";
 import SummonFusionModal from "./SummonFusionModal";
+import EnhancedSummonFusionModal from "./EnhancedSummonFusionModal";
+import FusionHistoryModal from "./FusionHistoryModal";
 import { useSummonSystem } from "../hooks/useSummonSystem";
 // 引入OOP召唤兽管理系统
 import {
@@ -31,6 +33,7 @@ import { generateUniqueId } from "@/utils/idUtils";
 import inventoryManager from "@/store/InventoryManager";
 import { generateNewSummon } from "@/utils/summonUtils";
 import { SUMMON_SOURCES } from "@/config/enumConfig";
+import { useEquipmentRelationship } from '../../../hooks/useEquipmentRelationship';
 
 const SummonSystem = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
@@ -56,9 +59,18 @@ const SummonSystem = ({ toasts, setToasts }) => {
     cloneSummon,
     clearError,
     manager,
-    equipItem,
-    unequipItem
   } = useSummonManager();
+
+  // 使用装备关系管理器
+  const {
+    equipItem,
+    unequipItem,
+    unequipFromSlot,
+    getSummonEquipment,
+    isItemEquipped,
+    error: equipmentError,
+    clearError: clearEquipmentError
+  } = useEquipmentRelationship();
 
   // 获取当前召唤兽和召唤兽列表（使用OOP系统的数据）
   const currentSummon = currentSummonFullData;
@@ -84,8 +96,13 @@ const SummonSystem = ({ toasts, setToasts }) => {
   const [showCrossEquipConfirm, setShowCrossEquipConfirm] = useState(false);
   const [crossEquipDetails, setCrossEquipDetails] = useState(null);
   const [isFusionModalOpen, setIsFusionModalOpen] = useState(false);
+  const [isFusionHistoryModalOpen, setIsFusionHistoryModalOpen] = useState(false);
+  const [isEnhancedFusionOpen, setIsEnhancedFusionOpen] = useState(false);
 
   const inventoryActions = useInventoryActions();
+
+  const [equipmentSelectorSlotType, setEquipmentSelectorSlotType] = useState(null);
+  const [equipmentSelectorSummonId, setEquipmentSelectorSummonId] = useState(null);
 
   const handleOpenEquipmentSelector = useCallback((slotType) => {
     if (!currentSummon) {
@@ -249,12 +266,8 @@ const SummonSystem = ({ toasts, setToasts }) => {
     }
   }, [summonsList.length, maxSummons, playerLevel, inventoryActions, setToasts, createSummon, dispatch, manager]);
 
-  const handleFusion = useCallback(async (summon1Id, summon2Id) => {
+  const handleFusion = useCallback(async (newSummon, summon1Id, summon2Id) => {
     try {
-      // 这里可以集成现有的合成逻辑，或者使用Redux的合成功能
-      const result = await dispatch(fuseSummons({ summon1Id, summon2Id }));
-      const newSummon = result.payload;
-      
       // 使用OOP系统创建合成后的召唤兽
       const oopResult = createSummon(newSummon);
       if (oopResult) {
@@ -265,10 +278,11 @@ const SummonSystem = ({ toasts, setToasts }) => {
         manager.setCurrentSummon(oopResult.id);
       }
 
+      setIsEnhancedFusionOpen(false);
       setIsFusionModalOpen(false);
       setToasts(prev => [...prev, {
         id: generateUniqueId('toast'),
-        message: `合成成功！获得了新的召唤兽「${summonConfig[newSummon.summonSourceId]?.name || '未知召唤兽'}」`,
+        message: `合成成功！获得了新的召唤兽「${newSummon.name}」`,
         type: 'success'
       }]);
     } catch (error) {
@@ -279,7 +293,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
         type: 'error'
       }]);
     }
-  }, [dispatch, createSummon, deleteSummon, manager, setToasts]);
+  }, [createSummon, deleteSummon, manager, setToasts]);
 
   // 当召唤兽列表变化时，设置当前召唤兽
   useEffect(() => {
@@ -294,52 +308,40 @@ const SummonSystem = ({ toasts, setToasts }) => {
     }
   }, [summonsList, currentSummon, manager]);
 
-  const handleEquipItem = useCallback(async (itemToEquip) => {
-    if (!currentSummon || !selectedSlotForEquipping) {
-      console.error("Cannot equip item: current summon or slot type is missing.");
-      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备失败：缺少召唤兽或槽位信息", type: 'error' }]);
-      setIsEquipmentSelectorOpen(false);
-      return;
-    }
-
-    if (typeof equipItem !== 'function') {
-      console.error("[SummonSystem handleEquipItem] FATAL: equipItem is not a function! Value:", equipItem);
-      setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "装备系统错误：操作模块未正确加载", type: 'error' }]);
-      setIsEquipmentSelectorOpen(false);
-      return;
-    }
-
+  const handleEquipItem = useCallback(async (itemId) => {
     try {
-      const result = await equipItem(currentSummon.id, itemToEquip.id, selectedSlotForEquipping);
-      if (result) {
-        setToasts(prev => [...prev, { 
-          id: generateUniqueId('toast'), 
-          message: `${itemToEquip.name} 装备成功!`,
-          type: 'success' 
-        }]);
+      const success = await equipItem(itemId, equipmentSelectorSummonId);
+      
+      if (success) {
+        console.log(`[SummonSystem] 装备成功: ${itemId} -> ${equipmentSelectorSummonId}`);
+        setIsEquipmentSelectorOpen(false);
+        setEquipmentSelectorSlotType(null);
+        setEquipmentSelectorSummonId(null);
       } else {
-        setToasts(prev => [...prev, { 
-          id: generateUniqueId('toast'), 
-          message: `${itemToEquip.name} 装备失败。`,
-          type: 'error' 
-        }]);
+        console.error('[SummonSystem] 装备失败');
       }
     } catch (error) {
-      console.error('[SummonSystem] 装备物品时出错:', error);
-      setToasts(prev => [...prev, { 
-        id: generateUniqueId('toast'), 
-        message: `装备失败: ${error.message || '未知错误'}`,
-        type: 'error' 
-      }]);
+      console.error('[SummonSystem] 装备操作出错:', error);
     }
-    
-    setIsEquipmentSelectorOpen(false);
-    setSelectedSlotForEquipping(null);
-  }, [currentSummon, selectedSlotForEquipping, setToasts, equipItem]);
+  }, [equipItem, equipmentSelectorSummonId]);
+
+  const handleUnequipItem = useCallback(async (summonId, slotType) => {
+    try {
+      const success = await unequipFromSlot(summonId, slotType);
+      
+      if (success) {
+        console.log(`[SummonSystem] 卸装成功: ${summonId}:${slotType}`);
+      } else {
+        console.error('[SummonSystem] 卸装失败');
+      }
+    } catch (error) {
+      console.error('[SummonSystem] 卸装操作出错:', error);
+    }
+  }, [unequipFromSlot]);
 
   const handleConfirmCrossEquip = async () => {
     if (!crossEquipDetails) return;
-    const { itemToEquip, originalSummon, targetSummon, slotType } = crossEquipDetails;
+    const { itemToEquip, originalSummon, targetSummon } = crossEquipDetails;
 
     if (typeof equipItem !== 'function') {
       console.error("[SummonSystem handleConfirmCrossEquip] FATAL: equipItem is not a function! Value:", equipItem);
@@ -350,7 +352,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
     }
 
     try {
-      const result = await equipItem(targetSummon.id, itemToEquip.id, slotType);
+      const result = await equipItem(itemToEquip.id, targetSummon.id);
       if (result) {
         setToasts(prev => [...prev, {
           id: generateUniqueId('toast'),
@@ -371,41 +373,6 @@ const SummonSystem = ({ toasts, setToasts }) => {
 
     setShowCrossEquipConfirm(false);
     setCrossEquipDetails(null);
-  };
-
-  const handleUnequipItem = async () => {
-    if (currentSummon && selectedSlotForEquipping) {
-      const summonIdToUpdate = currentSummon.id;
-
-      if (typeof unequipItem !== 'function') {
-        console.error("[SummonSystem handleUnequipItem] FATAL: unequipItem is not a function! Value:", unequipItem);
-        setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "卸装系统错误", type: 'error' }]);
-        setSelectedSlotForEquipping(null);
-        return;
-      }
-
-      try {
-        const result = await unequipItem(summonIdToUpdate, selectedSlotForEquipping);
-        if (result) {
-          setToasts(prev => [...prev, {
-            id: generateUniqueId('toast'),
-            message: `从 ${currentSummon.name || '当前召唤兽'} 的 ${selectedSlotForEquipping} 槽位卸装成功。`,
-            type: 'success'
-          }]);
-        } else {
-          setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "卸装失败。", type: 'error' }]);
-        }
-      } catch (error) {
-        console.error("[SummonSystem] 卸装失败:", error);
-        setToasts(prev => [...prev, {
-          id: generateUniqueId('toast'),
-          message: `卸装失败: ${error.message || '未知错误'}`,
-          type: 'error'
-        }]);
-      }
-    }
-    
-    setSelectedSlotForEquipping(null);
   };
 
   const handleConfirmSkillChange = (skillNameToLearnOrReplace) => {
@@ -434,6 +401,37 @@ const SummonSystem = ({ toasts, setToasts }) => {
     setCurrentSkillForSlot(null);
   };
 
+  // 打开装备选择器
+  const onOpenEquipmentSelectorForSlot = useCallback((summonId, slotType) => {
+    console.log(`[SummonSystem] 打开装备选择器: ${summonId}:${slotType}`);
+    setEquipmentSelectorSummonId(summonId);
+    setEquipmentSelectorSlotType(slotType);
+    setIsEquipmentSelectorOpen(true);
+  }, []);
+
+  // 关闭装备选择器
+  const onCloseEquipmentSelector = useCallback(() => {
+    setIsEquipmentSelectorOpen(false);
+    setEquipmentSelectorSlotType(null);
+    setEquipmentSelectorSummonId(null);
+  }, []);
+
+  // 获取召唤兽的装备信息
+  const getSummonEquipmentInfo = useCallback((summonId) => {
+    return getSummonEquipment(summonId);
+  }, [getSummonEquipment]);
+
+  // 清除装备错误
+  useEffect(() => {
+    if (equipmentError) {
+      console.error('[SummonSystem] 装备系统错误:', equipmentError);
+      // 可以在这里显示错误提示
+      setTimeout(() => {
+        clearEquipmentError();
+      }, 5000);
+    }
+  }, [equipmentError, clearEquipmentError]);
+
   return (
     <div className="w-full h-full flex flex-col summon-system-compact relative">
       {/* 装饰性角落元素 */}
@@ -452,13 +450,21 @@ const SummonSystem = ({ toasts, setToasts }) => {
           </button>
           
           <button 
-            onClick={() => setIsFusionModalOpen(true)}
+            onClick={() => setIsEnhancedFusionOpen(true)}
             className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={summonsList.length < 2}
             title={summonsList.length < 2 ? "需要至少两个召唤兽才能合成" : "合成两个召唤兽"}
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
-            <i className="fas fa-mortar-pestle mr-1.5"></i>合成
+            <i className="fas fa-mortar-pestle mr-1.5"></i>高级合成
+          </button>
+
+          <button 
+            onClick={() => setIsFusionHistoryModalOpen(true)}
+            className="w-full bg-gradient-to-b from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-purple-500/30"
+            style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
+          >
+            <i className="fas fa-history mr-1.5"></i>合成历史
           </button>
           
           {currentSummon && (
@@ -510,7 +516,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           {currentSummon ? (
             <SummonInfo
               summon={currentSummon}
-              onOpenEquipmentSelectorForSlot={handleOpenEquipmentSelector}
+              onOpenEquipmentSelectorForSlot={onOpenEquipmentSelectorForSlot}
               onLearnSkill={handleOpenSkillEditor}
               onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}
             />
@@ -558,12 +564,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
       {currentSummon && (
         <EquippableItemsModal
           isOpen={isEquipmentSelectorOpen}
-          onClose={() => {
-            setIsEquipmentSelectorOpen(false);
-            setSelectedSlotForEquipping(null);
-          }}
-          slotType={selectedSlotForEquipping}
-          currentSummonId={currentSummon.id}
+          onClose={onCloseEquipmentSelector}
+          slotType={equipmentSelectorSlotType}
+          currentSummonId={equipmentSelectorSummonId}
           onItemSelected={handleEquipItem}
         />
       )}
@@ -576,12 +579,25 @@ const SummonSystem = ({ toasts, setToasts }) => {
         onCancel={() => {
           setShowCrossEquipConfirm(false);
           setCrossEquipDetails(null);
-          setSelectedSlotForEquipping(null); 
+          onCloseEquipmentSelector();
           setToasts(prev => [...prev, { id: generateUniqueId('toast'), message: "已取消为其他召唤兽装备物品。", type: 'info' }]);
         }}
       />
       
-      {/* 召唤兽合成模态框 */}
+      {/* 增强版召唤兽合成模态框 */}
+      <EnhancedSummonFusionModal
+        isOpen={isEnhancedFusionOpen}
+        onClose={() => setIsEnhancedFusionOpen(false)}
+        onFusion={handleFusion}
+      />
+
+      {/* 合成历史模态框 */}
+      <FusionHistoryModal
+        isOpen={isFusionHistoryModalOpen}
+        onClose={() => setIsFusionHistoryModalOpen(false)}
+      />
+      
+      {/* 原有的召唤兽合成模态框（保留兼容性） */}
       <SummonFusionModal
         isOpen={isFusionModalOpen}
         onClose={() => setIsFusionModalOpen(false)}

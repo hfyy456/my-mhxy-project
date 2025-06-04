@@ -109,7 +109,7 @@ export const initiateMapBattleAction = createAsyncThunk(
                 },
                 skillSet: summonDetails.skillSet || [], // 确保技能列表存在
                 isPlayerUnit: true,
-                type: summonDetails.race || 'player_summon', // 使用召唤兽的种族或通用类型
+                type: 'player_summon', // Race removed, defaulting to player_summon
                 spriteAssetKey: summonDetails.spriteAssetKey || summonConfig[summonDetails.summonSourceId]?.sprite, // 战斗单位的精灵图
                 // 确保 gridPosition 在后续步骤中正确设置
               });

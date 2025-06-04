@@ -216,56 +216,6 @@ export const useSummonManager = () => {
       }
     },
 
-    // 装备物品
-    equipItem: async (summonId, itemId, slotType) => {
-      try {
-        setIsLoading(true);
-        const summon = summonManager.getSummonById(summonId);
-        if (!summon) {
-          setError({ message: '找不到指定的召唤兽', details: `ID: ${summonId}` });
-          return false;
-        }
-        
-        const result = await summon.equipItem(itemId, slotType);
-        // 强制更新状态
-        setState(summonManager.getState());
-        return result;
-      } catch (error) {
-        setError({
-          message: '装备物品失败',
-          details: error.message
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-
-    // 卸下装备
-    unequipItem: async (summonId, slotType) => {
-      try {
-        setIsLoading(true);
-        const summon = summonManager.getSummonById(summonId);
-        if (!summon) {
-          setError({ message: '找不到指定的召唤兽', details: `ID: ${summonId}` });
-          return false;
-        }
-        
-        const result = await summon.unequipItem(slotType);
-        // 强制更新状态
-        setState(summonManager.getState());
-        return result;
-      } catch (error) {
-        setError({
-          message: '卸下装备失败',
-          details: error.message
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-
     // 获取/设置昵称
     changeSummonNickname: (summonId, nickname) => {
       try {
@@ -402,6 +352,11 @@ export const useSummonManager = () => {
         });
         return false;
       }
+    },
+
+    // 清除错误
+    clearError: () => {
+      setError(null);
     }
   }), [summonManager]);
 

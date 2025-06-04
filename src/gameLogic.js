@@ -19,17 +19,20 @@ import {
   UNIQUE_ID_PREFIXES,
   REFINEMENT_SOURCES,
   SKILL_OPERATION_OUTCOMES,
-  QUALITY_TYPES
+  QUALITY_TYPES,
+  SUMMON_SOURCES
 } from '@/config/enumConfig';
 import { 
   uiText, 
-  getRaceTypeDisplayName,
-  getQualityDisplayName
+  getQualityDisplayName,
+  getAttributeDisplayName,
+  getFiveElementDisplayName,
 } from "@/config/ui/uiTextConfig";
 import { generateNewSummon } from '@/utils/summonUtils';
 import { experienceConfig, playerBaseConfig } from '@/config/character/playerConfig';
 import { generateUniqueId } from '@/utils/idUtils';
 import { ITEM_BASE_CONFIG } from '@/config/item/inventoryConfig';
+import { gachaPoolConfig, gachaCost, gachaPityRules } from '@/config/gachaConfig';
 // import Summon from "@/entities/Summon"; // Removed
 // import EquipmentEntity from "@/entities/EquipmentEntity"; // Removed
 // import EquipmentManager from "@/managers/EquipmentManager"; // Removed
@@ -170,7 +173,6 @@ export const refineMonster = (playerLevel) => {
     derivedAttributes: {},
     skillSet: [...newSummon.skillSet],
     equipment: newSummon.equippedItemIds,
-    race: summonDetails.race,
   };
 
   // 从配置中获取经验值
@@ -188,7 +190,7 @@ export const refineMonster = (playerLevel) => {
     newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
     requireNickname: false,
-    message: `炼妖成功！召唤兽 ${summonDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，种族: ${getRaceTypeDisplayName(summonDetails.race)}，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
+    message: `炼妖成功！召唤兽 ${summonDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
     experienceGained: experienceGained
   };
 };
@@ -326,4 +328,135 @@ export const calculateAttributesByLevel = (
   }
 
   return attributes;
+};
+
+// New Gacha Draw Function
+export const drawSummon = (playerGachaState, dispatch) => {
+  const updatedPlayerGachaState = JSON.parse(JSON.stringify(playerGachaState));
+
+  let determinedQuality = null;
+  let pityTriggered = false;
+
+  const legendaryOrMythicPityRule = gachaPityRules.guaranteedLegendaryOrMythic;
+  if (updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic >= legendaryOrMythicPityRule.count - 1) {
+    const possibleQualities = legendaryOrMythicPityRule.qualities;
+    determinedQuality = possibleQualities[Math.floor(Math.random() * possibleQualities.length)];
+    if (legendaryOrMythicPityRule.resetOnTrigger) {
+      updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic = 0;
+    }
+    pityTriggered = true;
+    console.log(`PITY TRIGGERED (Legendary/Mythic): ${determinedQuality}`);
+  }
+
+  if (!pityTriggered) {
+    const rareOrAbovePityRule = gachaPityRules.guaranteedRareOrAbove;
+    if (updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove >= rareOrAbovePityRule.count - 1) {
+      const possibleQualities = rareOrAbovePityRule.qualities;
+      const availablePityQualities = Object.keys(gachaPoolConfig).filter(q => possibleQualities.includes(q));
+      if (availablePityQualities.length > 0) {
+        determinedQuality = availablePityQualities[Math.floor(Math.random() * availablePityQualities.length)];
+        if (rareOrAbovePityRule.resetOnTrigger) {
+          updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove = 0;
+        }
+        pityTriggered = true;
+        console.log(`PITY TRIGGERED (Rare+): ${determinedQuality}`);
+      }
+    }
+  }
+
+  if (!pityTriggered) {
+    const rand = Math.random();
+    let cumulativeProbability = 0;
+    const qualityKeys = Object.keys(gachaPoolConfig); // Ensure consistent order for probability calculation
+    for (const quality of qualityKeys) {
+      cumulativeProbability += gachaPoolConfig[quality].probability;
+      if (rand <= cumulativeProbability) {
+        determinedQuality = quality;
+        break;
+      }
+    }
+  }
+
+  if (!determinedQuality) {
+    console.warn("Could not determine quality based on probability. Defaulting to NORMAL.");
+    determinedQuality = QUALITY_TYPES.NORMAL;
+  }
+
+  const poolForQuality = gachaPoolConfig[determinedQuality]?.summons;
+  if (!poolForQuality || poolForQuality.length === 0) {
+    console.error(`No summons defined for quality ${determinedQuality} in gachaConfig. Attempting fallback or throwing error.`);
+    // Fallback: try NORMAL pool, or first available summon, or throw error
+    const normalPool = gachaPoolConfig[QUALITY_TYPES.NORMAL]?.summons;
+    if (normalPool && normalPool.length > 0) {
+        console.warn(`Falling back to a summon from NORMAL pool.`);
+        determinedQuality = QUALITY_TYPES.NORMAL; // Explicitly set quality to normal for clarity
+        const selectedSummonId = normalPool[Math.floor(Math.random() * normalPool.length)];
+         const newSummon = generateNewSummon({
+            summonSourceId: selectedSummonId,
+            quality: determinedQuality,
+            source: SUMMON_SOURCES.GACHA,
+            dispatch: dispatch
+        });
+        // Update pity counts even on fallback if a draw happens
+        updatedPlayerGachaState.totalDraws += 1;
+        // ... (pity count updates for legendaryOrMythicPityRule and rareOrAbovePityRule as below)
+        if (legendaryOrMythicPityRule.resetOnTrigger && legendaryOrMythicPityRule.qualities.includes(determinedQuality)) {
+            updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic = 0;
+        } else {
+            updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic += 1;
+        }
+        if (rareOrAbovePityRule.resetOnTrigger && rareOrAbovePityRule.qualities.includes(determinedQuality)) {
+            updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove = 0;
+        } else {
+            updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove += 1;
+        }
+        return {
+            drawnSummon: newSummon,
+            updatedPlayerGachaState: updatedPlayerGachaState,
+            cost: gachaCost
+        };
+    } else {
+        throw new Error(`Configuration error: No summons available for quality ${determinedQuality} and no fallback summons in NORMAL pool.`);
+    }
+  }
+  
+  const selectedSummonId = poolForQuality[Math.floor(Math.random() * poolForQuality.length)];
+
+  updatedPlayerGachaState.totalDraws += 1;
+
+  // Update pity for Legendary/Mythic
+  const legendaryOrMythicPityRuleToUpdate = gachaPityRules.guaranteedLegendaryOrMythic;
+  if (legendaryOrMythicPityRuleToUpdate.resetOnTrigger && legendaryOrMythicPityRuleToUpdate.qualities.includes(determinedQuality)) {
+    updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic = 0;
+  } else {
+    // Only increment if this specific pity was not the one triggered and reset
+    // Or if it was triggered but doesn't reset (though our current config does reset)
+    if (!pityTriggered || !legendaryOrMythicPityRuleToUpdate.qualities.includes(determinedQuality) || !legendaryOrMythicPityRuleToUpdate.resetOnTrigger) {
+        updatedPlayerGachaState.pityCounts.guaranteedLegendaryOrMythic += 1;
+    }
+  }
+
+  // Update pity for Rare+
+  const rareOrAbovePityRuleToUpdate = gachaPityRules.guaranteedRareOrAbove;
+  if (rareOrAbovePityRuleToUpdate.resetOnTrigger && rareOrAbovePityRuleToUpdate.qualities.includes(determinedQuality)) {
+    updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove = 0;
+  } else {
+    // Similar logic for this pity counter
+    if (!pityTriggered || !rareOrAbovePityRuleToUpdate.qualities.includes(determinedQuality) || !rareOrAbovePityRuleToUpdate.resetOnTrigger) {
+        updatedPlayerGachaState.pityCounts.guaranteedRareOrAbove += 1;
+    }
+  }
+
+  const newSummon = generateNewSummon({
+    summonSourceId: selectedSummonId,
+    quality: determinedQuality,
+    source: SUMMON_SOURCES.GACHA,
+    dispatch: dispatch
+  });
+
+  return {
+    drawnSummon: newSummon,
+    updatedPlayerGachaState: updatedPlayerGachaState,
+    cost: gachaCost
+  };
 };

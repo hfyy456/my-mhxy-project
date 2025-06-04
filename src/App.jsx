@@ -63,6 +63,7 @@ import HomesteadView from '@/features/homestead/components/HomesteadView'; // �
 import SummonManagerDemo from '@/components/SummonManagerDemo'; // 导入OOP召唤兽演示组件
 import DataClearPanel from '@/components/DataClearPanel'; // 导入数据清理面板
 import { useSummonManager } from '@/hooks/useSummonManager'; // 导入OOP召唤兽系统hook
+import EquipmentRelationshipDemo from './components/EquipmentRelationshipDemo';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -134,6 +135,8 @@ const App = () => {
   const [isDataClearPanelOpen, setIsDataClearPanelOpen] = useState(false);
   const openDataClearPanel = () => setIsDataClearPanelOpen(true);
   const closeDataClearPanel = () => setIsDataClearPanelOpen(false);
+
+  const [isEquipmentRelationDemoOpen, setIsEquipmentRelationDemoOpen] = useState(false);
 
   useAutoSave();
 
@@ -223,29 +226,19 @@ const App = () => {
     simulateLoading();
   };
   
-  // 更新操作栏，移除旧背包按钮，保留面向对象背包按钮并重命名
+  // 更新操作栏，只保留核心游戏功能
   const GameActionBar = () => {
     return (
     <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '5px' }}>
       <button onClick={openFormationModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#555', border: 'none', borderRadius: '3px' }}>阵型</button>
       <button onClick={openTowerModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#6b46c1', border: 'none', borderRadius: '3px' }}>封妖塔</button>
       <button onClick={() => { openHomesteadModal(); }} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#069545', border: 'none', borderRadius: '3px' }}>家园</button>
-      {/* 重命名面向对象背包按钮为主背包 */}
-      <button onClick={openInventoryOOPModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#f59e0b', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
-        背包
-      </button>
-      {/* 召唤兽装备管理按钮 */}
-      <button onClick={openSummonEquipmentModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#8b5cf6', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
-        召唤兽装备
-      </button>
-      {/* OOP召唤兽演示按钮 */}
-      <button onClick={openSummonOOPDemoModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#dc2626', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
-        OOP召唤兽
-      </button>
-      {/* 数据清理管理按钮 */}
-      <button onClick={openDataClearPanel} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '3px', fontWeight: 'bold' }}>
-        数据清理
-      </button>
+      {/* 主背包系统 */}
+      <button onClick={openInventoryOOPModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#8B4513', border: 'none', borderRadius: '3px' }}>背包OOP</button>
+      {/* 召唤兽系统 */}
+      {/* 面向对象召唤兽演示系统 */}
+      <button onClick={openDataClearPanel} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#ff6b35', border: 'none', borderRadius: '3px' }}>测试系统</button>
+      {/* 装备关系管理演示 */}
     </div>
   ); };
 
@@ -541,6 +534,18 @@ const App = () => {
           </CommonModal>
           
         </>
+      )}
+
+      {/* 装备关系管理演示Modal */}
+      {isEquipmentRelationDemoOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '95%', height: '95%', backgroundColor: 'white', borderRadius: '10px', overflow: 'auto' }}>
+            <div style={{ position: 'sticky', top: 0, right: 0, textAlign: 'right', padding: '10px', backgroundColor: 'white', borderBottom: '1px solid #ccc' }}>
+              <button onClick={() => setIsEquipmentRelationDemoOpen(false)} style={{ padding: '5px 10px', backgroundColor: '#ff4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>关闭</button>
+            </div>
+            <EquipmentRelationshipDemo />
+          </div>
+        </div>
       )}
 
       <ToastContainer toasts={toasts} setToasts={setToasts} />

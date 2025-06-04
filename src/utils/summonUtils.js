@@ -2,29 +2,28 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-02 02:52:53
+ * @LastEditTime: 2025-06-05 06:31:53
  */
-import { summonConfig } from '@/config/summon/summonConfig';
-import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '@/config/config';
-import { getRaceBonus } from '@/config/summon/raceConfig';
-import { unlockSummon } from '@/store/slices/summonCatalogSlice';
-import { generateUniqueId } from '@/utils/idUtils';
-import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from "@/config/enumConfig";
+import { summonConfig } from '../config/summon/summonConfig';
+import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '../config/config';
+import { unlockSummon } from '../store/slices/summonCatalogSlice';
+import { generateUniqueId } from './idUtils';
+import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES, ATTRIBUTE_TYPES } from "../config/enumConfig";
+import { SUMMON_NATURE_TYPES, SUMMON_NATURE_CONFIG } from '../config/enumConfig';
+import { personalityConfig, getRandomPersonalityId, PERSONALITY_EFFECT_MODIFIER, PERSONALITY_TYPES,EXTREME_POSITIVE_MODIFIER } from '../config/summon/personalityConfig';
 
 /**
  * 计算召唤兽的派生属性
  * @param {Object} basicAttributesWithPoints - 基础属性加点后的值
  * @param {Object} equippedItemsDataMap - 装备数据映射
  * @param {number} currentLevel - 当前等级
- * @param {string} race - 种族
  * @returns {Object} 派生属性计算结果
  */
-export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel, race) => {
+export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel) => {
   console.log('[calculateDerivedAttributes] 输入参数:');
   console.log('  basicAttributesWithPoints:', basicAttributesWithPoints);
   console.log('  equippedItemsDataMap:', equippedItemsDataMap);
   console.log('  currentLevel:', currentLevel);
-  console.log('  race:', race);
 
   const derived = {};
   const equipmentContributions = {}; // 装备提供的所有加成
@@ -69,14 +68,6 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
   console.log('  equipmentBonusesToBasic:', equipmentBonusesToBasic);
   console.log('  finalBasicAttributes:', finalBasicAttributes);
   
-  // 应用种族加成
-  if (race) {
-    for (const attrKey in finalBasicAttributes) {
-      const raceBonus = getRaceBonus(race, attrKey);
-      finalBasicAttributes[attrKey] = Math.floor(finalBasicAttributes[attrKey] * raceBonus);
-    }
-  }
-
   // 2. 基于最终基础属性计算派生属性
   for (const [attrKey, config] of Object.entries(derivedAttributeConfig)) {
     let value = 0;
@@ -115,15 +106,15 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
   const mdef = derived.magicalDefense || 0;
   const speed = derived.speed || 0;
   const level = currentLevel || 1;
-  let qualityMultiplier = 1;
-  if (basicAttributesWithPoints.quality) {
-    // 如果传入了quality字段
-    const idx = qualityConfig.names.indexOf(basicAttributesWithPoints.quality);
-    qualityMultiplier = qualityConfig.attributeMultipliers[idx] || 1;
-  }
+  // let qualityMultiplier = 1; // qualityMultiplier logic removed
+  // if (basicAttributesWithPoints.quality) {
+  //   // 如果传入了quality字段
+  //   const idx = qualityConfig.names.indexOf(basicAttributesWithPoints.quality);
+  //   qualityMultiplier = qualityConfig.attributeMultipliers[idx] || 1;
+  // }
   // 简单加权公式，可根据实际调整
   const power = Math.floor(
-    hp * 0.2 + mp * 0.1 + patk * 1.2 + matk * 1.2 + pdef * 0.8 + mdef * 0.8 + speed * 1.0 + level * 10 * qualityMultiplier
+    hp * 0.2 + mp * 0.1 + patk * 1.2 + matk * 1.2 + pdef * 0.8 + mdef * 0.8 + speed * 1.0 + level * 10 // qualityMultiplier removed from calculation
   );
 
   return {
@@ -187,16 +178,17 @@ const shuffleArray = (array) => {
  * @param {Object} params - 生成召唤兽所需的参数
  * @param {string} params.summonSourceId - 召唤兽的ID
  * @param {string} params.quality - 召唤兽的品质
+ * @param {string} params.natureType - 召唤兽类型 (wild/baby/mutant)，默认为野生
  * @param {SUMMON_SOURCES[keyof SUMMON_SOURCES]} params.source - 召唤兽的来源 (using enum values)
  * @param {Function} params.dispatch - Redux dispatch 函数
  * @returns {Object} 新的召唤兽数据
  */
-export const generateNewSummon = ({ summonSourceId, quality, source, dispatch }) => {
+export const generateNewSummon = ({ summonSourceId, quality, natureType = 'wild', source, dispatch }) => {
   // 记录到图鉴
   if (dispatch) {
     dispatch(unlockSummon({
       summonSourceId,
-      quality
+      quality: summonData.quality
     }));
   }
 
@@ -204,6 +196,10 @@ export const generateNewSummon = ({ summonSourceId, quality, source, dispatch })
   if (!summonData) {
     throw new Error(`找不到召唤兽配置：${summonSourceId}`);
   }
+
+  // 获取召唤兽类型配置，默认为野生
+  const currentNatureType = natureType || SUMMON_NATURE_TYPES.WILD;
+  const natureConfig = SUMMON_NATURE_CONFIG[currentNatureType] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
 
   const summonId = generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON);
 
@@ -241,15 +237,63 @@ export const generateNewSummon = ({ summonSourceId, quality, source, dispatch })
   // 确保最终技能列表中的技能是唯一的 (尽管上面的逻辑试图避免重复)
   finalSkillSet = [...new Set(finalSkillSet)];
 
+  // 根据召唤兽类型确定初始等级
+  const [minLevel, maxLevel] = natureConfig.initialLevelRange;
+  const initialLevel = minLevel === maxLevel ? minLevel : Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel;
+
+  // 计算基础属性（应用类型倍数）
+  const baseAttributes = {};
+  if (summonData.basicAttributeRanges) {
+    Object.keys(summonData.basicAttributeRanges).forEach(attr => {
+      const [min, max] = summonData.basicAttributeRanges[attr];
+      const baseValue = getRandomAttribute(min, max);
+      // 应用召唤兽类型的属性倍数
+      baseAttributes[attr] = Math.floor(baseValue * natureConfig.baseAttributeMultiplier);
+    });
+  }
+
+  // ---- START: Apply Personality Modifiers ----
+  const personalityId = getRandomPersonalityId();
+  const selectedPersonality = personalityConfig[personalityId];
+
+  if (selectedPersonality && selectedPersonality.id !== PERSONALITY_TYPES.NEUTRAL) {
+    if (selectedPersonality.isExtreme) {
+      const { extremeStat, decreasedStat1, decreasedStat2 } = selectedPersonality;
+      if (extremeStat && baseAttributes.hasOwnProperty(extremeStat)) {
+        baseAttributes[extremeStat] = Math.floor(baseAttributes[extremeStat] * (1 + EXTREME_POSITIVE_MODIFIER));
+      }
+      if (decreasedStat1 && baseAttributes.hasOwnProperty(decreasedStat1)) {
+        baseAttributes[decreasedStat1] = Math.floor(baseAttributes[decreasedStat1] * (1 - PERSONALITY_EFFECT_MODIFIER)); // Using normal negative for decreased
+      }
+      if (decreasedStat2 && baseAttributes.hasOwnProperty(decreasedStat2)) {
+        baseAttributes[decreasedStat2] = Math.floor(baseAttributes[decreasedStat2] * (1 - PERSONALITY_EFFECT_MODIFIER)); // Using normal negative for decreased
+      }
+    } else {
+      const { increasedStat, decreasedStat } = selectedPersonality;
+      if (increasedStat && baseAttributes.hasOwnProperty(increasedStat)) {
+        baseAttributes[increasedStat] = Math.floor(baseAttributes[increasedStat] * (1 + PERSONALITY_EFFECT_MODIFIER));
+      }
+      if (decreasedStat && baseAttributes.hasOwnProperty(decreasedStat)) {
+        baseAttributes[decreasedStat] = Math.floor(baseAttributes[decreasedStat] * (1 - PERSONALITY_EFFECT_MODIFIER));
+      }
+    }
+  }
+  // ---- END: Apply Personality Modifiers ----
+
+  // 计算初始潜力点（宝宝和变异从0级开始，获得更多潜力点）
+  const basePotentialPoints = initialLevel > 0 ? 0 : natureConfig.potentialPointsBonus;
+
   // 基础数据结构
   const newSummon = {
     id: summonId,
     summonSourceId: summonSourceId,
     nickname: summonData.name,
-    level: 1,
-    quality: quality,
+    level: initialLevel,
+    quality: summonData.quality,
+    natureType: currentNatureType, // 新增：召唤兽类型
+    personalityId: personalityId, // 新增：召唤兽性格ID
     experience: 0,
-    potentialPoints: 0,
+    potentialPoints: basePotentialPoints,
     allocatedPoints: {
       constitution: 0,
       strength: 0,
@@ -257,28 +301,12 @@ export const generateNewSummon = ({ summonSourceId, quality, source, dispatch })
       intelligence: 0,
       luck: 0
     },
-    basicAttributes: summonData.basicAttributeRanges ? {
-      constitution: getRandomAttribute(...summonData.basicAttributeRanges.constitution),
-      strength: getRandomAttribute(...summonData.basicAttributeRanges.strength),
-      agility: getRandomAttribute(...summonData.basicAttributeRanges.agility),
-      intelligence: getRandomAttribute(...summonData.basicAttributeRanges.intelligence),
-      luck: getRandomAttribute(...summonData.basicAttributeRanges.luck)
-    } : {},
+    basicAttributes: baseAttributes,
     skillSet: finalSkillSet, // 使用新生成的技能列表
     equippedItemIds: {},
-    race: summonData.race,
     source: source,
     obtainedAt: new Date().toISOString(),
   };
-
-  // 根据品质调整属性
-  if (quality) {
-    const qualityIndex = qualityConfig.names.indexOf(quality);
-    const qualityMultiplier = qualityConfig.attributeMultipliers[qualityIndex] || 1;
-    Object.keys(newSummon.basicAttributes).forEach(attr => {
-      newSummon.basicAttributes[attr] = Math.floor(newSummon.basicAttributes[attr] * qualityMultiplier);
-    });
-  }
 
   return newSummon;
 };

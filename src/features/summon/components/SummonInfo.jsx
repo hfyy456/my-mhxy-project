@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import ReactDOM from 'react-dom';
 // 移除Redux相关导入，使用OOP召唤兽管理系统
 import { useSummonManager } from "@/hooks/useSummonManager";
 import {
@@ -12,66 +13,67 @@ import {
   getQualityDisplayName,
   getAttributeDisplayName,
   getSkillTypeDisplayName,
-  getRaceTypeDisplayName,
   getSkillModeDisplayName,
   getFiveElementDisplayName,
+  getSummonNatureTypeDisplayName,
 } from "@/config/ui/uiTextConfig";
 import { equipmentQualityConfig } from "@/config/item/summonEquipmentConfig";
-import { FIVE_ELEMENT_COLORS } from "@/config/enumConfig";
+import { SUMMON_NATURE_CONFIG, FIVE_ELEMENT_COLORS, ATTRIBUTE_TYPES } from "@/config/enumConfig";
+import { personalityConfig, getPersonalityDisplayName, PERSONALITY_EFFECT_MODIFIER, PERSONALITY_TYPES } from "@/config/summon/personalityConfig";
 import {
   useEquipmentSlotConfig,
-  useInventoryActions,
 } from "@/hooks/useInventoryManager";
-import inventoryManager from "@/store/InventoryManager";
+import { useEquipmentRelationship, useSummonEquipmentStatus } from '../../../hooks/useEquipmentRelationship';
+import inventoryManager from '@/store/InventoryManager'; // Import InventoryManager instance
 
-// 修改ItemTooltip组件
+// Restore ItemTooltip to a simpler version based on user feedback
 const ItemTooltip = ({ item, position }) => {
-  const itemQualityColorName = item.quality
-    ? equipmentQualityConfig.colors[item.quality] || "normal"
-    : "normal";
+  if (!item) return null;
 
-  // 格式化属性值的显示
+  const itemQuality = item.quality || 'normal'; 
+  // Use optional chaining for safety, fallback to a default color like white or a specific gray
+  const qualityColorForName = equipmentQualityConfig?.textColors?.[itemQuality] || equipmentQualityConfig?.colors?.[itemQuality] || '#FFFFFF'; 
+  const qualityColorForDisplay = equipmentQualityConfig?.textColors?.[itemQuality] || '#DDDDDD'; // Color for the (QualityName) part
+
   const formatAttributeValue = (stat, value) => {
-    // 处理百分比属性
     const percentageStats = [
-      "critRate",
-      "critDamage",
-      "dodgeRate",
-      "fireResistance",
-      "waterResistance",
-      "thunderResistance",
-      "windResistance",
-      "earthResistance",
+      "critRate", "critDamage", "dodgeRate",
+      "fireResistance", "waterResistance", "thunderResistance",
+      "windResistance", "earthResistance",
     ];
     if (percentageStats.includes(stat)) {
       return `${(value * 100).toFixed(1)}%`;
     }
-    // 处理整数属性
     return Math.floor(value);
   };
 
+  // Restore original className and dynamic positioning via position prop
   return (
     <div
       className="fixed bg-black bg-opacity-90 border border-slate-700 rounded-lg shadow-2xl p-3 text-sm text-white z-[100] pointer-events-none transition-opacity duration-150 opacity-100 max-w-xs"
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: position ? `${position.x}px` : '-10000px', // Position off-screen if no position
+        top: position ? `${position.y}px` : '-10000px',  // Position off-screen if no position
       }}
     >
       <div className="flex justify-between items-center mb-2">
-        <span className={`text-${itemQualityColorName} font-medium`}>
-          {item.name}
+        <span className={`font-medium`} style={{ color: qualityColorForName }}> 
+          {item.name || "Unnamed Item"}
         </span>
-        <span className={`text-sm text-${itemQualityColorName}`}>
-          ({getQualityDisplayName(item.quality)})
-        </span>
+        {item.quality && (
+          <span className={`text-sm`} style={{ color: qualityColorForDisplay }}> 
+            ({getQualityDisplayName(item.quality)})
+          </span>
+        )}
       </div>
 
-      <p className="text-gray-300 text-xs mb-2">{item.description}</p>
+      {item.description && (
+        <p className="text-xs mb-2 text-gray-300">{item.description}</p>
+      )}
 
       {item.finalEffects && Object.keys(item.finalEffects).length > 0 && (
         <div className="mt-2 pt-2 border-t border-slate-700">
-          <p className="text-slate-200 font-semibold mb-1 text-xs">属性加成:</p>
+          <p className="font-semibold mb-1 text-xs text-slate-200">属性加成:</p>
           {Object.entries(item.finalEffects).map(([stat, value]) => (
             <p key={stat} className="text-xs flex justify-between">
               <span className="text-gray-400">
@@ -121,70 +123,29 @@ const SummonInfo = ({
     error
   } = useSummonManager();
   
+  // 实例化新的装备关系 Hook
+  const { unequipFromSlot } = useEquipmentRelationship();
+
   const [isReleaseConfirmOpen, setIsReleaseConfirmOpen] = useState(false);
+
+  // Tooltip State
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipItem, setTooltipItem] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const tooltipTimeoutRef = useRef(null);
 
   // 使用装备槽位配置Hook
   const { slotConfig, getSlotDisplayName, getSlotIcon } =
     useEquipmentSlotConfig();
-  const { getSummonEquipmentStatus } = useInventoryActions();
 
-  // 简化装备数据获取 - 直接从召唤兽实例获取装备数据
-  const [equippedItems, setEquippedItems] = React.useState({});
-  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
-
-  useEffect(() => {
-    const loadEquippedItems = async () => {
-      if (!summon?.id) {
-        setEquippedItems({});
-        return;
-      }
-
-      try {
-        // 获取召唤兽实例
-        const summonInstance = getSummonById(summon.id);
-        if (!summonInstance) {
-          console.warn(`[SummonInfo] 找不到召唤兽: ${summon.id}`);
-          setEquippedItems({});
-          return;
-        }
-
-        // 直接从召唤兽实例获取装备数据
-        const equippedItemsData = await summonInstance.getEquippedItems();
-        setEquippedItems(equippedItemsData);
-        
-        console.log("[SummonInfo] 装备数据已加载:", equippedItemsData);
-      } catch (error) {
-        console.error("[SummonInfo] 加载装备数据失败:", error);
-        setEquippedItems({});
-      }
-    };
-
-    loadEquippedItems();
-  }, [summon?.id, getSummonById, refreshTrigger]);
-
-  // 监听装备变化事件并强制刷新
-  React.useEffect(() => {
-    const handleEquipmentChange = () => {
-      console.log('[SummonInfo] 装备变化事件触发，强制刷新数据');
-      setRefreshTrigger(prev => prev + 1);
-      
-      // 延迟一点再刷新，确保数据同步
-      setTimeout(() => {
-        setRefreshTrigger(prev => prev + 1);
-      }, 100);
-    };
-
-    // 监听InventoryManager的装备事件
-    inventoryManager.on("item_equipped_to_summon", handleEquipmentChange);
-    inventoryManager.on("item_unequipped_from_summon", handleEquipmentChange);
-    inventoryManager.on("inventory_changed", handleEquipmentChange);
-
-    return () => {
-      inventoryManager.off("item_equipped_to_summon", handleEquipmentChange);
-      inventoryManager.off("item_unequipped_from_summon", handleEquipmentChange);
-      inventoryManager.off("inventory_changed", handleEquipmentChange);
-    };
-  }, [summon?.id]);
+  // 使用装备关系Hook获取装备状态
+  const {
+    equipment,
+    equippedItemIds,
+    isEmpty: hasNoEquipment,
+    getItemInSlot,
+    hasItemInSlot
+  } = useSummonEquipmentStatus(summon?.id);
 
   // 从召唤兽实例获取数据，确保数据的准确性
   const {
@@ -208,19 +169,21 @@ const SummonInfo = ({
     },
     nickname,
     power,
+    natureType,
+    personalityId,
   } = summon || {};
 
   // 添加调试日志
   React.useEffect(() => {
     console.log("[SummonInfo] 召唤兽数据:", {
       summon: summon,
-      equippedItems: equippedItems,
+      equipmentFromHook: equipment,
       equipmentContributions: equipmentContributions,
       equipmentBonusesToBasic: equipmentBonusesToBasic,
       derivedAttributes: derivedAttributes,
       power: power
     });
-  }, [summon, equippedItems, equipmentContributions, equipmentBonusesToBasic, derivedAttributes, power]);
+  }, [summon, equipment, equipmentContributions, equipmentBonusesToBasic, derivedAttributes, power]);
 
   const qualityIndex = qualityConfig.names.indexOf(quality);
   const qualityColorName = quality
@@ -245,36 +208,148 @@ const SummonInfo = ({
   }
   progressPercentage = Math.min(Math.max(progressPercentage, 0), 100);
 
-  const handleEquipItem = (slotType) => {
+  const handleEquipmentSlotClick = useCallback(async (slotType) => {
     if (!summon) return;
-    console.log("[SummonInfo] handleEquipItem called for slot:", slotType);
-    if (typeof onOpenEquipmentSelectorForSlot === "function") {
-      onOpenEquipmentSelectorForSlot(slotType);
+
+    const itemId = equipment?.[slotType];
+    const currentEquippedItem = itemId ? inventoryManager.getItemById(itemId) : null;
+
+    if (currentEquippedItem) {
+      if (window.confirm(`是否卸下 ${currentEquippedItem.name || '该装备'} (${getSlotDisplayName(slotType)})？`)) {
+        try {
+          const success = await unequipFromSlot(summon.id, slotType);
+          if (success) {
+            console.log(`[SummonInfo] 成功从槽位 ${slotType} 卸下装备 ${currentEquippedItem.name}`);
+          } else {
+            console.warn(`[SummonInfo] 从槽位 ${slotType} 卸下装备 ${currentEquippedItem.name} 失败`);
+          }
+        } catch (error) {
+          console.error(`[SummonInfo] 卸下装备 ${currentEquippedItem.name} 时发生错误:`, error);
+        }
+      }
     } else {
-      console.warn(
-        "[SummonInfo] onOpenEquipmentSelectorForSlot is not a function"
-      );
+      if (onOpenEquipmentSelectorForSlot) {
+        onOpenEquipmentSelectorForSlot(summon.id, slotType);
+      }
     }
+  }, [summon, equipment, unequipFromSlot, onOpenEquipmentSelectorForSlot, getSlotDisplayName, inventoryManager]);
+
+  const renderEquipmentSlots = () => {
+    if (!slotConfig) return null;
+
+    const slotsToRender = slotConfig.filter(
+      (slot) => slot.type !== "unknown" && slot.type !== "special"
+    );
+
+    return slotsToRender.map((slot) => {
+      const itemId = equipment?.[slot.type];
+      const actualEquippedItem = itemId ? inventoryManager.getItemById(itemId) : null;
+
+      const itemQuality = actualEquippedItem?.quality || "normal";
+      const qualityColorDetail = equipmentQualityConfig.colors[itemQuality] || equipmentQualityConfig.colors.normal;
+      
+      const borderColorClass = actualEquippedItem ? `border-${qualityColorDetail}` : 'border-slate-600';
+      const iconColorClass = actualEquippedItem ? `text-${qualityColorDetail}` : "text-slate-400";
+      const nameColorClass = actualEquippedItem ? `text-${qualityColorDetail}` : "text-slate-300";
+      // Use actualEquippedItem.icon if available, otherwise default slot.icon from config
+      const slotIconToDisplay = actualEquippedItem?.icon || slot.icon || 'fa-question-circle'; 
+      // Use actualEquippedItem.name if available, otherwise default slot.displayName from config
+      const slotNameToDisplay = actualEquippedItem?.name || slot.displayName;
+
+      return (
+        <div
+          key={slot.type}
+          className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group`}
+          onClick={() => handleEquipmentSlotClick(slot.type)}
+          onMouseEnter={(e) => {
+            const eventTimestamp = Date.now(); // Add a timestamp for easier log corellation
+            if (actualEquippedItem) {
+              clearTimeout(tooltipTimeoutRef.current);
+              const rect = e.currentTarget.getBoundingClientRect();
+              const screenWidth = window.innerWidth;
+              const screenHeight = window.innerHeight;
+              const tooltipWidth = 280; 
+              const tooltipHeightEstimate = 150;
+
+            
+
+              let xPos = rect.right + 5; 
+
+              if (xPos + tooltipWidth > screenWidth) {
+                xPos = rect.left - tooltipWidth - 5;
+              }
+
+              if (xPos < 0) {
+                xPos = 5;
+              }
+
+              let yPos = rect.top;
+              
+              if (yPos + tooltipHeightEstimate > screenHeight) {
+                console.log(`[SummonInfo ${eventTimestamp}] Tooltip (height: ${tooltipHeightEstimate}) would go off bottom screen edge (${yPos + tooltipHeightEstimate} > ${screenHeight}). Repositioning higher.`);
+                yPos = screenHeight - tooltipHeightEstimate - 5;
+                console.log(`[SummonInfo ${eventTimestamp}] New yPos (adjusted from bottom): ${yPos}`);
+              }
+
+              if (yPos < 0) {
+                console.log(`[SummonInfo ${eventTimestamp}] Tooltip would go off top screen edge (${yPos} < 0). Adjusting to 5.`);
+                yPos = 5;
+              }
+              
+              console.log(`[SummonInfo ${eventTimestamp}] Attempting to setTooltipPosition with: xPos=${xPos}, yPos=${yPos}`);
+              
+              // Prepare item for Tooltip, ensuring finalEffects is present
+              const itemForTooltip = {
+                ...actualEquippedItem,
+                finalEffects: actualEquippedItem.finalEffects || actualEquippedItem.effects
+              };
+
+              // Log the item being sent to the tooltip, including the potentially aliased finalEffects
+              console.log('[SummonInfo onMouseEnter] itemForTooltip (with finalEffects):', JSON.stringify(itemForTooltip, null, 2));
+              
+              setTooltipPosition({ x: xPos, y: yPos });
+              setTooltipItem(itemForTooltip); // Use the modified item
+              setTooltipVisible(true); 
+            } else {
+              console.log(`[SummonInfo ${eventTimestamp}] actualEquippedItem is NOT present. Tooltip will not show.`);
+            }
+          }}
+          onMouseLeave={(e) => {
+            const eventTimestamp = Date.now();
+            console.log(`[SummonInfo] MouseLeave triggered at ${eventTimestamp}`);
+            setTooltipVisible(false);
+          }}
+        >
+          <div className="w-10 h-10 flex items-center justify-center mb-1 text-2xl">
+            <i className={`fas ${slotIconToDisplay} ${iconColorClass}`}></i>
+          </div>
+          <p className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}>
+            {slotNameToDisplay}
+          </p>
+          {actualEquippedItem && (
+            <span
+              className={`absolute top-1 right-1 text-[10px] px-1 rounded-sm bg-slate-900 bg-opacity-70 ${nameColorClass}`}
+            >
+              Lv.{actualEquippedItem.level || "-"}
+            </span>
+          )}
+          {actualEquippedItem && (
+            <div
+              className={`absolute bottom-1 left-1 w-2 h-2 rounded-full bg-green-400`}
+              title="已装备"
+            />
+          )}
+          {!actualEquippedItem && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                点击装备
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    });
   };
-
-  // 使用正确的装备槽位配置
-  const displayEquipmentSlots = slotConfig.map((slotConfigItem) => ({
-    type: slotConfigItem.type,
-    defaultIcon: slotConfigItem.icon,
-    displayTypeName: slotConfigItem.displayName,
-    description: slotConfigItem.description,
-  }));
-
-  const displayName =
-    summonConfig[summonSourceId]?.name ||
-    summonSourceId ||
-    uiText.general.unknown;
-
-  // 添加tooltip状态
-  const [tooltipItem, setTooltipItem] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const tooltipTimeoutRef = React.useRef(null);
 
   if (!summon) {
     return <div className="text-white">{uiText.general.loading}</div>;
@@ -330,102 +405,6 @@ const SummonInfo = ({
     setIsReleaseConfirmOpen(false);
   };
 
-  // 修改装备槽渲染部分
-  const renderEquipmentSlots = () => {
-    return displayEquipmentSlots.map((slot) => {
-      const equippedItem = equippedItems[slot.type];
-
-      const itemQuality = equippedItem?.quality || "normal";
-      const qualityColorDetail =
-        equipmentQualityConfig.colors[itemQuality] ||
-        equipmentQualityConfig.colors.normal;
-
-      const borderColorClass = `border-${qualityColorDetail}`;
-      const iconColorClass = equippedItem
-        ? `text-${qualityColorDetail}`
-        : "text-slate-400";
-      const nameColorClass = equippedItem
-        ? `text-${qualityColorDetail}`
-        : "text-slate-300";
-
-      return (
-        <div
-          key={slot.type}
-          className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group`}
-          onClick={() => handleEquipItem(slot.type)}
-          title={slot.description}
-          onMouseEnter={(e) => {
-            if (equippedItem) {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const screenWidth = window.innerWidth;
-              const tooltipWidth = 280; // 估算tooltip宽度
-              const x =
-                rect.left + rect.width + tooltipWidth > screenWidth
-                  ? rect.left - tooltipWidth - 5
-                  : rect.left + rect.width + 5;
-
-              let y = rect.top;
-              const tooltipHeight = 150; // 估算tooltip高度
-              if (rect.top + tooltipHeight > window.innerHeight) {
-                y = window.innerHeight - tooltipHeight - 5;
-              }
-              if (y < 0) y = 5;
-
-              setTooltipPosition({ x, y });
-              setTooltipItem(equippedItem);
-              tooltipTimeoutRef.current = setTimeout(
-                () => setTooltipVisible(true),
-                300
-              );
-            }
-          }}
-          onMouseLeave={() => {
-            clearTimeout(tooltipTimeoutRef.current);
-            setTooltipVisible(false);
-          }}
-        >
-          <div className="w-10 h-10 flex items-center justify-center mb-1 text-2xl">
-            <i
-              className={`fas ${
-                equippedItem && equippedItem.icon
-                  ? equippedItem.icon
-                  : slot.defaultIcon
-              } ${iconColorClass}`}
-            ></i>
-          </div>
-          <p
-            className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}
-          >
-            {equippedItem ? equippedItem.name : slot.displayTypeName}
-          </p>
-          {/* 显示装备等级和品质指示器 */}
-          {equippedItem && (
-            <span
-              className={`absolute top-1 right-1 text-[10px] px-1 rounded-sm bg-slate-900 bg-opacity-70 ${nameColorClass}`}
-            >
-              Lv.{equippedItem.level || "-"}
-            </span>
-          )}
-          {/* 显示装备状态指示器 */}
-          {equippedItem && (
-            <div
-              className={`absolute bottom-1 left-1 w-2 h-2 rounded-full bg-green-400`}
-              title="已装备"
-            />
-          )}
-          {/* 空槽位提示 */}
-          {!equippedItem && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
-                点击装备
-              </span>
-            </div>
-          )}
-        </div>
-      );
-    });
-  };
-
   return (
     <div className="flex flex-col space-y-4">
       {/* Left Column */}
@@ -439,7 +418,7 @@ const SummonInfo = ({
                   : "border-slate-500"
               } shadow-lg rounded-lg transition-all duration-300`}
               src={imageUrl}
-              alt={name}
+              alt={summon.name}
               onError={(e) => {
                 e.target.src =
                   images["/src/assets/summons/default.png"].default;
@@ -491,27 +470,53 @@ const SummonInfo = ({
                 </span>
               </div>
 
-              {/* Race Tag */}
-              <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
-                <i className="fas fa-paw text-sky-400 mr-2"></i>
-                <span className="text-xs font-semibold text-gray-100 ">
-                  {getRaceTypeDisplayName(summon.race)}
-                </span>
-              </div>
+              {/* Nature Type Tag - Corrected and uses SUMMON_NATURE_CONFIG */}
+              {natureType && SUMMON_NATURE_CONFIG[natureType] && (
+                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${SUMMON_NATURE_CONFIG[natureType].bgColor || 'bg-slate-600/50'}`}>
+                  <i className={`fas mr-2 ${
+                    natureType === 'wild' ? 'fa-tree' : 
+                    natureType === 'baby' ? 'fa-baby' :
+                    natureType === 'mutant' ? 'fa-dna' :
+                    'fa-question' 
+                  } ${SUMMON_NATURE_CONFIG[natureType].color || 'text-gray-400'}`}></i>
+                  <span className={`text-xs font-semibold ${SUMMON_NATURE_CONFIG[natureType].color || 'text-white'}`}>
+                    {getSummonNatureTypeDisplayName(natureType)}
+                  </span>
+                </div>
+              )}
 
-              {/* Five Element Tag */}
-              {(summon.fiveElement ||
-                summonConfig[summon.summonSourceId]?.fiveElement) && (
+              {/* Personality Tag - New */} 
+              {personalityId && personalityConfig[personalityId] && (
+                <div className={`flex items-center bg-slate-600/80 px-3 py-1.5 rounded-lg shadow`}>
+                  <i className={`fas fa-grin-stars mr-2 text-yellow-300`}></i> 
+                  <span className={`text-xs font-semibold text-white`}>
+                    {getPersonalityDisplayName(personalityId)}
+                  </span>
+                </div>
+              )}
+
+              {/* Five Element Tag - Corrected to use FIVE_ELEMENT_COLORS */}
+              {(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement) && (
                 <div
                   className={`flex items-center px-3 py-1.5 rounded-lg shadow ${
                     FIVE_ELEMENT_COLORS[
                       summon.fiveElement ||
                         summonConfig[summon.summonSourceId]?.fiveElement
-                    ] || "bg-gray-500 text-white"
+                    ]?.bgColor || 'bg-slate-600/50' 
                   }`}
                 >
-                  <i className="fas fa-adjust mr-2"></i>
-                  <span className="text-xs font-semibold">
+                  <i className={`fas fa-circle mr-2 ${
+                    FIVE_ELEMENT_COLORS[
+                      summon.fiveElement ||
+                        summonConfig[summon.summonSourceId]?.fiveElement
+                    ]?.textColor || 'text-gray-400'
+                  }`}></i>
+                  <span className={`text-xs font-semibold ${
+                    FIVE_ELEMENT_COLORS[
+                      summon.fiveElement ||
+                        summonConfig[summon.summonSourceId]?.fiveElement
+                    ]?.textColor || 'text-white'
+                  }`}>
                     {getFiveElementDisplayName(
                       summon.fiveElement ||
                         summonConfig[summon.summonSourceId]?.fiveElement
@@ -626,9 +631,33 @@ const SummonInfo = ({
               {BASIC_ATTRIBUTE_KEYS.map(({ key, name: attrDisplayName }) => {
                 const allocatedVal = allocatedPoints[key] || 0;
                 const equipmentBonus = equipmentBonusesToBasic[key] || 0;
-                const currentBaseAttr = basicAttributes[key] || 0;
-                const totalVal =
-                  currentBaseAttr + allocatedVal + equipmentBonus;
+                const currentBaseAttr = basicAttributes[key] || 0; // This now includes personality effects from generation
+                
+                const displayValue = currentBaseAttr + allocatedVal + equipmentBonus;
+                let personalityEffectIndicator = "";
+                let indicatorColorClass = "";
+
+                // Determine if the current attribute (key) is affected by personality for indicator purposes
+                if (personalityId && personalityConfig[personalityId] && personalityConfig[personalityId].id !== PERSONALITY_TYPES.NEUTRAL) {
+                  const selectedPersonality = personalityConfig[personalityId];
+                  if (selectedPersonality.isExtreme) {
+                    if (selectedPersonality.extremeStat === key) {
+                      personalityEffectIndicator = " (++)";
+                      indicatorColorClass = "text-emerald-400"; // Brighter green for extreme positive
+                    } else if (selectedPersonality.decreasedStat1 === key || selectedPersonality.decreasedStat2 === key) {
+                      personalityEffectIndicator = " (-)";
+                      indicatorColorClass = "text-red-400";
+                    }
+                  } else {
+                    if (selectedPersonality.increasedStat === key) {
+                      personalityEffectIndicator = " (+)";
+                      indicatorColorClass = "text-green-400";
+                    } else if (selectedPersonality.decreasedStat === key) {
+                      personalityEffectIndicator = " (-)";
+                      indicatorColorClass = "text-red-400";
+                    }
+                  }
+                }
 
                 return (
                   <li
@@ -644,7 +673,8 @@ const SummonInfo = ({
                         {equipmentBonus})
                       </span>
                       <span className="font-semibold text-white text-sm">
-                        {totalVal}
+                        {displayValue}
+                        {personalityEffectIndicator && <span className={indicatorColorClass}>{personalityEffectIndicator}</span>}
                       </span>
                     </div>
                     <div className="flex items-center space-x-1.5 flex-shrink-0">
@@ -814,10 +844,19 @@ const SummonInfo = ({
         </div>
       </div>
 
-      {/* Tooltip Display */}
-      {tooltipVisible && tooltipItem && (
-        <ItemTooltip item={tooltipItem} position={tooltipPosition} />
-      )}
+      {/* Tooltip Display using Portal */}
+      {(() => {
+        if (typeof window !== 'undefined') {
+          const renderTimestamp = Date.now();
+        }
+        if (tooltipVisible && tooltipItem && document.body) {
+          return ReactDOM.createPortal(
+            <ItemTooltip item={tooltipItem} position={tooltipPosition} />,
+            document.body
+          );
+        }
+        return null;
+      })()}
 
       {/* 释放确认对话框 */}
       {isReleaseConfirmOpen && (
