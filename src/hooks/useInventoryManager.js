@@ -653,7 +653,7 @@ export function useInventoryMigration() {
         description: '锋利的钢铁长剑',
         slotType: 'weapon',
         effects: {
-          attack: 25,
+          physicalAttack: 25,
           critRate: 0.05
         }
       },
@@ -668,7 +668,7 @@ export function useInventoryMigration() {
         description: '简单的皮质护甲',
         slotType: 'armor',
         effects: {
-          defense: 15,
+          physicalDefense: 15,
           hp: 30
         }
       },

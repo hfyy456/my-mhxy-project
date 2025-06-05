@@ -210,8 +210,10 @@ class Summon {
     this.attributes = data.attributes || {
       hp: 100,
       mp: 50,
-      attack: 10,
-      defense: 10,
+      physicalAttack: 10,
+      magicalAttack: 10,
+      physicalDefense: 10,
+      magicalDefense: 10,
       speed: 10
     };
     this.skills = data.skills || [];

@@ -305,10 +305,7 @@ class SummonFusionManager extends EventEmitter {
    * 计算可能的五行属性
    */
   calculatePossibleElements(summon1, summon2, materials = []) {
-    const config1 = summonConfig[summon1.summonSourceId];
-    const config2 = summonConfig[summon2.summonSourceId];
-    
-    const possibleElements = [config1?.fiveElement, config2?.fiveElement].filter(Boolean);
+    const possibleElements = [summon1?.fiveElement, summon2?.fiveElement].filter(Boolean);
     
     // 五行石可以选择任意五行
     const hasFiveElementStone = materials.includes('five_element_stone');
@@ -334,13 +331,12 @@ class SummonFusionManager extends EventEmitter {
    * 获取五行相克加成
    */
   getElementCompatibilityBonus(summon1, summon2) {
-    const config1 = summonConfig[summon1.summonSourceId];
-    const config2 = summonConfig[summon2.summonSourceId];
+    if (!summon1?.fiveElement || !summon2?.fiveElement) {
+      return 0;
+    }
     
-    if (!config1 || !config2) return 0;
-    
-    const element1 = config1.fiveElement;
-    const element2 = config2.fiveElement;
+    const element1 = summon1.fiveElement;
+    const element2 = summon2.fiveElement;
     
     const compatibility = FUSION_RULES.ELEMENT_COMPATIBILITY[element1];
     return compatibility?.[element2] || 0;

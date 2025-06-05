@@ -1,11 +1,29 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-03 04:42:45
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-06 03:38:29
+ */
 /**
  * 简化版背包管理器 - 直接基于物品ID操作
  * 核心设计原则：简单直接、单一职责、易于维护
  */
 import { EventEmitter } from "events";
 import { generateUniqueId } from "@/utils/idUtils";
-import { EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
+import { EQUIPMENT_SLOT_TYPES, QUALITY_TYPES } from "@/config/enumConfig";
 import summonManager from './SummonManager'; // 直接导入SummonManager单例
+import { ITEM_BASE_CONFIG } from "@/config/item/inventoryConfig";
+import { applyQualityToEquipment, generateRandomQuality } from "@/config/item/equipmentConfig";
+
+// ===========================================
+// 辅助函数和常量
+// ===========================================
+const FLATTENED_ITEM_CONFIG = Object.values(ITEM_BASE_CONFIG)
+  .flatMap(category => Object.values(category))
+  .reduce((acc, item) => {
+    acc[item.id] = item;
+    return acc;
+  }, {});
 
 // ===========================================
 // 物品类继承体系 - 实现继承与多态
@@ -16,7 +34,8 @@ import summonManager from './SummonManager'; // 直接导入SummonManager单例
  */
 class Item {
   constructor(data) {
-    this.id = data.id || this.generateId();
+    this.id = data.id || generateUniqueId("item");
+    this.sourceId = data.sourceId || data.id; // 新增：用于查找配置模板的ID
     this.name = data.name || "";
     this.type = data.type || "misc";
     this.subType = data.subType || "";
@@ -139,6 +158,7 @@ class Item {
   toJSON() {
     return {
       id: this.id,
+      sourceId: this.sourceId, // 新增
       name: this.name,
       type: this.type,
       subType: this.subType,
@@ -273,7 +293,7 @@ class Consumable extends Item {
     });
     
     // 消耗品特有属性
-    this.useEffect = data.useEffect || {}; // 使用效果
+    this.useEffect = data.useEffect || data.effect || {}; // 使用效果
     this.cooldown = data.cooldown || 0; // 使用冷却时间
     this.lastUsed = data.lastUsed || 0; // 上次使用时间
   }
@@ -456,22 +476,58 @@ class QuestItem extends Item {
 // ===========================================
 class ItemFactory {
   static createItem(data) {
-    switch (data.type) {
-      case "equipment":
-        return new Equipment(data);
-      case "consumable":
-        return new Consumable(data);
-      case "material":
-        return new Material(data);
-      case "quest":
-        return new QuestItem(data);
+    if (!data || !data.sourceId) {
+      console.error("[ItemFactory] 关键错误: 物品数据无效或缺少 sourceId", data);
+      return null;
+    }
+
+    const baseItemConfig = FLATTENED_ITEM_CONFIG[data.sourceId];
+    if (!baseItemConfig) {
+      console.error(`[ItemFactory] 关键错误: 找不到ID为 ${data.sourceId} 的基础物品定义。`, data);
+      return null;
+    }
+
+    let finalItemData = { ...baseItemConfig, ...data };
+
+    // 如果是装备，需要特殊处理品质
+    if (finalItemData.type === 'equipment') {
+      const quality = data.quality || generateRandomQuality();
+      // applyQualityToEquipment 返回一个完整的装备对象，我们需要合并它
+      const equipmentWithQuality = applyQualityToEquipment(baseItemConfig, quality);
+      finalItemData = { ...equipmentWithQuality, ...data, quality };
+    }
+
+    const itemType = finalItemData.type;
+
+    switch (itemType) {
+      case 'equipment':
+        return new Equipment(finalItemData);
+      case 'consumable':
+        return new Consumable(finalItemData);
+      case 'material':
+        return new Material(finalItemData);
+      case 'quest':
+        return new QuestItem(finalItemData);
       default:
-        return new Item(data);
+        console.warn(`[ItemFactory] 未知的物品类型: ${itemType}`);
+        return new Item(finalItemData);
     }
   }
 
   static fromJSON(jsonData) {
-    return this.createItem(jsonData);
+    // fromJSON 应该直接使用jsonData创建，因为它已经是完整的物品数据
+    switch (jsonData.type) {
+      case "equipment":
+        return new Equipment(jsonData);
+      case "consumable":
+        return new Consumable(jsonData);
+      case "material":
+        return new Material(jsonData);
+      case "quest":
+        return new QuestItem(jsonData);
+      default:
+        return new Item(jsonData);
+    }
   }
 }
 
@@ -917,7 +973,8 @@ class InventoryManager extends EventEmitter {
 
     if (savedState.items) {
       savedState.items.forEach(([id, itemData]) => {
-        const item = ItemFactory.createItem(itemData);
+        // 添加一个标志，表示这是从存储中恢复的，数据是完整的
+        const item = ItemFactory.createItem({ ...itemData, isFromDeserialization: true });
         item.setInventory(this);
         this.items.set(id, item);
       });
@@ -940,94 +997,20 @@ class InventoryManager extends EventEmitter {
     if (this.items.size === 0) {
       console.log('[InventoryManager] 首次初始化，添加新手物品');
       
-      // 添加不同品质的新手物品
-      const starterItems = [
-        {
-          name: '新手生命药水',
-          type: 'consumable',
-          quality: 'common',
-          quantity: 3,
-          value: 10,
-          description: '恢复50点生命值的基础药水',
-          isConsumable: true,
-          useEffect: { type: 'heal', value: 50 }
-        },
-        {
-          name: '品质法力药水',
-          type: 'consumable',
-          quality: 'uncommon',
-          quantity: 2,
-          value: 25,
-          description: '恢复100点法力值的优质药水',
-          isConsumable: true,
-          useEffect: { type: 'mp_restore', value: 100 }
-        },
-        {
-          name: '精致铁剑',
-          type: 'equipment',
-          subType: 'weapon',
-          quality: 'rare',
-          quantity: 1,
-          value: 200,
-          level: 1,
-          description: '一把制作精良的铁质长剑',
-          slotType: 'accessory',
-          isEquipment: true,
-          effects: {
-            attack: 15,
-            critRate: 0.03
-          },
-          requirements: { level: 1 }
-        },
-        {
-          name: '传说护符',
-          type: 'equipment',
-          subType: 'accessory',
-          quality: 'legendary',
-          quantity: 1,
-          value: 500,
-          level: 1,
-          description: '蕴含神秘力量的传说级护符',
-          slotType: 'relic',
-          isEquipment: true,
-          effects: {
-            hp: 50,
-            mp: 30,
-            defense: 10
-          },
-          requirements: { level: 1 }
-        },
-        {
-          name: '史诗经验丹',
-          type: 'consumable',
-          quality: 'epic',
-          quantity: 1,
-          value: 100,
-          description: '含有巨大经验能量的史诗级丹药',
-          isConsumable: true,
-          useEffect: { type: 'experience', value: 10000 }
-        },
-        {
-          name: '炼妖石',
-          type: 'material',
-          quality: 'common',
-          quantity: 5,
-          value: 15,
-          description: '用于炼妖的基础材料'
-        },
-        {
-          name: '高级炼妖石',
-          type: 'material',
-          quality: 'rare',
-          quantity: 2,
-          value: 50,
-          description: '稀有的高级炼妖材料'
-        }
+      // 修正：使用 sourceId 来匹配新的 ItemFactory 逻辑
+      const starterItemDefs = [
+        { sourceId: 'starterHpPotion', quantity: 3 },
+        { sourceId: 'qualityMpPotion', quantity: 2 },
+        { sourceId: 'fineIronSword', quantity: 1, quality: QUALITY_TYPES.RARE },
+        { sourceId: 'legendaryAmulet', quantity: 1, quality: QUALITY_TYPES.LEGENDARY },
+        { sourceId: 'epicExpPill', quantity: 1 },
+        { sourceId: 'refinementStone', quantity: 5 },
+        { sourceId: 'advancedRefinementStone', quantity: 2 }
       ];
 
-      // 添加初始物品
-      starterItems.forEach(itemData => {
-        this.addItem(itemData);
+      starterItemDefs.forEach(itemDef => {
+        // 直接传递定义给 addItem，工厂会在内部处理
+        this.addItem(itemDef);
       });
 
       // 添加初始金币

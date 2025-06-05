@@ -39,7 +39,12 @@ class Summon {
     this.level = data.level || 1;
     this.experience = data.experience || 0;
     this.quality = data.quality || "normal";
-    this.fiveElement = data.fiveElement || "none";
+    
+    // 五行属性：优先使用传入的data.fiveElement，否则从配置中获取
+    this.fiveElement = data.fiveElement || 
+      (data.summonSourceId && summonConfig[data.summonSourceId]?.fiveElement) || 
+      "metal"; // 默认金属性而不是"none"
+    
     this.natureType = data.natureType || "wild";
     this.personalityId = data.personalityId || "neutral";
 

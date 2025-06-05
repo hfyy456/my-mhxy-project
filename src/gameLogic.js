@@ -13,7 +13,7 @@ import {
   STANDARD_EQUIPMENT_SLOTS,
   // levelExperienceRequirements // Not directly used here, OOP SummonManager will handle
 } from "@/config/config";
-import { summonEquipmentConfig, getEquipmentWithQualityEffects } from "@/config/item/summonEquipmentConfig";
+import { applyQualityToEquipment, generateRandomQuality } from "@/config/item/equipmentConfig";
 import { 
   SKILL_MODES,
   UNIQUE_ID_PREFIXES,
@@ -60,72 +60,38 @@ export const getRandomSkill = () => {
 
 // 获取随机装备
 export const getRandomEquipment = () => {
-  // 随机选择一个装备类型 (category/slotType)
-  const equipmentCategories = Object.keys(summonEquipmentConfig);
-  const randomCategory = equipmentCategories[Math.floor(Math.random() * equipmentCategories.length)];
-  
-  // 从选中的类型中随机选择一件装备配置
-  const equipmentList = summonEquipmentConfig[randomCategory];
-  const randomEquipmentConfig = equipmentList[Math.floor(Math.random() * equipmentList.length)];
-  
-  // 随机选择一个品质
-  const randomQuality = getRandomQuality();
-  
-  // 根据品质计算最终效果
-  const configWithQualityEffects = getEquipmentWithQualityEffects({
-    ...randomEquipmentConfig,
-    quality: randomQuality
-  });
-  
-  // 返回给背包或召唤兽的初始装备数据结构 (纯数据对象)
-  const newEquipmentData = {
-    id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
-    name: randomEquipmentConfig.name,
-    quality: randomQuality,
-    level: 1,
-    itemType: 'equipment',
-    slotType: randomEquipmentConfig.slotType,
-    icon: randomEquipmentConfig.icon,
-    description: randomEquipmentConfig.description,
-    // 重要：包含装备效果属性
-    effects: configWithQualityEffects.effects || {}
-  };
+  const equipmentTemplates = Object.values(ITEM_BASE_CONFIG.equipments);
+  if (equipmentTemplates.length === 0) return null;
 
-  return newEquipmentData;
+  const baseEquipment = equipmentTemplates[Math.floor(Math.random() * equipmentTemplates.length)];
+  const randomQuality = generateRandomQuality();
+
+  // 正确的做法：只返回基础ID和动态生成的属性
+  // ItemFactory 将负责组合基础数据和这些动态数据
+  return {
+    sourceId: baseEquipment.id,
+    id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
+    quality: randomQuality,
+    type: 'equipment', // 确保类型正确，帮助 ItemFactory 识别
+  };
 };
 
 // 生成随机魔兽要诀
 export const getRandomMonsterManual = () => {
-  // 魔兽要诀类型数组
-  const monsterManualTypes = [
-    'monsterManualFire',
-    'monsterManualWater',
-    'monsterManualThunder',
-    'monsterManualSupport',
-    'monsterManualPassive'
-  ];
+  const monsterManualTemplates = Object.values(ITEM_BASE_CONFIG.consumables).filter(
+    item => item.subType === 'monsterManual'
+  );
+   if (monsterManualTemplates.length === 0) return null;
   
-  // 随机选择一种魔兽要诀类型
-  const randomType = monsterManualTypes[Math.floor(Math.random() * monsterManualTypes.length)];
-  
-  // 获取选中类型的魔兽要诀配置
-  const manualConfig = ITEM_BASE_CONFIG.consumables[randomType];
-  
-  // 创建魔兽要诀数据对象
-  const monsterManualData = {
+  const baseManual = monsterManualTemplates[Math.floor(Math.random() * monsterManualTemplates.length)];
+
+  // 正确的做法：只返回基础ID和唯一ID，不返回完整对象
+  return {
+    sourceId: baseManual.id,
     id: generateUniqueId(UNIQUE_ID_PREFIXES.ITEM),
-    name: manualConfig.name,
-    quality: manualConfig.quality,
-    itemType: 'consumable',
-    type: manualConfig.type,
-    description: manualConfig.description,
-    icon: manualConfig.icon,
-    effect: manualConfig.effect,
-    stackable: true,
-    amount: 1
+    type: 'consumable', // 帮助 ItemFactory
+    quantity: 1
   };
-  
-  return monsterManualData;
 };
 
 // 生成初始装备
@@ -153,15 +119,15 @@ export const refineMonster = (playerLevel) => {
   // 从可用品质中随机选择一个
   const quality = availableQualities[Math.floor(Math.random() * availableQualities.length)];
 
-  // 生成初始装备 (纯数据对象数组)
-  const initialEquipmentData = generateInitialEquipment(3);
-
   // 使用公共函数生成新的召唤兽
   const newSummon = generateNewSummon({
     summonSourceId: selectedSummonId,
     quality: quality,
     source: REFINEMENT_SOURCES.REFINEMENT
   });
+  
+  // 生成初始装备 (纯数据对象数组) - 这已是最终数据
+  const initialEquipmentData = generateInitialEquipment(3);
 
   // 准备历史记录
   const historyItem = {

@@ -11,6 +11,7 @@ import { generateUniqueId } from './idUtils';
 import { UNIQUE_ID_PREFIXES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES, ATTRIBUTE_TYPES } from "../config/enumConfig";
 import { SUMMON_NATURE_TYPES, SUMMON_NATURE_CONFIG } from '../config/enumConfig';
 import { personalityConfig, getRandomPersonalityId, PERSONALITY_EFFECT_MODIFIER, PERSONALITY_TYPES,EXTREME_POSITIVE_MODIFIER } from '../config/summon/personalityConfig';
+import { calculateEffectValue } from './equipmentEffectUtils';
 
 /**
  * 计算召唤兽的派生属性
@@ -31,7 +32,10 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
 
   const finalBasicAttributes = { ...basicAttributesWithPoints };
 
-  // 1. 累加装备对基础属性的直接加成
+  // 1. 第一阶段：处理对基础属性的装备效果
+  const basicAttributeEffects = {};  // 基础属性的装备效果
+  const derivedAttributeEffects = {}; // 派生属性的装备效果（待第二阶段处理）
+  
   if (equippedItemsDataMap) {
     for (const slot in equippedItemsDataMap) {
       const item = equippedItemsDataMap[slot];
@@ -42,16 +46,29 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
         console.log(`  [装备槽 ${slot}] effects类型:`, typeof item.effects);
         console.log(`  [装备槽 ${slot}] effects键:`, Object.keys(item.effects));
         for (const effectKey in item.effects) {
-          const value = item.effects[effectKey];
-          console.log(`    处理效果 ${effectKey}: ${value} (类型: ${typeof value})`);
+          const effect = item.effects[effectKey];
+          console.log(`    处理效果 ${effectKey}:`, effect, `(类型: ${typeof effect})`);
+          
+          // 判断是基础属性还是派生属性
           if (finalBasicAttributes.hasOwnProperty(effectKey)) {
-            finalBasicAttributes[effectKey] = (finalBasicAttributes[effectKey] || 0) + value;
-            equipmentBonusesToBasic[effectKey] = (equipmentBonusesToBasic[effectKey] || 0) + value;
-            console.log(`      -> 添加到基础属性 ${effectKey}: ${value}`);
+            // 基础属性：立即计算并应用
+            const baseValue = finalBasicAttributes[effectKey] || 0;
+            const effectValue = calculateEffectValue(effect, baseValue, effectKey);
+            
+            console.log(`    [基础属性] ${effectKey} 计算得到效果值: ${effectValue}`);
+            
+            finalBasicAttributes[effectKey] = (finalBasicAttributes[effectKey] || 0) + effectValue;
+            equipmentBonusesToBasic[effectKey] = (equipmentBonusesToBasic[effectKey] || 0) + effectValue;
+            equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + effectValue;
+            console.log(`      -> 添加到基础属性 ${effectKey}: ${effectValue}`);
+          } else {
+            // 派生属性：存储效果配置，待第二阶段处理
+            console.log(`    [派生属性] ${effectKey} 存储待第二阶段处理:`, effect);
+            if (!derivedAttributeEffects[effectKey]) {
+              derivedAttributeEffects[effectKey] = [];
+            }
+            derivedAttributeEffects[effectKey].push(effect);
           }
-          // 记录所有装备效果
-          equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + value;
-          console.log(`      -> 添加到装备贡献 ${effectKey}: ${value}`);
         }
       } else {
         console.log(`  [装备槽 ${slot}] 无装备或无效果`);
@@ -68,20 +85,35 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
   console.log('  equipmentBonusesToBasic:', equipmentBonusesToBasic);
   console.log('  finalBasicAttributes:', finalBasicAttributes);
   
-  // 2. 基于最终基础属性计算派生属性
+  // 2. 第二阶段：基于最终基础属性计算派生属性，并应用装备的派生属性效果
   for (const [attrKey, config] of Object.entries(derivedAttributeConfig)) {
-    let value = 0;
+    // 首先基于基础属性计算派生属性的基础值
+    let baseValue = 0;
     for (const baseAttr of config.attributes) {
-      value += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
-    }
-
-    if (equipmentContributions.hasOwnProperty(attrKey) && !basicAttributesWithPoints.hasOwnProperty(attrKey)) {
-      value += equipmentContributions[attrKey];
+      baseValue += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
     }
     
-    // Corrected: Use EQUIPMENT_EFFECT_TYPES and ensure values are compared consistently (e.g., all lowercase)
-    // Assuming attrKey from derivedAttributeConfig is 'critRate', 'critDamage', 'dodgeRate'
-    // and EQUIPMENT_EFFECT_TYPES values are also these exact strings.
+    console.log(`  [派生属性] ${attrKey} 基础计算值: ${baseValue}`);
+    
+    // 应用装备对该派生属性的效果
+    let finalValue = baseValue;
+    if (derivedAttributeEffects[attrKey]) {
+      console.log(`  [派生属性] ${attrKey} 应用装备效果:`, derivedAttributeEffects[attrKey]);
+      
+      for (const effect of derivedAttributeEffects[attrKey]) {
+        const effectValue = calculateEffectValue(effect, baseValue, attrKey);
+        finalValue += effectValue;
+        
+        console.log(`    装备效果: ${JSON.stringify(effect)} -> 效果值: ${effectValue}`);
+        
+                 // 更新装备贡献为实际生效值
+         equipmentContributions[attrKey] = (equipmentContributions[attrKey] || 0) + effectValue;
+      }
+    }
+    
+    console.log(`  [派生属性] ${attrKey} 最终值: ${finalValue}`);
+    
+    // 格式化最终值
     const criticalAttributeKeys = [
       EQUIPMENT_EFFECT_TYPES.CRIT_RATE,
       EQUIPMENT_EFFECT_TYPES.CRIT_DAMAGE,
@@ -89,9 +121,9 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
     ];
 
     if (criticalAttributeKeys.includes(attrKey)) {
-      derived[attrKey] = parseFloat(value.toFixed(5));
+      derived[attrKey] = parseFloat(finalValue.toFixed(5));
     } else {
-      derived[attrKey] = Math.floor(value);
+      derived[attrKey] = Math.floor(finalValue);
     }
   }
 

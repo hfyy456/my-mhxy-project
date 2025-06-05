@@ -372,7 +372,7 @@ const battleSlice = createSlice({
         
         // 记录单位属性信息
         state.battleLog.push({
-          message: `单位属性 - HP: ${unit.stats.currentHp}/${unit.stats.maxHp}, MP: ${unit.stats.currentMp}/${unit.stats.maxMp}, 攻击: ${unit.stats.attack}, 防御: ${unit.stats.defense}`,
+          message: `单位属性 - HP: ${unit.stats.currentHp}/${unit.stats.maxHp}, MP: ${unit.stats.currentMp}/${unit.stats.maxMp}, 物理攻击: ${unit.stats.physicalAttack || 0}, 法术攻击: ${unit.stats.magicalAttack || 0}, 物理防御: ${unit.stats.physicalDefense || 0}, 法术防御: ${unit.stats.magicalDefense || 0}`,
           timestamp: Date.now() + 3,
           isDebugLog: true,
           unitId: unit.id
@@ -635,13 +635,13 @@ const battleSlice = createSlice({
               let defenseStat;
               
               if (skill.type === 'magical') {
-                attackStat = sourceUnit.stats.magicAttack;
-                defenseStat = targetUnit.stats.magicDefense || targetUnit.stats.defense;
+                attackStat = sourceUnit.stats.magicalAttack || sourceUnit.stats.magicAttack || 0;
+                defenseStat = targetUnit.stats.magicalDefense || targetUnit.stats.magicDefense || 0;
                 baseDamage = attackStat * skill.damage;
                 console.log(`魔法伤害计算 - 魔法攻击: ${attackStat}, 技能系数: ${skill.damage}, 基础伤害: ${baseDamage}`);
               } else {
-                attackStat = sourceUnit.stats.attack;
-                defenseStat = targetUnit.stats.defense;
+                attackStat = sourceUnit.stats.physicalAttack || sourceUnit.stats.attack || 0;
+                defenseStat = targetUnit.stats.physicalDefense || targetUnit.stats.defense || 0;
                 baseDamage = attackStat * skill.damage;
                 console.log(`物理伤害计算 - 物理攻击: ${attackStat}, 技能系数: ${skill.damage}, 基础伤害: ${baseDamage}`);
               }

@@ -171,36 +171,22 @@ const SummonSystem = ({ toasts, setToasts }) => {
       const result = refineMonster(playerLevel);
       if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
         // 改进物品添加逻辑 - 使用异步并行处理
-        const itemAddPromises = result.newlyCreatedItems.map(async (item) => {
+        // 关键修复：过滤掉可能的null值，防止后续代码出错
+        const validItems = result.newlyCreatedItems.filter(item => item !== null);
+        
+        const itemAddPromises = validItems.map(async (item) => {
           try {
-            const inventoryItem = {
-              id: item.id,
-              name: item.name,
-              type: item.itemType || 'equipment',
-              subType: item.subType,
-              quality: item.quality,
-              description: item.description,
-              value: item.sellPrice || 100,
-              isEquipment: item.itemType === 'equipment',
-              slotType: item.slotType,
-              effects: item.effects || {},
-              level: item.level || 1,
-              quantity: 1,
-              maxStack: 1,
-              stackable: false,
-              source: 'refineMonster',
-              createdAt: Date.now()
-            };
-            
-            console.log('[SummonSystem] 准备添加物品到背包:', inventoryItem);
-            const success = inventoryActions.addItem(inventoryItem);
+            // 直接使用 gameLogic 返回的完整物品对象
+            // 它已经包含了 sourceId 和所有必要信息
+            console.log('[SummonSystem] 准备添加物品到背包:', item);
+            const success = inventoryActions.addItem(item);
             
             if (success) {
               console.log('[SummonSystem] 成功添加物品:', item.name);
-              return { success: true, item: inventoryItem };
+              return { success: true, item }; // 直接返回item
             } else {
               console.warn('[SummonSystem] 背包已满，无法添加物品:', item.name);
-              return { success: false, item: inventoryItem, reason: 'inventory_full' };
+              return { success: false, item, reason: 'inventory_full' }; // 直接返回item
             }
           } catch (error) {
             console.error('[SummonSystem] 添加物品到背包失败:', error, item);

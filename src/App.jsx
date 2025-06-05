@@ -36,7 +36,6 @@ import MinimapPanel from '@/features/minimap/components/MinimapPanel';
 // import TileInfoPanel from '@/features/tile-info/components/TileInfoPanel'; // REMOVE THIS LINE
 import DialoguePanel from "@/features/ui/components/DialoguePanel";
 import NpcPanel from "@/features/npc/components/NpcPanel";
-import { generateInitialEquipment } from "@/gameLogic";
 import {
   initializeReduxIntegration,
   // useCurrentSummon, // Now used within useAppModals
@@ -64,6 +63,9 @@ import SummonManagerDemo from '@/components/SummonManagerDemo'; // 导入OOP召�
 import DataClearPanel from '@/components/DataClearPanel'; // 导入数据清理面板
 import { useSummonManager } from '@/hooks/useSummonManager'; // 导入OOP召唤兽系统hook
 import EquipmentRelationshipDemo from './components/EquipmentRelationshipDemo';
+import dataClearManager from '@/store/DataClearManager'; // 修正导入方式并直接使用单例
+import DataClearManager from './utils/DataClearManager';
+import ConfigManager from './components/ConfigManager';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -137,25 +139,54 @@ const App = () => {
   const closeDataClearPanel = () => setIsDataClearPanelOpen(false);
 
   const [isEquipmentRelationDemoOpen, setIsEquipmentRelationDemoOpen] = useState(false);
+  
+  // 添加配置管理器的状态管理
+  const [isConfigManagerOpen, setIsConfigManagerOpen] = useState(false);
+  const openConfigManager = () => setIsConfigManagerOpen(true);
+  const closeConfigManager = () => setIsConfigManagerOpen(false);
 
   useAutoSave();
 
   useEffect(() => {
-    const cleanup = initializeReduxIntegration();
-    dispatch(initializePlayerQuests());
-    console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
-    console.log("[App.jsx] 背包初始化状态:", {
-      isLoading: inventoryState.isLoading,
-      error: inventoryState.error,
-      gold: inventoryState.gold,
-      usedSlots: inventoryState.usedSlots,
-      capacity: inventoryState.capacity
-    });
-    const loader = document.getElementById(LOADER_WRAPPER_ID);
-    if (loader) {
-      loader.style.display = 'none';
-    }
-    return cleanup;
+    const runOneTimeFix = async () => {
+      const fixKey = 'hasFixedInventorySourceId_v1';
+      if (!localStorage.getItem(fixKey)) {
+        console.warn("[App.jsx] 检测到可能是首次修复，将执行一次性的背包数据清理...");
+        try {
+          await dataClearManager.clearInventoryData();
+          console.log("[App.jsx] 一次性背包数据清理完成。");
+          localStorage.setItem(fixKey, 'true');
+        } catch (error) {
+          console.error("[App.jsx] 一次性背包数据清理失败:", error);
+        }
+      }
+    };
+
+    const initializeApp = async () => {
+      await runOneTimeFix();
+
+      const cleanup = initializeReduxIntegration();
+      dispatch(initializePlayerQuests());
+      console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
+      console.log("[App.jsx] 背包初始化状态:", {
+        isLoading: inventoryState.isLoading,
+        error: inventoryState.error,
+        gold: inventoryState.gold,
+        usedSlots: inventoryState.usedSlots,
+        capacity: inventoryState.capacity
+      });
+      const loader = document.getElementById(LOADER_WRAPPER_ID);
+      if (loader) {
+        loader.style.display = 'none';
+      }
+      return cleanup;
+    };
+
+    const cleanupPromise = initializeApp();
+
+    return () => {
+      cleanupPromise.then(cleanup => cleanup && cleanup());
+    };
   }, [dispatch, inventoryState.isLoading]);
 
   // 监听背包初始化完成
@@ -238,11 +269,20 @@ const App = () => {
       {/* 召唤兽系统 */}
       {/* 面向对象召唤兽演示系统 */}
       <button onClick={openDataClearPanel} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#ff6b35', border: 'none', borderRadius: '3px' }}>测试系统</button>
+      {/* 配置管理器 */}
+      <button onClick={openConfigManager} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#10b981', border: 'none', borderRadius: '3px' }}>配置管理</button>
       {/* 装备关系管理演示 */}
     </div>
   ); };
 
     console.log('[App.jsx] App component rendering. isHomesteadModalOpen:', isHomesteadModalOpen);
+
+  // 一次性数据清理逻辑
+  useEffect(() => {
+    const dataManager = new DataClearManager();
+    dataManager.clearInvalidInventoryData();
+  }, []); // 空依赖数组确保只在组件挂载时运行一次
+
   return (
     <div
       style={{
@@ -389,7 +429,7 @@ const App = () => {
             isOpen={isSummonEquipmentOpen} 
             onClose={closeSummonEquipmentModal}
             title="召唤兽装备管理 (集成背包系统)"
-            maxWidthClass="max-w-5xl"
+            maxWidthClass="max-w-7xl"
             centerContent={false}
           >
             <SummonSystem
@@ -531,6 +571,18 @@ const App = () => {
             fullScreen={false}
           >
             <DataClearPanel />
+          </CommonModal>
+
+          {/* 配置管理器模态框 */}
+          <CommonModal
+            isOpen={isConfigManagerOpen}
+            onClose={closeConfigManager}
+            title="游戏配置管理器"
+            maxWidthClass="max-w-7xl"
+            centerContent={false}
+            fullScreen={true}
+          >
+            <ConfigManager />
           </CommonModal>
           
         </>

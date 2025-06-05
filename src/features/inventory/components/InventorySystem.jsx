@@ -17,6 +17,7 @@ import inventoryManager from '../../../store/InventoryManager';
 import { EQUIPMENT_SLOT_TYPES } from '@/config/enumConfig';
 import { uiText, getAttributeDisplayName, getQualityDisplayName } from '@/config/ui/uiTextConfig';
 import { useEquipmentRelationship, useItemEquipmentStatus, useSummonEquipmentStatus } from '../../../hooks/useEquipmentRelationship';
+import { formatEffectDisplay } from '@/utils/equipmentEffectUtils';
 
 // 背包格子组件
 function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, isDragTarget, isSelected }) {
@@ -316,10 +317,10 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
           <div className="mt-3">
             <h4 className="font-medium text-neutral-200 mb-2">属性加成:</h4>
             <div className="bg-black bg-opacity-20 rounded-lg p-2 space-y-1">
-              {Object.entries(item.effects).map(([stat, value]) => (
+              {Object.entries(item.effects).map(([stat, effect]) => (
                 <div key={stat} className="flex justify-between text-xs">
                   <span className="text-neutral-300">{getAttributeDisplayName(stat)}:</span>
-                  <span className="text-green-400 font-semibold">+{value}</span>
+                  <span className="text-green-400 font-semibold">{formatEffectDisplay(stat, effect)}</span>
                 </div>
               ))}
             </div>

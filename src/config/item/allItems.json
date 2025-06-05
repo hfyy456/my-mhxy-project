@@ -1,0 +1,477 @@
+{
+  "equipments": {
+    "fineIronSword": {
+      "id": "fineIronSword",
+      "name": "精致铁剑",
+      "type": "equipment",
+      "description": "一把制作精良的铁质长剑",
+      "icon": "fa-sword",
+      "slotType": "accessory",
+      "effects": {
+        "physicalAttack": {
+          "type": "percent",
+          "value": 5
+        },
+        "critRate": 0.03
+      },
+      "requirements": {
+        "level": 1
+      }
+    },
+    "legendaryAmulet": {
+      "id": "legendaryAmulet",
+      "name": "传说护符",
+      "type": "equipment",
+      "description": "蕴含神秘力量的传说级护符",
+      "icon": "fa-talisman",
+      "slotType": "relic",
+      "effects": {
+        "hp": {
+          "type": "percent",
+          "value": 5
+        },
+        "mp": {
+          "type": "flat",
+          "value": 30
+        },
+        "physicalDefense": {
+          "type": "flat",
+          "value": 10
+        }
+      },
+      "requirements": {
+        "level": 1
+      }
+    },
+    "apprenticeAmulet": {
+      "id": "apprenticeAmulet",
+      "name": "学徒护符",
+      "type": "equipment",
+      "description": "新手常用的护身符，能略微提升法力值。",
+      "icon": "fa-solid fa-gem",
+      "slotType": "accessory",
+      "effects": {
+        "mp": {
+          "type": "flat",
+          "value": 20
+        },
+        "magicalAttack": {
+          "type": "flat",
+          "value": 5
+        }
+      }
+    },
+    "courageMedal": {
+      "id": "courageMedal",
+      "name": "勇气勋章",
+      "type": "equipment",
+      "description": "授予勇敢者的勋章，能增加少量生命和攻击。",
+      "icon": "fa-solid fa-shield-halved",
+      "slotType": "accessory",
+      "effects": {
+        "hp": {
+          "type": "percent",
+          "value": 30
+        },
+        "physicalAttack": {
+          "type": "flat",
+          "value": 5
+        }
+      }
+    },
+    "agilityRing": {
+      "id": "agilityRing",
+      "name": "敏捷指环",
+      "type": "equipment",
+      "description": "提升佩戴者的敏捷，使其行动更迅速。",
+      "icon": "fa-solid fa-ring",
+      "slotType": "accessory",
+      "effects": {
+        "agility": {
+          "type": "flat",
+          "value": 10
+        },
+        "speed": {
+          "type": "flat",
+          "value": 15
+        }
+      }
+    },
+    "scholarGlasses": {
+      "id": "scholarGlasses",
+      "name": "学者眼镜",
+      "type": "equipment",
+      "description": "增强智力，略微提升法术暴击。",
+      "icon": "fa-solid fa-glasses",
+      "slotType": "accessory",
+      "effects": {
+        "intelligence": {
+          "type": "flat",
+          "value": 12
+        },
+        "critRate": 0.05
+      }
+    },
+    "ancestralStone": {
+      "id": "ancestralStone",
+      "name": "先祖之石",
+      "type": "equipment",
+      "description": "蕴含先祖力量的石头，全面提升基础属性。",
+      "icon": "fa-solid fa-landmark",
+      "slotType": "relic",
+      "effects": {
+        "constitution": {
+          "type": "flat",
+          "value": 5
+        },
+        "strength": {
+          "type": "flat",
+          "value": 5
+        },
+        "agility": {
+          "type": "flat",
+          "value": 5
+        },
+        "intelligence": {
+          "type": "flat",
+          "value": 5
+        }
+      }
+    },
+    "lostScroll": {
+      "id": "lostScroll",
+      "name": "失落卷轴",
+      "type": "equipment",
+      "description": "记载着古老知识的卷轴，大幅提升法术效果。",
+      "icon": "fa-solid fa-scroll",
+      "slotType": "relic",
+      "effects": {
+        "magicalAttack": {
+          "type": "flat",
+          "value": 25
+        },
+        "critRate": 0.02
+      }
+    },
+    "guardianBarrier": {
+      "id": "guardianBarrier",
+      "name": "守护者壁垒",
+      "type": "equipment",
+      "description": "古老文明的防御遗物，大幅提升双抗。",
+      "icon": "fa-solid fa-shield-heart",
+      "slotType": "relic",
+      "effects": {
+        "physicalDefense": {
+          "type": "flat",
+          "value": 25
+        },
+        "magicalDefense": {
+          "type": "flat",
+          "value": 25
+        }
+      }
+    },
+    "dragonBlood": {
+      "id": "dragonBlood",
+      "name": "巨龙之血",
+      "type": "equipment",
+      "description": "稀释的巨龙血液，赋予强大的生命力和火焰抗性。",
+      "icon": "fa-solid fa-fire",
+      "slotType": "bloodline",
+      "effects": {
+        "hp": {
+          "type": "flat",
+          "value": 100
+        },
+        "fireResistance": 0.1
+      }
+    },
+    "elfTears": {
+      "id": "elfTears",
+      "name": "精灵之泪",
+      "type": "equipment",
+      "description": "精灵族的圣物，提升敏捷和魔法恢复速度。",
+      "icon": "fa-solid fa-leaf",
+      "slotType": "bloodline",
+      "effects": {
+        "agility": {
+          "type": "flat",
+          "value": 15
+        },
+        "mpRecovery": {
+          "type": "flat",
+          "value": 5
+        }
+      }
+    },
+    "giantBloodline": {
+      "id": "giantBloodline",
+      "name": "山岭巨人血脉",
+      "type": "equipment",
+      "description": "注入山岭巨人的坚韧血液，大幅提升体质和生命值。",
+      "icon": "fa-solid fa-mountain",
+      "slotType": "bloodline",
+      "effects": {
+        "constitution": {
+          "type": "flat",
+          "value": 15
+        },
+        "hp": {
+          "type": "flat",
+          "value": 150
+        }
+      }
+    },
+    "strengthRune": {
+      "id": "strengthRune",
+      "name": "力量符文",
+      "type": "equipment",
+      "description": "刻有力量印记的符文，增强物理攻击。",
+      "icon": "fa-solid fa-hand-fist",
+      "slotType": "rune",
+      "effects": {
+        "physicalAttack": {
+          "type": "flat",
+          "value": 15
+        }
+      }
+    },
+    "guardianRune": {
+      "id": "guardianRune",
+      "name": "守护符文",
+      "type": "equipment",
+      "description": "提供基础的防御加持。",
+      "icon": "fa-solid fa-shield",
+      "slotType": "rune",
+      "effects": {
+        "physicalDefense": {
+          "type": "flat",
+          "value": 10
+        },
+        "magicalDefense": {
+          "type": "flat",
+          "value": 10
+        }
+      }
+    },
+    "precisionRune": {
+      "id": "precisionRune",
+      "name": "精准符文",
+      "type": "equipment",
+      "description": "略微增加暴击伤害。",
+      "icon": "fa-solid fa-crosshairs",
+      "slotType": "rune",
+      "effects": {
+        "critDamage": 0.02
+      }
+    },
+    "regenerationRune": {
+      "id": "regenerationRune",
+      "name": "再生符文",
+      "type": "equipment",
+      "description": "略微提升佩戴者的体质。",
+      "icon": "fa-solid fa-heart-pulse",
+      "slotType": "rune",
+      "effects": {
+        "constitution": {
+          "type": "flat",
+          "value": 5
+        }
+      }
+    }
+  },
+  "consumables": {
+    "starterHpPotion": {
+      "id": "starterHpPotion",
+      "name": "新手生命药水",
+      "type": "consumable",
+      "quality": "normal",
+      "description": "恢复50点生命值的基础药水",
+      "icon": "fa-flask",
+      "value": 10,
+      "effect": {
+        "type": "heal",
+        "value": 50
+      }
+    },
+    "qualityMpPotion": {
+      "id": "qualityMpPotion",
+      "name": "品质法力药水",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "恢复100点法力值的优质药水",
+      "icon": "fa-flask-potion",
+      "value": 25,
+      "effect": {
+        "type": "mp_restore",
+        "value": 100
+      }
+    },
+    "epicExpPill": {
+      "id": "epicExpPill",
+      "name": "史诗经验丹",
+      "type": "consumable",
+      "quality": "epic",
+      "description": "含有巨大经验能量的史诗级丹药",
+      "icon": "fa-pills",
+      "value": 100,
+      "effect": {
+        "type": "experience",
+        "value": 10000
+      }
+    },
+    "basicExpPill": {
+      "id": "basicExpPill",
+      "name": "初级经验丹",
+      "type": "consumable",
+      "quality": "normal",
+      "description": "使用后获得1000点经验值",
+      "icon": "fa-pills",
+      "effect": {
+        "type": "experience",
+        "value": 1000
+      }
+    },
+    "intermediateExpPill": {
+      "id": "intermediateExpPill",
+      "name": "中级经验丹",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "使用后获得5000点经验值",
+      "icon": "fa-pills",
+      "effect": {
+        "type": "experience",
+        "value": 5000
+      }
+    },
+    "advancedExpPill": {
+      "id": "advancedExpPill",
+      "name": "高级经验丹",
+      "type": "consumable",
+      "quality": "epic",
+      "description": "使用后获得20000点经验值",
+      "icon": "fa-pills",
+      "effect": {
+        "type": "experience",
+        "value": 20000
+      }
+    },
+    "monsterManualFire": {
+      "id": "monsterManualFire",
+      "name": "火系魔兽要诀",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "使用后可以为召唤兽学习一个火系技能",
+      "icon": "fa-book-flame",
+      "effect": {
+        "type": "learn_skill",
+        "skillElement": "FIRE",
+        "skillPool": [
+          "烈火",
+          "三味真火",
+          "烈焰护体"
+        ]
+      }
+    },
+    "monsterManualWater": {
+      "id": "monsterManualWater",
+      "name": "水系魔兽要诀",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "使用后可以为召唤兽学习一个水系技能",
+      "icon": "fa-book-sparkles",
+      "effect": {
+        "type": "learn_skill",
+        "skillElement": "WATER",
+        "skillPool": [
+          "水漫金山",
+          "冰牢",
+          "水盾"
+        ]
+      }
+    },
+    "monsterManualThunder": {
+      "id": "monsterManualThunder",
+      "name": "雷系魔兽要诀",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "使用后可以为召唤兽学习一个雷系技能",
+      "icon": "fa-book-bolt",
+      "effect": {
+        "type": "learn_skill",
+        "skillElement": "THUNDER",
+        "skillPool": [
+          "雷击",
+          "奔雷咒",
+          "风雷天威"
+        ]
+      }
+    },
+    "monsterManualSupport": {
+      "id": "monsterManualSupport",
+      "name": "辅助魔兽要诀",
+      "type": "consumable",
+      "quality": "rare",
+      "description": "使用后可以为召唤兽学习一个辅助技能",
+      "icon": "fa-book-medical",
+      "effect": {
+        "type": "learn_skill",
+        "skillType": "SUPPORT",
+        "skillPool": [
+          "治愈之光",
+          "隐身",
+          "大地护盾"
+        ]
+      }
+    },
+    "monsterManualPassive": {
+      "id": "monsterManualPassive",
+      "name": "被动魔兽要诀",
+      "type": "consumable",
+      "quality": "epic",
+      "description": "使用后可以为召唤兽学习一个被动技能",
+      "icon": "fa-book-open",
+      "effect": {
+        "type": "learn_skill",
+        "skillMode": "PASSIVE",
+        "skillPool": [
+          "法术暴击",
+          "连击",
+          "反震",
+          "感知",
+          "魔之心",
+          "敏捷",
+          "幸运",
+          "强力",
+          "法术连击",
+          "夜战",
+          "法术波动",
+          "防御",
+          "必杀",
+          "神佑复生",
+          "闪避"
+        ]
+      }
+    }
+  },
+  "materials": {
+    "refinementStone": {
+      "id": "refinementStone",
+      "name": "炼妖石",
+      "type": "material",
+      "quality": "normal",
+      "description": "用于炼妖的基础材料",
+      "icon": "fa-gem",
+      "value": 15
+    },
+    "advancedRefinementStone": {
+      "id": "advancedRefinementStone",
+      "name": "高级炼妖石",
+      "type": "material",
+      "quality": "rare",
+      "description": "用于炼妖的高级材料",
+      "icon": "fa-gem",
+      "value": 50
+    }
+  }
+}

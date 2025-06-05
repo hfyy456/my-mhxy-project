@@ -17,7 +17,7 @@ import {
   getFiveElementDisplayName,
   getSummonNatureTypeDisplayName,
 } from "@/config/ui/uiTextConfig";
-import { equipmentQualityConfig } from "@/config/item/summonEquipmentConfig";
+import { equipmentQualityConfig } from "@/config/item/equipmentConfig";
 import { SUMMON_NATURE_CONFIG, FIVE_ELEMENT_COLORS, ATTRIBUTE_TYPES } from "@/config/enumConfig";
 import { personalityConfig, getPersonalityDisplayName, PERSONALITY_EFFECT_MODIFIER, PERSONALITY_TYPES } from "@/config/summon/personalityConfig";
 import {
@@ -35,16 +35,30 @@ const ItemTooltip = ({ item, position }) => {
   const qualityColorForName = equipmentQualityConfig?.textColors?.[itemQuality] || equipmentQualityConfig?.colors?.[itemQuality] || '#FFFFFF'; 
   const qualityColorForDisplay = equipmentQualityConfig?.textColors?.[itemQuality] || '#DDDDDD'; // Color for the (QualityName) part
 
-  const formatAttributeValue = (stat, value) => {
+  const formatAttributeValue = (stat, effect) => {
+    // 百分比属性列表
     const percentageStats = [
       "critRate", "critDamage", "dodgeRate",
       "fireResistance", "waterResistance", "thunderResistance",
       "windResistance", "earthResistance",
     ];
-    if (percentageStats.includes(stat)) {
-      return `${(value * 100).toFixed(1)}%`;
+    
+    if (typeof effect === 'number') {
+      // 兼容旧格式
+      if (percentageStats.includes(stat)) {
+        return `${(effect * 100).toFixed(1)}%`;
+      }
+      return Math.floor(effect);
+    } else if (effect && typeof effect === 'object') {
+      // 新格式
+      const { type, value } = effect;
+      if (type === 'percent') {
+        return `${value}%`;
+      } else {
+        return Math.floor(value);
+      }
     }
-    return Math.floor(value);
+    return '0';
   };
 
   // Restore original className and dynamic positioning via position prop
@@ -71,16 +85,16 @@ const ItemTooltip = ({ item, position }) => {
         <p className="text-xs mb-2 text-gray-300">{item.description}</p>
       )}
 
-      {item.finalEffects && Object.keys(item.finalEffects).length > 0 && (
+      {item.effects && Object.keys(item.effects).length > 0 && (
         <div className="mt-2 pt-2 border-t border-slate-700">
           <p className="font-semibold mb-1 text-xs text-slate-200">属性加成:</p>
-          {Object.entries(item.finalEffects).map(([stat, value]) => (
+          {Object.entries(item.effects).map(([stat, effect]) => (
             <p key={stat} className="text-xs flex justify-between">
               <span className="text-gray-400">
                 {getAttributeDisplayName(stat)}
               </span>
               <span className="text-green-400">
-                +{formatAttributeValue(stat, value)}
+                +{formatAttributeValue(stat, effect)}
               </span>
             </p>
           ))}
@@ -208,6 +222,9 @@ const SummonInfo = ({
   }
   progressPercentage = Math.min(Math.max(progressPercentage, 0), 100);
 
+  // 计算是否可以升级
+  const canLevelUp = targetExperience !== Infinity && currentExperience >= targetExperience;
+
   const handleEquipmentSlotClick = useCallback(async (slotType) => {
     if (!summon) return;
 
@@ -259,7 +276,7 @@ const SummonInfo = ({
       return (
         <div
           key={slot.type}
-          className={`w-full h-24 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-2 relative group`}
+          className={`w-full h-20 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-1.5 relative group`}
           onClick={() => handleEquipmentSlotClick(slot.type)}
           onMouseEnter={(e) => {
             const eventTimestamp = Date.now(); // Add a timestamp for easier log corellation
@@ -298,17 +315,11 @@ const SummonInfo = ({
               
               console.log(`[SummonInfo ${eventTimestamp}] Attempting to setTooltipPosition with: xPos=${xPos}, yPos=${yPos}`);
               
-              // Prepare item for Tooltip, ensuring finalEffects is present
-              const itemForTooltip = {
-                ...actualEquippedItem,
-                finalEffects: actualEquippedItem.finalEffects || actualEquippedItem.effects
-              };
-
-              // Log the item being sent to the tooltip, including the potentially aliased finalEffects
-              console.log('[SummonInfo onMouseEnter] itemForTooltip (with finalEffects):', JSON.stringify(itemForTooltip, null, 2));
+              // Log the item being sent to the tooltip
+              console.log('[SummonInfo onMouseEnter] actualEquippedItem:', JSON.stringify(actualEquippedItem, null, 2));
               
               setTooltipPosition({ x: xPos, y: yPos });
-              setTooltipItem(itemForTooltip); // Use the modified item
+              setTooltipItem(actualEquippedItem);
               setTooltipVisible(true); 
             } else {
               console.log(`[SummonInfo ${eventTimestamp}] actualEquippedItem is NOT present. Tooltip will not show.`);
@@ -320,7 +331,7 @@ const SummonInfo = ({
             setTooltipVisible(false);
           }}
         >
-          <div className="w-10 h-10 flex items-center justify-center mb-1 text-2xl">
+          <div className="w-8 h-8 flex items-center justify-center mb-0.5 text-xl">
             <i className={`fas ${slotIconToDisplay} ${iconColorClass}`}></i>
           </div>
           <p className={`text-xs font-medium truncate w-full text-center ${nameColorClass}`}>
@@ -406,244 +417,177 @@ const SummonInfo = ({
   };
 
   return (
-    <div className="flex flex-col space-y-4">
-      {/* Left Column */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="md:col-span-5 flex flex-col gap-3">
-          <div className="flex justify-center">
-            <img
-              className={`w-60 h-60 object-cover border-2 ${
-                quality
-                  ? `border-${qualityConfig.colors[quality]}`
-                  : "border-slate-500"
-              } shadow-lg rounded-lg transition-all duration-300`}
-              src={imageUrl}
-              alt={summon.name}
-              onError={(e) => {
-                e.target.src =
-                  images["/src/assets/summons/default.png"].default;
-              }}
-            />
+    <div className="flex flex-col space-y-3 max-w-none">
+      {/* Main Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-4 flex flex-col gap-3">
+          <div className="flex justify-center p-2">
+            <div className="relative">
+              <img
+                className={`w-44 h-44 object-cover border-4 ${
+                  quality
+                    ? `border-${qualityConfig.colors[quality]}`
+                    : "border-slate-500"
+                } shadow-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-105`}
+                src={imageUrl}
+                alt={summon.name}
+                onError={(e) => {
+                  e.target.src =
+                    images["/src/assets/summons/default.png"].default;
+                }}
+              />
+              {/* 品质光效 */}
+              <div className={`absolute inset-0 rounded-xl bg-gradient-to-t ${
+                qualityConfig.gradients?.[quality] || "from-transparent to-transparent"
+              } opacity-20 pointer-events-none`}></div>
+            </div>
           </div>
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
-            {/* <h2 className="text-2xl font-bold text-purple-300 mb-1 text-center">{displayName}</h2> */}
+          
+          {/* 小标签区域 - 头像下方 */}
+          <div className="flex flex-wrap justify-center gap-1 mb-2">
+            {/* Quality Tag */}
+            <div 
+              className={`flex items-center ${
+                qualityConfig.bgColors?.[quality] || "bg-slate-600/50"
+              } px-2 py-1 rounded-md text-xs shadow-sm cursor-help`}
+              title={`品质: ${getQualityDisplayName(quality)} - 属性倍率: ${qualityConfig.attributeMultipliers[qualityConfig.names.indexOf(quality)] || 1.0}x`}
+            >
+              <i className={`fas fa-gem ${qualityColorName} mr-1`}></i>
+              <span className={qualityConfig.textColors?.[quality] || qualityColorName}>
+                {getQualityDisplayName(quality)}
+              </span>
+            </div>
 
+            {/* Nature Type Tag */}
+            {natureType && SUMMON_NATURE_CONFIG[natureType] && (
+              <div 
+                className={`flex items-center px-2 py-1 rounded-md text-xs shadow-sm cursor-help ${
+                  SUMMON_NATURE_CONFIG[natureType].bgColor || 'bg-slate-600/50'
+                }`}
+                title={`自然属性: ${getSummonNatureTypeDisplayName(natureType)} - ${SUMMON_NATURE_CONFIG[natureType].description || '影响召唤兽的基础属性'}`}
+              >
+                <i className={`fas mr-1 ${
+                  natureType === 'wild' ? 'fa-tree' : 
+                  natureType === 'baby' ? 'fa-baby' :
+                  natureType === 'mutant' ? 'fa-dna' :
+                  'fa-question' 
+                } ${SUMMON_NATURE_CONFIG[natureType].color || 'text-gray-400'}`}></i>
+                <span className={SUMMON_NATURE_CONFIG[natureType].color || 'text-white'}>
+                  {getSummonNatureTypeDisplayName(natureType)}
+                </span>
+              </div>
+            )}
+
+            {/* Personality Tag */} 
+            {personalityId && personalityConfig[personalityId] && (
+              <div 
+                className="flex items-center bg-pink-600/50 px-2 py-1 rounded-md text-xs shadow-sm cursor-help"
+                title={`性格: ${getPersonalityDisplayName(personalityId)} - ${personalityConfig[personalityId].description || '影响基础属性的分配'}`}
+              >
+                <i className="fas fa-grin-stars mr-1 text-pink-300"></i> 
+                <span className="text-pink-100">
+                  {getPersonalityDisplayName(personalityId)}
+                </span>
+              </div>
+            )}
+
+            {/* Five Element Tag */}
+            {(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement) && (
+              <div 
+                className={`flex items-center px-2 py-1 rounded-md text-xs shadow-sm cursor-help ${
+                  FIVE_ELEMENT_COLORS[
+                    summon.fiveElement ||
+                      summonConfig[summon.summonSourceId]?.fiveElement
+                  ] || 'bg-slate-600/50 text-white'
+                }`}
+                title={`五行: ${getFiveElementDisplayName(
+                  summon.fiveElement ||
+                    summonConfig[summon.summonSourceId]?.fiveElement
+                )} - 影响技能相克和法术伤害`}
+              >
+                <i className="fas fa-circle mr-1"></i>
+                <span>
+                  {getFiveElementDisplayName(
+                    summon.fiveElement ||
+                      summonConfig[summon.summonSourceId]?.fiveElement
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
             {/* Nickname Section */}
-            <div className="flex justify-between items-center gap-2 mb-3">
-              <div>
-                <span className="text-xs text-gray-400 mr-1">昵称:</span>
-                <span className="text-lg font-semibold text-purple-300">
+            <div className="flex justify-between items-center gap-2 mb-2">
+              <div className="flex-1">
+                <span className="text-xs text-gray-400 block mb-0.5">昵称</span>
+                <span className="text-base font-bold text-purple-300">
                   {nickname || "未设置"}
                 </span>
               </div>
               <button
                 onClick={() => onOpenNicknameModal(summon)}
-                className="text-xs p-1.5 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-md transition-colors leading-none"
+                className="p-1.5 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-lg transition-colors duration-200 hover:scale-105"
+                title="编辑昵称"
               >
-                <i className="fas fa-edit"></i>
+                <i className="fas fa-edit text-xs"></i>
               </button>
             </div>
 
-            {/* Attribute Tags Section */}
-            <div className="flex flex-wrap justify-start items-stretch gap-x-2 gap-y-2 mb-2">
-              {/* Level Tag */}
-              <div className="flex items-center bg-slate-600/50 px-3 py-1.5 rounded-lg shadow">
-                <i className="fas fa-star text-yellow-400 mr-2"></i>
-                <span className="text-xs font-semibold text-gray-100">
-                  {level || 1}
+            {/* Experience Section */}
+            <div className="mt-2 px-1">
+              <div className="flex justify-between items-center mb-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 px-1.5 py-0.5 rounded-lg shadow">
+                    <div className="flex items-center">
+                      <i className="fas fa-star text-yellow-100 mr-1 text-xs"></i>
+                      <span className="text-sm font-bold text-white">
+                        Lv.{level || 1}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs font-medium text-gray-300 bg-slate-800/50 px-1.5 py-0.5 rounded">
+                  {currentExperience} / {targetExperience === Infinity ? "MAX" : targetExperience}
                 </span>
               </div>
-
-              {/* Quality Tag */}
-              <div
-                className={`flex items-center ${
-                  qualityConfig.bgColors?.[quality] || "bg-slate-600/50"
-                } px-3 py-1.5 rounded-lg shadow`}
-              >
-                <i className={`fas fa-gem ${qualityColorName} mr-2`}></i>
-                <span
-                  className={`text-xs font-semibold ${
-                    qualityConfig.textColors?.[quality] || qualityColorName
-                  }`}
-                >
-                  {getQualityDisplayName(quality)}
-                </span>
-              </div>
-
-              {/* Nature Type Tag - Corrected and uses SUMMON_NATURE_CONFIG */}
-              {natureType && SUMMON_NATURE_CONFIG[natureType] && (
-                <div className={`flex items-center px-3 py-1.5 rounded-lg shadow ${SUMMON_NATURE_CONFIG[natureType].bgColor || 'bg-slate-600/50'}`}>
-                  <i className={`fas mr-2 ${
-                    natureType === 'wild' ? 'fa-tree' : 
-                    natureType === 'baby' ? 'fa-baby' :
-                    natureType === 'mutant' ? 'fa-dna' :
-                    'fa-question' 
-                  } ${SUMMON_NATURE_CONFIG[natureType].color || 'text-gray-400'}`}></i>
-                  <span className={`text-xs font-semibold ${SUMMON_NATURE_CONFIG[natureType].color || 'text-white'}`}>
-                    {getSummonNatureTypeDisplayName(natureType)}
-                  </span>
-                </div>
-              )}
-
-              {/* Personality Tag - New */} 
-              {personalityId && personalityConfig[personalityId] && (
-                <div className={`flex items-center bg-slate-600/80 px-3 py-1.5 rounded-lg shadow`}>
-                  <i className={`fas fa-grin-stars mr-2 text-yellow-300`}></i> 
-                  <span className={`text-xs font-semibold text-white`}>
-                    {getPersonalityDisplayName(personalityId)}
-                  </span>
-                </div>
-              )}
-
-              {/* Five Element Tag - Corrected to use FIVE_ELEMENT_COLORS */}
-              {(summon.fiveElement || summonConfig[summon.summonSourceId]?.fiveElement) && (
+              <div className="w-full bg-slate-600 rounded-full h-1.5 shadow-inner">
                 <div
-                  className={`flex items-center px-3 py-1.5 rounded-lg shadow ${
-                    FIVE_ELEMENT_COLORS[
-                      summon.fiveElement ||
-                        summonConfig[summon.summonSourceId]?.fiveElement
-                    ]?.bgColor || 'bg-slate-600/50' 
-                  }`}
-                >
-                  <i className={`fas fa-circle mr-2 ${
-                    FIVE_ELEMENT_COLORS[
-                      summon.fiveElement ||
-                        summonConfig[summon.summonSourceId]?.fiveElement
-                    ]?.textColor || 'text-gray-400'
-                  }`}></i>
-                  <span className={`text-xs font-semibold ${
-                    FIVE_ELEMENT_COLORS[
-                      summon.fiveElement ||
-                        summonConfig[summon.summonSourceId]?.fiveElement
-                    ]?.textColor || 'text-white'
-                  }`}>
-                    {getFiveElementDisplayName(
-                      summon.fiveElement ||
-                        summonConfig[summon.summonSourceId]?.fiveElement
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-2 px-2">
-              <div className="flex justify-between mb-0.5">
-                <span className="text-xs font-medium text-purple-300">
-                  {uiText.labels.experience}
-                </span>
-                <span className="text-xs font-medium text-gray-300">
-                  {currentExperience} /{" "}
-                  {targetExperience === Infinity ? "MAX" : targetExperience}
-                </span>
-              </div>
-              <div className="w-full bg-slate-500 rounded-full h-1.5 dark:bg-gray-700">
-                <div
-                  className="bg-purple-500 h-1.5 rounded-full transition-all duration-300 ease-out"
+                  className="bg-gradient-to-r from-purple-500 to-purple-400 h-1.5 rounded-full transition-all duration-500 ease-out shadow-sm"
                   style={{ width: `${progressPercentage}%` }}
-                ></div>
+                >
+                  <div className="h-full rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm flex-grow">
-            <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
-              <i className="fa-solid fa-star text-purple-400 mr-2"></i>
-              {uiText.titles.coreAttributes}
-            </h3>
-            {/* 战力值展示 */}
-            {typeof summon.power === "number" && (
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-yellow-400 font-bold text-base flex items-center">
-                  <i className="fas fa-fire-alt mr-2"></i>战力值
-                </span>
-                <span className="text-lg font-extrabold text-yellow-300 drop-shadow">
-                  {summon.power}
-                </span>
-              </div>
-            )}
-            <ul className="space-y-2 mb-2">
-              {[
-                { key: "hp" },
-                { key: "mp" },
-                { key: "physicalAttack" },
-                { key: "magicalAttack" },
-                { key: "physicalDefense" },
-                { key: "magicalDefense" },
-                { key: "speed" },
-                { key: "critRate", isPercent: true },
-                { key: "critDamage", isPercent: true },
-                { key: "dodgeRate", isPercent: true },
-              ].map(
-                (attr) =>
-                  derivedAttributes.hasOwnProperty(attr.key) && (
-                    <li className="flex justify-between" key={attr.key}>
-                      <span className="text-gray-300">
-                        {getAttributeDisplayName(attr.key)}
-                      </span>
-                      <span className="font-semibold text-white">
-                        {attr.isPercent
-                          ? `${(derivedAttributes[attr.key] * 100).toFixed(1)}%`
-                          : derivedAttributes[attr.key]}
-                        {equipmentContributions &&
-                        equipmentContributions[attr.key] !== undefined &&
-                        equipmentContributions[attr.key] !== 0 ? (
-                          <span className="text-green-400 ml-1">
-                            (+
-                            {attr.isPercent
-                              ? `${(
-                                  equipmentContributions[attr.key] * 100
-                                ).toFixed(1)}%`
-                              : equipmentContributions[attr.key]}
-                            )
-                          </span>
-                        ) : null}
-                      </span>
-                    </li>
-                  )
-              )}
-            </ul>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="md:col-span-7 flex flex-col gap-3">
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
-              <i className="fa-solid fa-star text-purple-400 mr-2"></i>
-              {uiText.titles.equipmentBar}
-            </h3>
-            <div className="grid grid-cols-4 gap-4">
-              {renderEquipmentSlots()}
-            </div>
-          </div>
-
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm flex-grow">
-            <h3 className="text-lg font-semibold text-gray-100 mb-2 flex justify-between items-center">
+          <div className="bg-slate-700/70 rounded-lg p-2.5 shadow-sm flex-grow">
+            <h3 className="text-base font-semibold text-gray-100 mb-2.5 flex justify-between items-center border-b border-slate-600/50 pb-1.5">
               <div className="flex items-center">
-                <i className="fa-solid fa-fist-raised text-red-400 mr-2"></i>
+                <i className="fa-solid fa-fist-raised text-red-400 mr-1.5 text-sm"></i>
                 <span>{uiText.titles.basicAttributes}</span>
               </div>
-              <span className="text-gray-400 font-normal text-xs ml-2">
-                ({uiText.labels.remainingPoints}: {potentialPoints})
+              <span className="bg-slate-600/50 px-1.5 py-0.5 rounded text-xs text-amber-300 font-medium">
+                剩余: {potentialPoints}
               </span>
             </h3>
-            <ul className="space-y-1 mb-3 pt-2 border-t border-slate-600">
+            <div className="space-y-2 mb-4">
               {BASIC_ATTRIBUTE_KEYS.map(({ key, name: attrDisplayName }) => {
                 const allocatedVal = allocatedPoints[key] || 0;
                 const equipmentBonus = equipmentBonusesToBasic[key] || 0;
-                const currentBaseAttr = basicAttributes[key] || 0; // This now includes personality effects from generation
+                const currentBaseAttr = basicAttributes[key] || 0;
                 
                 const displayValue = currentBaseAttr + allocatedVal + equipmentBonus;
                 let personalityEffectIndicator = "";
                 let indicatorColorClass = "";
 
-                // Determine if the current attribute (key) is affected by personality for indicator purposes
                 if (personalityId && personalityConfig[personalityId] && personalityConfig[personalityId].id !== PERSONALITY_TYPES.NEUTRAL) {
                   const selectedPersonality = personalityConfig[personalityId];
                   if (selectedPersonality.isExtreme) {
                     if (selectedPersonality.extremeStat === key) {
                       personalityEffectIndicator = " (++)";
-                      indicatorColorClass = "text-emerald-400"; // Brighter green for extreme positive
+                      indicatorColorClass = "text-emerald-400";
                     } else if (selectedPersonality.decreasedStat1 === key || selectedPersonality.decreasedStat2 === key) {
                       personalityEffectIndicator = " (-)";
                       indicatorColorClass = "text-red-400";
@@ -660,65 +604,157 @@ const SummonInfo = ({
                 }
 
                 return (
-                  <li
-                    className="flex items-center py-2 border-b border-slate-800 last:border-b-0"
+                  <div
+                    className="bg-slate-800/50 rounded-lg p-3 hover:bg-slate-800/70 transition-colors"
                     key={key}
                   >
-                    <span className="w-16 text-gray-300 text-sm flex-shrink-0">
-                      {getAttributeDisplayName(key)}
-                    </span>
-                    <div className="flex-grow px-2 text-right">
-                      <span className="text-xs text-gray-500 mr-1.5 whitespace-nowrap">
-                        (基:{currentBaseAttr} 加:{allocatedVal} 装:
-                        {equipmentBonus})
-                      </span>
-                      <span className="font-semibold text-white text-sm">
-                        {displayValue}
-                        {personalityEffectIndicator && <span className={indicatorColorClass}>{personalityEffectIndicator}</span>}
-                      </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-gray-300 text-sm font-medium">
+                          {getAttributeDisplayName(key)}
+                        </span>
+                        {(allocatedVal > 0 || equipmentBonus > 0) && (
+                          <span className="text-xs text-green-400">
+                            +{allocatedVal + equipmentBonus}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-white text-sm">
+                          {displayValue}
+                        </span>
+                        <button
+                          onClick={() => handleAllocatePoint(key, 1)}
+                          disabled={potentialPoints < 1}
+                          className="w-6 h-6 bg-green-600 hover:bg-green-500 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150 flex items-center justify-center"
+                        >
+                          +1
+                        </button>
+                        <button
+                          onClick={() => handleAllocatePoint(key, 5)}
+                          disabled={potentialPoints < 5}
+                          className="w-6 h-6 bg-green-700 hover:bg-green-600 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150 flex items-center justify-center"
+                        >
+                          +5
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => handleAllocatePoint(key, 1)}
-                        disabled={potentialPoints < 1}
-                        className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150"
-                      >
-                        +1
-                      </button>
-                      <button
-                        onClick={() => handleAllocatePoint(key, 5)}
-                        disabled={potentialPoints < 5}
-                        className="px-1.5 py-0.5 bg-green-700 hover:bg-green-600 text-white text-xs rounded shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed transition-colors duration-150"
-                      >
-                        +5
-                      </button>
-                    </div>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
-            {potentialPoints > 0 && (
-              <div className="mt-2">
+            </div>
+            {/* 操作按钮区域 */}
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={handleLevelUp}
+                  disabled={!canLevelUp}
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 disabled:from-gray-600 disabled:to-gray-500 text-white font-medium py-2.5 px-2 rounded-lg shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed text-sm"
+                >
+                  <i className="fas fa-arrow-up mr-1"></i>
+                  升级
+                </button>
+                
                 <button
                   onClick={handleResetPoints}
-                  className="w-full bg-red-600 hover:bg-red-500 text-white font-medium py-1.5 px-3 rounded-md text-xs shadow-sm transition-colors duration-150 mb-1.5"
+                  disabled={Object.values(allocatedPoints).every(val => val === 0)}
+                  className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:from-gray-600 disabled:to-gray-500 text-white font-medium py-2.5 px-2 rounded-lg shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed text-sm"
+                  title="重置所有已分配的属性点"
                 >
-                  {uiText.buttons.resetPoints}
+                  <i className="fas fa-undo mr-1"></i>
+                  重置
                 </button>
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-6 flex flex-col gap-3">
+          <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
+              <i className="fa-solid fa-gem text-purple-400 mr-1 text-sm"></i>
+              {uiText.titles.equipmentBar}
+            </h3>
+            <div className="grid grid-cols-4 gap-2">
+              {renderEquipmentSlots()}
+            </div>
           </div>
 
-          <div className="bg-slate-700/70 rounded-lg p-3 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-100 mb-3 flex items-center">
-              <i className="fa-solid fa-bolt text-purple-400 mr-2"></i>
+          <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm flex-grow">
+            <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
+              <i className="fa-solid fa-star text-purple-400 mr-1 text-sm"></i>
+              {uiText.titles.coreAttributes}
+            </h3>
+            
+            {/* 战力值展示 */}
+            {typeof summon.power === "number" && (
+              <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 rounded-lg p-1.5 mb-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-yellow-400 font-bold text-xs flex items-center">
+                    <i className="fas fa-fire-alt mr-1"></i>战力值
+                  </span>
+                  <span className="text-base font-extrabold text-yellow-300 drop-shadow">
+                    {summon.power.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { key: "hp", icon: "fa-heart", color: "text-red-400" },
+                { key: "mp", icon: "fa-tint", color: "text-blue-400" },
+                { key: "physicalAttack", icon: "fa-sword", color: "text-orange-400" },
+                { key: "magicalAttack", icon: "fa-magic", color: "text-purple-400" },
+                { key: "physicalDefense", icon: "fa-shield", color: "text-gray-400" },
+                { key: "magicalDefense", icon: "fa-shield-alt", color: "text-indigo-400" },
+                { key: "speed", icon: "fa-bolt", color: "text-yellow-400" },
+                { key: "critRate", icon: "fa-crosshairs", color: "text-red-400", isPercent: true },
+                { key: "critDamage", icon: "fa-bomb", color: "text-red-500", isPercent: true },
+                { key: "dodgeRate", icon: "fa-running", color: "text-green-400", isPercent: true },
+              ].map(
+                (attr) =>
+                  derivedAttributes.hasOwnProperty(attr.key) && (
+                    <div className="bg-slate-800/50 rounded-lg p-1.5 hover:bg-slate-800/70 transition-colors" key={attr.key}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-gray-300 flex items-center text-xs">
+                          <i className={`fas ${attr.icon} ${attr.color} mr-1 text-xs`}></i>
+                          {getAttributeDisplayName(attr.key)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-white text-sm">
+                          {attr.isPercent
+                            ? `${(derivedAttributes[attr.key] * 100).toFixed(1)}%`
+                            : Math.floor(derivedAttributes[attr.key]).toLocaleString()}
+                        </span>
+                        {equipmentContributions &&
+                        equipmentContributions[attr.key] !== undefined &&
+                        equipmentContributions[attr.key] !== 0 && (
+                          <span className="text-green-400 text-xs font-medium">
+                            +{attr.isPercent
+                              ? `${(equipmentContributions[attr.key] * 100).toFixed(1)}%`
+                              : Math.floor(equipmentContributions[attr.key]).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+              )}
+            </div>
+          </div>
+
+          <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
+              <i className="fa-solid fa-bolt text-purple-400 mr-1 text-sm"></i>
               {uiText.titles.skillSet}
-              <span className="text-xs text-gray-400 ml-1">
+              <span className="text-xs text-amber-300 ml-2 bg-slate-600/50 px-1.5 py-0.5 rounded">
                 {uiText.labels.skillCount}
               </span>
             </h3>
             <ul id="skillSet" className="">
-              <div className="grid grid-cols-4 gap-x-0 gap-y-0 items-center sm:w-[280px] mx-auto">
+              <div className="grid grid-cols-4 gap-x-0 gap-y-0 items-center sm:w-[224px] mx-auto">
                 {Array.from({ length: 12 }).map((_, i) => {
                   const skillId = i < skillSet.length ? skillSet[i] : null;
                   const skillInfo = skillId
@@ -737,7 +773,7 @@ const SummonInfo = ({
                   const colorForSkill = currentTypeConfig.color;
 
                   const baseSlotClasses =
-                    "w-20 h-20 rounded flex flex-col justify-center items-center p-1 shadow-md relative group cursor-pointer border-2";
+                    "w-16 h-16 rounded flex flex-col justify-center items-center p-1 shadow-md relative group cursor-pointer border-2";
 
                   const handleSkillSlotClick = () => {
                     if (typeof onOpenSkillEditorForSlot === "function") {
@@ -756,8 +792,8 @@ const SummonInfo = ({
                         className={`${baseSlotClasses} bg-slate-800 border-slate-700 hover:border-yellow-500`}
                         onClick={handleSkillSlotClick}
                       >
-                        <div className="h-6 w-6 mb-1 flex items-center justify-center">
-                          <i className="fa-solid fa-plus text-slate-600 text-2xl"></i>
+                        <div className="h-5 w-5 mb-1 flex items-center justify-center">
+                          <i className="fa-solid fa-plus text-slate-600 text-xl"></i>
                         </div>
                         <span className="text-xs text-center text-slate-600 leading-tight">
                           {uiText.emptyStates.emptySlot}
@@ -772,9 +808,9 @@ const SummonInfo = ({
                       className={`${baseSlotClasses} bg-slate-800 border-slate-700 hover:border-${colorForSkill} hover:border-opacity-70`}
                       onClick={handleSkillSlotClick}
                     >
-                      <div className="h-6 w-6 flex items-center justify-center">
+                      <div className="h-5 w-5 flex items-center justify-center">
                         <i
-                          className={`fa-solid ${iconToDisplay} text-4xl text-${colorForSkill}`}
+                          className={`fa-solid ${iconToDisplay} text-3xl text-${colorForSkill}`}
                         ></i>
                       </div>
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs bg-slate-800 text-white text-xs rounded-md py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none group-hover:pointer-events-auto shadow-lg border border-${colorForSkill} border-opacity-50">

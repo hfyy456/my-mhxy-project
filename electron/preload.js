@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-31 04:52:37
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-03 04:24:47
+ * @LastEditTime: 2025-06-06 05:03:13
  */
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -60,6 +60,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         minimize: () => ipcRenderer.send('window-minimize'),
         maximize: () => ipcRenderer.send('window-maximize'),
         close: () => ipcRenderer.send('window-close')
+    },
+
+    // 配置文件管理API
+    config: {
+        saveFile: (fileName, data, configType) => 
+            ipcRenderer.invoke('save-config-file', { fileName, data, configType }),
+        loadFile: (fileName, configType) => 
+            ipcRenderer.invoke('load-config-file', { fileName, configType }),
+        backupFile: (fileName, configType) => 
+            ipcRenderer.invoke('backup-config-file', { fileName, configType })
     }
 });
 

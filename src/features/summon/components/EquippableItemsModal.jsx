@@ -1,19 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { summonEquipmentConfig, equipmentQualityConfig } from '@/config/item/summonEquipmentConfig';
+import { equipmentQualityConfig } from '@/config/item/equipmentConfig';
 import { uiText, getQualityDisplayName, getAttributeDisplayName } from '@/config/ui/uiTextConfig';
 import { useInventoryManager, useEquipmentSlotConfig } from '@/hooks/useInventoryManager';
 import inventoryManager from '@/store/InventoryManager';
 import { useSummonManager } from '@/hooks/useSummonManager'; // 使用OOP召唤兽系统
+import { formatEffectDisplay } from '@/utils/equipmentEffectUtils';
 
-// Helper to format attribute values (similar to ItemTooltip)
-const formatAttributeValue = (stat, value) => {
-  const percentageStats = ['critRate', 'critDamage', 'dodgeRate', 'fireResistance', 'waterResistance', 'thunderResistance', 'windResistance', 'earthResistance'];
-  if (percentageStats.includes(stat)) {
-    return `${(value * 100).toFixed(1)}%`;
-  }
-  return Math.floor(value);
-};
+// 已移除 formatAttributeValue 函数，现在使用统一的 formatEffectDisplay
 
 const EquippableItemsModal = ({
   isOpen,
@@ -179,10 +173,10 @@ const EquippableItemsModal = ({
                   {item.effects && Object.keys(item.effects).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-slate-600">
                       <p className="text-slate-300 font-semibold text-xs mb-1">属性加成:</p>
-                      {Object.entries(item.effects).map(([stat, value]) => (
+                      {Object.entries(item.effects).map(([stat, effect]) => (
                         <div key={stat} className="text-xs flex justify-between">
                           <span className="text-gray-400">{getAttributeDisplayName(stat)}:</span>
-                          <span className="text-green-400">+{formatAttributeValue(stat, value)}</span>
+                          <span className="text-green-400">{formatEffectDisplay(stat, effect)}</span>
                         </div>
                       ))}
                     </div>

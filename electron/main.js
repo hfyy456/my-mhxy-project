@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 const Store = require('electron-store');
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -171,4 +172,121 @@ ipcMain.on('window-maximize', (event) => {
 ipcMain.on('window-close', (event) => {
     const win = BrowserWindow.getFocusedWindow();
     if (win) win.close();
+});
+
+// 配置文件管理IPC处理程序
+ipcMain.handle('save-config-file', async (event, { fileName, data, configType }) => {
+    try {
+        // 获取项目根目录
+        const projectRoot = isDev 
+            ? path.join(__dirname, '..')  // 开发模式：electron文件夹的上级目录
+            : path.dirname(app.getPath('exe')); // 生产模式：exe文件所在目录
+        
+        // 确定配置文件路径
+        let configPath;
+        if (configType === 'items') {
+            configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
+        } else if (configType === 'summons') {
+            configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else {
+            throw new Error(`不支持的配置类型: ${configType}`);
+        }
+
+        // 确保目录存在
+        const configDir = path.dirname(configPath);
+        await fs.mkdir(configDir, { recursive: true });
+
+        // 写入JSON文件
+        await fs.writeFile(configPath, JSON.stringify(data, null, 2), 'utf8');
+
+        console.log(`配置文件已保存: ${configPath}`);
+        return { 
+            success: true, 
+            path: configPath,
+            message: `配置文件 ${fileName} 保存成功`
+        };
+    } catch (error) {
+        console.error('保存配置文件失败:', error);
+        return { 
+            success: false, 
+            error: error.message,
+            message: `保存配置文件失败: ${error.message}`
+        };
+    }
+});
+
+// 读取配置文件
+ipcMain.handle('load-config-file', async (event, { fileName, configType }) => {
+    try {
+        const projectRoot = isDev 
+            ? path.join(__dirname, '..')
+            : path.dirname(app.getPath('exe'));
+        
+        let configPath;
+        if (configType === 'items') {
+            configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
+        } else if (configType === 'summons') {
+            configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else {
+            throw new Error(`不支持的配置类型: ${configType}`);
+        }
+
+        const data = await fs.readFile(configPath, 'utf8');
+        const parsedData = JSON.parse(data);
+
+        return { 
+            success: true, 
+            data: parsedData,
+            path: configPath
+        };
+    } catch (error) {
+        console.error('读取配置文件失败:', error);
+        return { 
+            success: false, 
+            error: error.message,
+            message: `读取配置文件失败: ${error.message}`
+        };
+    }
+});
+
+// 创建备份文件
+ipcMain.handle('backup-config-file', async (event, { fileName, configType }) => {
+    try {
+        const projectRoot = isDev 
+            ? path.join(__dirname, '..')
+            : path.dirname(app.getPath('exe'));
+        
+        let configPath;
+        if (configType === 'items') {
+            configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
+        } else if (configType === 'summons') {
+            configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else {
+            throw new Error(`不支持的配置类型: ${configType}`);
+        }
+
+        // 创建备份文件名（添加时间戳）
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupFileName = fileName.replace('.json', `_backup_${timestamp}.json`);
+        const backupPath = path.join(path.dirname(configPath), 'backups', backupFileName);
+
+        // 确保备份目录存在
+        await fs.mkdir(path.dirname(backupPath), { recursive: true });
+
+        // 复制原文件到备份位置
+        await fs.copyFile(configPath, backupPath);
+
+        return { 
+            success: true, 
+            backupPath: backupPath,
+            message: `备份文件创建成功: ${backupFileName}`
+        };
+    } catch (error) {
+        console.error('创建备份文件失败:', error);
+        return { 
+            success: false, 
+            error: error.message,
+            message: `创建备份失败: ${error.message}`
+        };
+    }
 });

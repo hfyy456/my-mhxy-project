@@ -73,7 +73,12 @@ export const calculateRewards = (playerUnits, enemyUnits, battleResult) => {
         rarity: avgEnemyLevel > 5 ? 'uncommon' : 'common',
         description: '锋利的铁制武器',
         value: 150,
-        effects: { attack: 15 + Math.floor(avgEnemyLevel * 2) },
+        effects: { 
+          physicalAttack: { 
+            type: 'flat', 
+            value: 15 + Math.floor(avgEnemyLevel * 2) 
+          } 
+        },
         level: Math.max(1, Math.floor(avgEnemyLevel))
       },
       {
@@ -84,7 +89,12 @@ export const calculateRewards = (playerUnits, enemyUnits, battleResult) => {
         rarity: avgEnemyLevel > 5 ? 'uncommon' : 'common',
         description: '坚韧的皮制护甲',
         value: 120,
-        effects: { defense: 12 + Math.floor(avgEnemyLevel * 1.5) },
+        effects: { 
+          physicalDefense: { 
+            type: 'flat', 
+            value: 12 + Math.floor(avgEnemyLevel * 1.5) 
+          } 
+        },
         level: Math.max(1, Math.floor(avgEnemyLevel))
       },
       {
@@ -95,7 +105,12 @@ export const calculateRewards = (playerUnits, enemyUnits, battleResult) => {
         rarity: avgEnemyLevel > 3 ? 'uncommon' : 'common',
         description: '提升法力的帽子',
         value: 100,
-        effects: { magic: 10 + Math.floor(avgEnemyLevel * 1.2) },
+        effects: { 
+          magicalAttack: { 
+            type: 'flat', 
+            value: 10 + Math.floor(avgEnemyLevel * 1.2) 
+          } 
+        },
         level: Math.max(1, Math.floor(avgEnemyLevel))
       }
     ];

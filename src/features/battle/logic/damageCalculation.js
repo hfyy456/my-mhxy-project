@@ -180,7 +180,7 @@ export const calculateBattleDamage = (
   // 如果自动选择伤害类型，根据攻击者的物理攻击和法术攻击值决定
   if (damageType === 'auto') {
     // 获取物理攻击和法术攻击值，支持简写和完整属性名
-    const physicalAttack = attacker.stats.physicalAttack || attacker.stats.pAtk || attacker.stats.attack || 0;
+    const physicalAttack = attacker.stats.physicalAttack || attacker.stats.pAtk || 0;
     const magicalAttack = attacker.stats.magicalAttack || attacker.stats.mAtk || 0; // 假设法术攻击仍然按原方式获取，或者如果也合并到了 attack，则需要相应调整
     
     const determinedDamageType = physicalAttack >= magicalAttack ? 'physical' : 'magical'; // Prefer physical if equal
@@ -206,8 +206,8 @@ export const calculateBattleDamage = (
   
   if (damageType === 'physical') {
     // 获取物理攻击和防御值，支持简写和完整属性名
-    const physicalAttack = attackerStats.physicalAttack || attackerStats.pAtk || attackerStats.attack || 0;
-    const physicalDefense = defenderStats.physicalDefense || defenderStats.pDef || defenderStats.defense || 0;
+    const physicalAttack = attackerStats.physicalAttack || attackerStats.pAtk || 0;
+    const physicalDefense = defenderStats.physicalDefense || defenderStats.pDef || 0;
     
     console.log(`物理伤害计算: 攻击=${physicalAttack}, 防御=${physicalDefense}`);
     
@@ -289,9 +289,9 @@ export const simulateBattleDamage = (attacker, defender) => {
   const defenderStats = defender.stats;
   
   // 统一属性名，支持简写和完整属性名
-  const physicalAttack = attackerStats.physicalAttack || attackerStats.pAtk || attackerStats.attack || 0;
+  const physicalAttack = attackerStats.physicalAttack || attackerStats.pAtk || 0;
   const magicalAttack = attackerStats.magicalAttack || attackerStats.mAtk || 0;
-  const physicalDefense = defenderStats.physicalDefense || defenderStats.pDef || defenderStats.defense || 0;
+  const physicalDefense = defenderStats.physicalDefense || defenderStats.pDef || 0;
   const magicalDefense = defenderStats.magicalDefense || defenderStats.mDef || 0;
   
   // 返回详细的模拟结果
