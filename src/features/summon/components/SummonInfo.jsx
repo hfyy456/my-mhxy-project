@@ -420,7 +420,7 @@ const SummonInfo = ({
     <div className="flex flex-col space-y-3 max-w-none">
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-4 flex flex-col gap-3">
+        <div className="lg:col-span-5 flex flex-col gap-3">
           <div className="flex justify-center p-2">
             <div className="relative">
               <img
@@ -670,7 +670,7 @@ const SummonInfo = ({
         </div>
 
         {/* Right Column */}
-        <div className="lg:col-span-6 flex flex-col gap-3">
+        <div className="lg:col-span-7  flex flex-col gap-3">
           <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
             <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
               <i className="fa-solid fa-gem text-purple-400 mr-1 text-sm"></i>
