@@ -42,6 +42,27 @@ export const qualityConfig = {
     legendary: "quality-legendary",
     mythic: "quality-mythic",
   },
+  bgColors: {
+    normal: "bg-slate-600",
+    rare: "bg-blue-600",
+    epic: "bg-purple-600", 
+    legendary: "bg-orange-600",
+    mythic: "bg-red-600",
+  },
+  textColors: {
+    normal: "text-slate-100",
+    rare: "text-blue-100",
+    epic: "text-purple-100",
+    legendary: "text-orange-100", 
+    mythic: "text-red-100",
+  },
+  gradients: {
+    normal: "from-slate-600/20 to-slate-700/20",
+    rare: "from-blue-600/20 to-blue-700/20",
+    epic: "from-purple-600/20 to-purple-700/20",
+    legendary: "from-orange-600/20 to-orange-700/20",
+    mythic: "from-red-600/20 to-red-700/20",
+  },
   attributeMultipliers: [1.0, 1.5, 2.0, 2.5, 3.0],
 };
 

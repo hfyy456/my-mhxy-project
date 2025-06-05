@@ -170,57 +170,57 @@ html {
   
   /* 普通品质 */
   .quality-normal {
-    @apply text-quality-normal;
+    @apply text-slate-400;
   }
   .quality-border-normal {
     @apply border-quality-normal;
   }
   .quality-bg-normal {
-    @apply bg-quality-normal;
+    @apply bg-slate-600;
   }
   
   /* 稀有品质 */
   .quality-rare {
-    @apply text-quality-rare;
+    @apply text-blue-400;
   }
   .quality-border-rare {
     @apply border-quality-rare;
   }
   .quality-bg-rare {
-    @apply bg-quality-rare;
+    @apply bg-blue-600;
   }
   
   /* 史诗品质 */
   .quality-epic {
-    @apply text-quality-epic;
+    @apply text-purple-400;
   }
   .quality-border-epic {
     @apply border-quality-epic;
   }
   .quality-bg-epic {
-    @apply bg-quality-epic;
+    @apply bg-purple-600;
   }
   
   /* 传说品质 */
   .quality-legendary {
-    @apply text-quality-legendary;
+    @apply text-orange-400;
   }
   .quality-border-legendary {
     @apply border-quality-legendary;
   }
   .quality-bg-legendary {
-    @apply bg-quality-legendary;
+    @apply bg-orange-600;
   }
   
   /* 神话品质 */
   .quality-mythic {
-    @apply text-quality-mythic;
+    @apply text-red-400;
   }
   .quality-border-mythic {
     @apply border-quality-mythic;
   }
   .quality-bg-mythic {
-    @apply bg-quality-mythic;
+    @apply bg-red-600;
   }
 }
 
@@ -253,4 +253,71 @@ html {
 
 .animate-spin-slower {
   animation: spin-slower 2.5s linear infinite;
+}
+
+/* 品质相关样式 */
+.quality-normal {
+  @apply text-slate-400;
+}
+
+.quality-rare {
+  @apply text-blue-400;
+}
+
+.quality-epic {
+  @apply text-purple-400;
+}
+
+.quality-legendary {
+  @apply text-orange-400;
+}
+
+.quality-mythic {
+  @apply text-red-400;
+}
+
+/* 品质背景样式 */
+.bg-quality-normal {
+  @apply bg-slate-600;
+}
+
+.bg-quality-rare {
+  @apply bg-blue-600;
+}
+
+.bg-quality-epic {
+  @apply bg-purple-600;
+}
+
+.bg-quality-legendary {
+  @apply bg-orange-600;
+}
+
+.bg-quality-mythic {
+  @apply bg-red-600;
+}
+
+/* 行裁剪工具类 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 闪烁动画 */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }

@@ -1,0 +1,290 @@
+{
+  "skills": [
+    {
+      "id": "stealth",
+      "name": "隐身",
+      "description": "可以隐藏自己的身形",
+      "type": "support",
+      "icon": "fa-moon",
+      "mode": "active",
+      "targetType": "self",
+      "cooldownRounds": 5,
+      "mpCost": 15,
+      "applyBuffs": [
+        { "buffId": "stealth", "level": 1 }
+      ]
+    },
+    {
+      "id": "water_mountain",
+      "name": "水漫金山",
+      "description": "施展水属性法术攻击多个目标",
+      "type": "magical",
+      "icon": "fa-water",
+      "mode": "active",
+      "targetType": "group",
+      "attackDistance": 3,
+      "areaType": "cross",
+      "damage": 1.2,
+      "element": "water",
+      "cooldownRounds": 3,
+      "mpCost": 20,
+      "applyBuffs": [
+        { "buffId": "speed_down", "level": 1, "chance": 0.3 }
+      ]
+    },
+    {
+      "id": "fire_spell",
+      "name": "烈火",
+      "description": "施展火属性法术攻击目标",
+      "type": "magical",
+      "icon": "fa-fire-flame-curved",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 2,
+      "damage": 1.8,
+      "element": "fire",
+      "cooldownRounds": 2,
+      "mpCost": 25,
+      "applyBuffs": [
+        { "buffId": "burn", "level": 1 }
+      ]
+    },
+    {
+      "id": "heal",
+      "name": "治疗术",
+      "description": "恢复目标生命值",
+      "type": "healing",
+      "icon": "fa-heart",
+      "mode": "active",
+      "targetType": "ally",
+      "healPower": 1.5,
+      "cooldownRounds": 1,
+      "mpCost": 20
+    },
+    {
+      "id": "meditation",
+      "name": "凝神",
+      "description": "回复法力值并提升防御",
+      "type": "support",
+      "icon": "fa-brain",
+      "mode": "active",
+      "targetType": "self",
+      "mpRecover": 30,
+      "cooldownRounds": 3,
+      "applyBuffs": [
+        { "buffId": "defense_up", "level": 1 }
+      ]
+    },
+    {
+      "id": "lightning_strike",
+      "name": "雷击",
+      "description": "召唤雷电攻击目标",
+      "type": "magical",
+      "icon": "fa-bolt",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 3,
+      "damage": 2.0,
+      "element": "thunder",
+      "cooldownRounds": 2,
+      "mpCost": 30,
+      "applyBuffs": [
+        { "buffId": "stun", "level": 1, "chance": 0.4 }
+      ]
+    },
+    {
+      "id": "earth_shield",
+      "name": "土盾",
+      "description": "为目标提供强力防护",
+      "type": "defensive",
+      "icon": "fa-shield",
+      "mode": "active",
+      "targetType": "ally",
+      "cooldownRounds": 4,
+      "mpCost": 25,
+      "applyBuffs": [
+        { "buffId": "earth_shield", "level": 1 }
+      ]
+    },
+    {
+      "id": "wind_slash",
+      "name": "风之刃",
+      "description": "释放风刃攻击敌人，降低其防御",
+      "type": "magical",
+      "icon": "fa-wind",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 2,
+      "damage": 1.6,
+      "element": "wind",
+      "cooldownRounds": 2,
+      "mpCost": 18,
+      "applyBuffs": [
+        { "buffId": "defense_down", "level": 1 }
+      ]
+    },
+    {
+      "id": "poison_cloud",
+      "name": "毒云",
+      "description": "释放毒云攻击敌方区域",
+      "type": "magical",
+      "icon": "fa-cloud",
+      "mode": "active",
+      "targetType": "group",
+      "attackDistance": 3,
+      "areaType": "square",
+      "damage": 0.8,
+      "element": "poison",
+      "cooldownRounds": 4,
+      "applyBuffs": [
+        { "buffId": "poison", "level": 1 }
+      ]
+    },
+    {
+      "id": "rock_smash",
+      "name": "碎岩击",
+      "description": "用大地之力攻击敌人，有几率使其沉默",
+      "type": "physical",
+      "icon": "fa-hill-rockslide",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 1,
+      "damage": 2.2,
+      "element": "earth",
+      "cooldownRounds": 2,
+      "applyBuffs": [
+        { "buffId": "silence", "level": 1, "chance": 0.25 }
+      ]
+    },
+    {
+      "id": "ice_prison",
+      "name": "冰牢",
+      "description": "将敌人冻结在冰牢中",
+      "type": "magical",
+      "icon": "fa-snowflake",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 2,
+      "damage": 1.0,
+      "element": "water",
+      "cooldownRounds": 4,
+      "applyBuffs": [
+        { "buffId": "freeze", "level": 1 }
+      ]
+    },
+    {
+      "id": "storm_judgment",
+      "name": "风雷天威",
+      "description": "召唤风暴与雷霆之力，对敌方全体造成伤害，并有几率附加麻痹或禁锢效果",
+      "type": "magical",
+      "icon": "fa-cloud-bolt",
+      "mode": "active",
+      "targetType": "group",
+      "attackDistance": 4,
+      "areaType": "square",
+      "damage": 1.8,
+      "element": "thunder",
+      "cooldownRounds": 5,
+      "mpCost": 40,
+      "applyBuffs": [
+        { "buffId": "stun", "level": 2, "chance": 0.4 },
+        { "buffId": "speed_down", "level": 1, "chance": 0.6 }
+      ]
+    },
+    {
+      "id": "tiger_roar",
+      "name": "虎啸",
+      "description": "发出虎啸，对敌方群体造成震慑效果",
+      "type": "support",
+      "icon": "fa-bullhorn",
+      "mode": "active",
+      "targetType": "group",
+      "attackDistance": 3,
+      "cooldownRounds": 4,
+      "mpCost": 20,
+      "applyBuffs": [
+        { "buffId": "fear", "level": 1, "chance": 0.3 }
+      ]
+    },
+    {
+      "id": "water_escape",
+      "name": "水遁",
+      "description": "利用水的力量快速脱离并获得保护",
+      "type": "support",
+      "icon": "fa-tint",
+      "mode": "active",
+      "targetType": "self",
+      "cooldownRounds": 5,
+      "mpCost": 15,
+      "applyBuffs": [
+        { "buffId": "evasion", "level": 1 }
+      ]
+    },
+    {
+      "id": "life_death_book",
+      "name": "生死簿",
+      "description": "操控生死之力，对目标造成特殊伤害",
+      "type": "magical",
+      "icon": "fa-book-dead",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 2,
+      "damage": 1.5,
+      "element": "nether",
+      "cooldownRounds": 3,
+      "mpCost": 25,
+      "applyBuffs": [
+        { "buffId": "doom", "level": 1, "chance": 0.2 }
+      ]
+    },
+    {
+      "id": "ghost_fire",
+      "name": "鬼火",
+      "description": "召唤鬼火攻击敌人",
+      "type": "magical",
+      "icon": "fa-fire-alt",
+      "mode": "active",
+      "targetType": "single",
+      "attackDistance": 3,
+      "damage": 1.7,
+      "element": "fire",
+      "cooldownRounds": 2,
+      "mpCost": 22,
+      "applyBuffs": [
+        { "buffId": "burn", "level": 1 }
+      ]
+    },
+    {
+      "id": "yin_yang_switch",
+      "name": "阴阳转换",
+      "description": "转换自身状态，获得特殊效果",
+      "type": "support",
+      "icon": "fa-yin-yang",
+      "mode": "active",
+      "targetType": "self",
+      "cooldownRounds": 4,
+      "mpCost": 30,
+      "applyBuffs": [
+        { "buffId": "yin_yang", "level": 1 }
+      ]
+    },
+    {
+      "id": "nether_portal",
+      "name": "幽冥之门",
+      "description": "打开通往幽冥的传送门，对区域造成影响",
+      "type": "magical",
+      "icon": "fa-dungeon",
+      "mode": "active",
+      "targetType": "area",
+      "attackDistance": 4,
+      "cooldownRounds": 6,
+      "mpCost": 50,
+      "damage": 2.5,
+      "element": "nether",
+      "areaType": "circle",
+      "applyBuffs": [
+        { "buffId": "curse", "level": 2, "chance": 0.8 }
+      ]
+    }
+  ]
+} 

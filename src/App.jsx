@@ -129,6 +129,14 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState("正在加载游戏资源...");
+  const [mapGenerationState, setMapGenerationState] = useState({
+    isGenerating: false,
+    currentRegion: '',
+    currentRegionName: '',
+    totalRegions: 0,
+    completedRegions: 0,
+    progress: 0
+  });
 
   const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
   const isBattleActive = useSelector(selectIsBattleActive);
@@ -147,47 +155,17 @@ const App = () => {
 
   useAutoSave();
 
+  // 组件挂载时的基础检查（不执行资源加载）
   useEffect(() => {
-    const runOneTimeFix = async () => {
-      const fixKey = 'hasFixedInventorySourceId_v1';
-      if (!localStorage.getItem(fixKey)) {
-        console.warn("[App.jsx] 检测到可能是首次修复，将执行一次性的背包数据清理...");
-        try {
-          await dataClearManager.clearInventoryData();
-          console.log("[App.jsx] 一次性背包数据清理完成。");
-          localStorage.setItem(fixKey, 'true');
-        } catch (error) {
-          console.error("[App.jsx] 一次性背包数据清理失败:", error);
-        }
-      }
-    };
-
-    const initializeApp = async () => {
-      await runOneTimeFix();
-
-      const cleanup = initializeReduxIntegration();
-      dispatch(initializePlayerQuests());
-      console.log("[App.jsx] Redux集成已初始化, 任务已初始化");
-      console.log("[App.jsx] 背包初始化状态:", {
+    console.log("[App.jsx] 应用组件已挂载，等待用户启动游戏");
+    console.log("[App.jsx] 背包系统状态:", {
         isLoading: inventoryState.isLoading,
         error: inventoryState.error,
         gold: inventoryState.gold,
         usedSlots: inventoryState.usedSlots,
         capacity: inventoryState.capacity
       });
-      const loader = document.getElementById(LOADER_WRAPPER_ID);
-      if (loader) {
-        loader.style.display = 'none';
-      }
-      return cleanup;
-    };
-
-    const cleanupPromise = initializeApp();
-
-    return () => {
-      cleanupPromise.then(cleanup => cleanup && cleanup());
-    };
-  }, [dispatch, inventoryState.isLoading]);
+  }, [inventoryState.isLoading, inventoryState.error, inventoryState.gold, inventoryState.usedSlots, inventoryState.capacity]);
 
   // 监听背包初始化完成
   useEffect(() => {
@@ -225,36 +203,70 @@ const App = () => {
     };
   }, []);
 
-  // 模拟资源加载进度
-  const simulateLoading = async () => {
+  // 使用加载管理器的游戏资源加载逻辑
+  const loadGameResources = async () => {
     setIsLoading(true);
-    setLoadingProgress(0);
-    setLoadingMessage("正在初始化游戏引擎...");
+    
+    try {
+      // 导入加载管理器
+      const { default: loadingManager } = await import('@/utils/loadingManager');
+      
+      // 设置加载管理器的回调函数
+      loadingManager.setProgressCallback(setLoadingProgress);
+      loadingManager.setMessageCallback(setLoadingMessage);
+      loadingManager.setMapGenerationCallback(setMapGenerationState);
 
-    // 模拟不同阶段的加载
-    const stages = [
-      { progress: 15, message: "正在加载世界地图数据..." },
-      { progress: 30, message: "正在生成区域地图..." },
-      { progress: 45, message: "正在加载角色模型..." },
-      { progress: 60, message: "正在加载游戏数据..." },
-      { progress: 75, message: "正在初始化游戏世界..." },
-      { progress: 90, message: "正在准备传送门..." },
-      { progress: 100, message: "准备进入长安城..." }
-    ];
+      // 执行完整的加载流程
+      const result = await loadingManager.execute();
+      
+      if (result.success) {
+        // Redux集成初始化
+        const cleanup = initializeReduxIntegration();
+        dispatch(initializePlayerQuests());
+        
+        console.log('[App] 游戏资源加载成功');
+        console.log('[App] 加载报告:', result.report);
+        
+        // 完成加载
+        setIsLoading(false);
+        setShowHomePage(false);
+        
+        return cleanup;
+      } else {
+        console.warn('[App] 游戏资源加载部分失败，但仍允许启动');
+        console.error('[App] 加载错误:', result.error);
+        
+        // 即使部分失败也尝试启动游戏
+        const cleanup = initializeReduxIntegration();
+        dispatch(initializePlayerQuests());
+        
+        setIsLoading(false);
+        setShowHomePage(false);
+        
+        return cleanup;
+      }
+      
+    } catch (error) {
+      console.error('[App] 加载管理器执行失败:', error);
+      
+      // 回退到简单的启动逻辑
+      setLoadingProgress(100);
+      setLoadingMessage("正在以简化模式启动游戏...");
 
-    for (const stage of stages) {
-      await new Promise(resolve => setTimeout(resolve, 150));
-      setLoadingProgress(stage.progress);
-      setLoadingMessage(stage.message);
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const cleanup = initializeReduxIntegration();
+      dispatch(initializePlayerQuests());
+      
     setIsLoading(false);
     setShowHomePage(false);
+      
+      return cleanup;
+    }
   };
 
   const handleStartGame = () => {
-    simulateLoading();
+    loadGameResources();
   };
   
   // 更新操作栏，只保留核心游戏功能
@@ -310,6 +322,7 @@ const App = () => {
         <LoadingScreen 
           progress={loadingProgress}
           message={loadingMessage}
+          mapGenerationState={mapGenerationState}
         />
       )}
 

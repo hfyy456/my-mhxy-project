@@ -106,6 +106,12 @@ export const Incubator = ({ toasts, setToasts }) => {
         const summonData = summonConfig[summonType];
         const qualityDisplayName = getQualityDisplayName(summonQuality);
         
+        // 解锁图鉴
+        dispatch(unlockSummon({ 
+          summonSourceId: summonType, 
+          quality: summonQuality 
+        }));
+        
         showResult(`恭喜！获得了一只${qualityDisplayName}品质的${summonData.name}！`, "success");
       } else {
         showResult("创建召唤兽失败", "error");

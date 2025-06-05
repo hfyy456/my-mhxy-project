@@ -1,0 +1,442 @@
+{
+  "skills": [
+    {
+      "id": "magic_critical",
+      "name": "法术暴击",
+      "description": "法术攻击时有几率造成双倍伤害",
+      "type": "magical",
+      "icon": "fa-bolt",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "before_magic_skill",
+      "probability": 0.3,
+      "multiplier": 2.0,
+      "triggerBuffs": [
+        { "buffId": "magic_surge", "level": 1, "target": "self", "chance": 0.3 }
+      ]
+    },
+    {
+      "id": "combo_attack",
+      "name": "连击",
+      "description": "物理攻击时可能连续攻击两次",
+      "type": "physical",
+      "icon": "fa-strikethrough",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "after_normal_attack",
+      "probability": 0.25,
+      "hits": 2,
+      "triggerBuffs": [
+        { "buffId": "attack_up", "level": 1, "target": "self", "chance": 0.25, "duration": 1 }
+      ]
+    },
+    {
+      "id": "counter",
+      "name": "反震",
+      "description": "受到物理攻击时有几率反弹伤害",
+      "type": "defensive",
+      "icon": "fa-shield-alt",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "on_physical_damage",
+      "probability": 0.2,
+      "reflectPercentage": 0.3,
+      "triggerBuffs": [
+        { "buffId": "reflect", "level": 1, "target": "self", "chance": 0.2, "duration": 1 }
+      ]
+    },
+    {
+      "id": "perception",
+      "name": "感知",
+      "description": "可以感知到隐身的单位",
+      "type": "support",
+      "icon": "fa-eye",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "detectRange": 5,
+      "permanentBuffs": [
+        { "buffId": "perception", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "magic_heart",
+      "name": "魔之心",
+      "description": "增加法术伤害",
+      "type": "magical",
+      "icon": "fa-fire",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "magicalDamageBonus": 0.15,
+      "permanentBuffs": [
+        { "buffId": "magic_attack_up", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "agility_boost",
+      "name": "敏捷",
+      "description": "提升自身速度",
+      "type": "speed",
+      "icon": "fa-running",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "speedBonus": 0.2,
+      "permanentBuffs": [
+        { "buffId": "speed_up", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "luck_boost",
+      "name": "幸运",
+      "description": "增加躲避暴击的几率",
+      "type": "defensive",
+      "icon": "fa-four-leaf-clover",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "critResistance": 0.2,
+      "permanentBuffs": [
+        { "buffId": "crit_resistance", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "power_strike",
+      "name": "强力",
+      "description": "增加物理攻击伤害",
+      "type": "physical",
+      "icon": "fa-bullseye",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "physicalDamageBonus": 0.15,
+      "permanentBuffs": [
+        { "buffId": "attack_up", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "magic_chain",
+      "name": "法术连击",
+      "description": "法术攻击时可能连续攻击两次",
+      "type": "magical",
+      "icon": "fa-bolt-lightning",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "after_magic_skill",
+      "probability": 0.25,
+      "hits": 2,
+      "triggerBuffs": [
+        { "buffId": "magic_attack_up", "level": 1, "target": "self", "chance": 0.25, "duration": 1 }
+      ]
+    },
+    {
+      "id": "night_combat",
+      "name": "夜战",
+      "description": "夜间战斗能力增强",
+      "type": "physical",
+      "icon": "fa-moon-stars",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "battle_start",
+      "nightBonusDamage": 0.3
+    },
+    {
+      "id": "magic_surge",
+      "name": "法术波动",
+      "description": "法术伤害在一定范围内波动",
+      "type": "magical",
+      "icon": "fa-wave-square",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "before_magic_skill",
+      "damageVariation": { "min": 0.8, "max": 1.4 }
+    },
+    {
+      "id": "defense_boost",
+      "name": "防御",
+      "description": "增加物理防御能力",
+      "type": "defensive",
+      "icon": "fa-shield",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "defenseBonus": 0.2,
+      "permanentBuffs": [
+        { "buffId": "defense_up", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "critical_strike",
+      "name": "必杀",
+      "description": "物理攻击时有几率造成双倍伤害",
+      "type": "physical",
+      "icon": "fa-crown",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "before_normal_attack",
+      "probability": 0.3,
+      "multiplier": 2.0,
+      "triggerBuffs": [
+        { "buffId": "attack_up", "level": 2, "target": "self", "chance": 0.3, "duration": 1 }
+      ]
+    },
+    {
+      "id": "divine_protection",
+      "name": "神佑复生",
+      "description": "战斗中死亡时有几率复活",
+      "type": "survival",
+      "icon": "fa-life-ring",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "on_death",
+      "probability": 0.15,
+      "reviveHealthPercentage": 0.3,
+      "triggerBuffs": [
+        { "buffId": "regeneration", "level": 2, "target": "self", "chance": 1.0, "duration": 3 }
+      ]
+    },
+    {
+      "id": "sneak_attack",
+      "name": "偷袭",
+      "description": "物理攻击时不会受到反击",
+      "type": "physical",
+      "icon": "fa-dagger",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "before_physical_skill",
+      "bonusDamage": 0.2
+    },
+    {
+      "id": "divine_might",
+      "name": "神力",
+      "description": "增加所有攻击伤害",
+      "type": "physical",
+      "icon": "fa-hand-fist",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "damageBonus": 0.2
+    },
+    {
+      "id": "magic_resistance",
+      "name": "魔法抗性",
+      "description": "减少受到的法术伤害",
+      "type": "defensive",
+      "icon": "fa-hat-wizard",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "on_magical_damage",
+      "magicResistance": 0.2,
+      "permanentBuffs": [
+        { "buffId": "magic_defense_up", "level": 1, "target": "self" }
+      ],
+      "triggerBuffs": [
+        { "buffId": "magic_defense_up", "level": 1, "target": "self", "chance": 0.3, "duration": 1 }
+      ]
+    },
+    {
+      "id": "life_force",
+      "name": "生命力",
+      "description": "增加最大生命值",
+      "type": "survival",
+      "icon": "fa-heart",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "healthBonus": 0.2
+    },
+    {
+      "id": "mana_flow",
+      "name": "法力流",
+      "description": "增加最大法力值",
+      "type": "magical",
+      "icon": "fa-droplet",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "manaBonus": 0.2
+    },
+    {
+      "id": "elemental_mastery",
+      "name": "元素掌控",
+      "description": "增加元素伤害",
+      "type": "magical",
+      "icon": "fa-wand-sparkles",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "elementalDamageBonus": 0.15
+    },
+    {
+      "id": "quick_recovery",
+      "name": "快速恢复",
+      "description": "每回合恢复少量生命值",
+      "type": "survival",
+      "icon": "fa-heart-pulse",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "turn_start",
+      "healthRecovery": 0.05
+    },
+    {
+      "id": "mana_regeneration",
+      "name": "法力再生",
+      "description": "每回合恢复少量法力值",
+      "type": "magical",
+      "icon": "fa-droplet-percent",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "turn_start",
+      "manaRecovery": 0.05
+    },
+    {
+      "id": "first_strike",
+      "name": "先发制人",
+      "description": "战斗开始时有几率先手攻击",
+      "type": "speed",
+      "icon": "fa-bolt-lightning",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "battle_start",
+      "probability": 0.3
+    },
+    {
+      "id": "damage_reduction",
+      "name": "伤害减免",
+      "description": "减少受到的所有伤害",
+      "type": "defensive",
+      "icon": "fa-shield-heart",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "on_any_damage",
+      "damageReduction": 0.1
+    },
+    {
+      "id": "spirit_link",
+      "name": "灵魂链接",
+      "description": "与主人共享部分生命值",
+      "type": "support",
+      "icon": "fa-link",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "after_damage",
+      "linkPercentage": 0.2
+    },
+    {
+      "id": "elemental_resistance",
+      "name": "元素抗性",
+      "description": "减少受到的元素伤害",
+      "type": "defensive",
+      "icon": "fa-fire-flame-simple",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "on_magical_damage",
+      "elementalResistance": 0.15
+    },
+    {
+      "id": "dodge",
+      "name": "闪避",
+      "description": "有几率完全闪避普通攻击",
+      "type": "speed",
+      "icon": "fa-person-running",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "before_normal_attack",
+      "dodgeChance": 0.15
+    },
+    {
+      "id": "fire_mastery",
+      "name": "火系精通",
+      "description": "增加火系技能伤害，减少受到的火系伤害",
+      "type": "magical",
+      "icon": "fa-fire",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "elementType": "fire",
+      "elementDamageBonus": 0.2,
+      "elementResistance": 0.15,
+      "permanentBuffs": [
+        { "buffId": "fire_power", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "water_mastery",
+      "name": "水系精通",
+      "description": "增加水系技能伤害，减少受到的水系伤害",
+      "type": "magical",
+      "icon": "fa-water",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "elementType": "water",
+      "elementDamageBonus": 0.2,
+      "elementResistance": 0.15,
+      "permanentBuffs": [
+        { "buffId": "water_power", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "thunder_mastery",
+      "name": "雷系精通",
+      "description": "增加雷系技能伤害，减少受到的雷系伤害",
+      "type": "magical",
+      "icon": "fa-bolt",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "always",
+      "elementType": "thunder",
+      "elementDamageBonus": 0.2,
+      "elementResistance": 0.15,
+      "permanentBuffs": [
+        { "buffId": "thunder_power", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "vampiric_touch",
+      "name": "吸血",
+      "description": "攻击时有几率吸取目标生命值",
+      "type": "physical",
+      "icon": "fa-droplet",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "after_any_attack",
+      "probability": 0.3,
+      "lifeStealPercent": 0.2,
+      "triggerBuffs": [
+        { "buffId": "vampiric_aura", "level": 1, "target": "self", "chance": 0.3, "duration": 1 }
+      ]
+    },
+    {
+      "id": "meditation",
+      "name": "冥想",
+      "description": "回合结束时恢复少量MP",
+      "type": "support",
+      "icon": "fa-brain",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "turn_end",
+      "probability": 1.0,
+      "mpRecovery": 5,
+      "permanentBuffs": [
+        { "buffId": "meditation", "level": 1, "target": "self" }
+      ]
+    },
+    {
+      "id": "elemental_harmony",
+      "name": "元素和谐",
+      "description": "使用元素技能后，下一个不同元素的技能威力提升",
+      "type": "magical",
+      "icon": "fa-yin-yang",
+      "mode": "passive",
+      "targetType": "none",
+      "timing": "after_magic_skill",
+      "probability": 0.8,
+      "elementalBonus": 0.25,
+      "triggerBuffs": [
+        { "buffId": "elemental_harmony", "level": 1, "target": "self", "chance": 0.8, "duration": 2 }
+      ]
+    }
+  ]
+} 

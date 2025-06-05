@@ -162,7 +162,7 @@ export const uiText = {
   // 五行类型
   fiveElements: {
     [FIVE_ELEMENTS.METAL]: "金",
-    [FIVE_ELEMENTS.WOOD]: "木", 
+    [FIVE_ELEMENTS.WOOD]: "木",
     [FIVE_ELEMENTS.WATER]: "水",
     [FIVE_ELEMENTS.FIRE]: "火",
     [FIVE_ELEMENTS.EARTH]: "土",

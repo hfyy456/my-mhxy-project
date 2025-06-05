@@ -29,6 +29,7 @@ function createWindow() {
         title: '梦幻西游单机版',
         frame: false, // 无边框模式
         transparent: false, // 不透明
+        titleBarStyle: 'hidden', // 隐藏标题栏但保留窗口控件
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'), // 预加载脚本
             contextIsolation: true, // 增强安全性
@@ -46,6 +47,23 @@ function createWindow() {
         // 生产模式下加载打包后的index.html
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
+
+    // 添加窗口事件监听器
+    mainWindow.on('maximize', () => {
+        mainWindow.webContents.send('window-maximized');
+    });
+
+    mainWindow.on('unmaximize', () => {
+        mainWindow.webContents.send('window-unmaximized');
+    });
+
+    mainWindow.on('enter-full-screen', () => {
+        mainWindow.webContents.send('window-enter-fullscreen');
+    });
+
+    mainWindow.on('leave-full-screen', () => {
+        mainWindow.webContents.send('window-leave-fullscreen');
+    });
 
     // 窗口最大化
     mainWindow.maximize();
@@ -169,9 +187,35 @@ ipcMain.on('window-maximize', (event) => {
     }
 });
 
+ipcMain.on('window-unmaximize', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) win.unmaximize();
+});
+
 ipcMain.on('window-close', (event) => {
     const win = BrowserWindow.getFocusedWindow();
     if (win) win.close();
+});
+
+ipcMain.on('window-fullscreen', (event, flag) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) win.setFullScreen(flag);
+});
+
+// 窗口状态检查
+ipcMain.handle('window-is-maximized', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    return win ? win.isMaximized() : false;
+});
+
+ipcMain.handle('window-is-fullscreen', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    return win ? win.isFullScreen() : false;
+});
+
+ipcMain.handle('window-is-minimized', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    return win ? win.isMinimized() : false;
 });
 
 // 配置文件管理IPC处理程序
@@ -188,6 +232,10 @@ ipcMain.handle('save-config-file', async (event, { fileName, data, configType })
             configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
         } else if (configType === 'summons') {
             configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else if (configType === 'skills') {
+            configPath = path.join(projectRoot, 'src', 'config', 'skill', fileName);
+        } else if (configType === 'buffs') {
+            configPath = path.join(projectRoot, 'src', 'config', 'buff', fileName);
         } else {
             throw new Error(`不支持的配置类型: ${configType}`);
         }
@@ -227,6 +275,10 @@ ipcMain.handle('load-config-file', async (event, { fileName, configType }) => {
             configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
         } else if (configType === 'summons') {
             configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else if (configType === 'skills') {
+            configPath = path.join(projectRoot, 'src', 'config', 'skill', fileName);
+        } else if (configType === 'buffs') {
+            configPath = path.join(projectRoot, 'src', 'config', 'buff', fileName);
         } else {
             throw new Error(`不支持的配置类型: ${configType}`);
         }
@@ -261,6 +313,10 @@ ipcMain.handle('backup-config-file', async (event, { fileName, configType }) => 
             configPath = path.join(projectRoot, 'src', 'config', 'item', fileName);
         } else if (configType === 'summons') {
             configPath = path.join(projectRoot, 'src', 'config', 'summon', fileName);
+        } else if (configType === 'skills') {
+            configPath = path.join(projectRoot, 'src', 'config', 'skill', fileName);
+        } else if (configType === 'buffs') {
+            configPath = path.join(projectRoot, 'src', 'config', 'buff', fileName);
         } else {
             throw new Error(`不支持的配置类型: ${configType}`);
         }

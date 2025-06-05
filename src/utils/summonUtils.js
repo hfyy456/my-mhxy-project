@@ -92,7 +92,7 @@ export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedIt
     for (const baseAttr of config.attributes) {
       baseValue += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
     }
-    
+
     console.log(`  [派生属性] ${attrKey} 基础计算值: ${baseValue}`);
     
     // 应用装备对该派生属性的效果
