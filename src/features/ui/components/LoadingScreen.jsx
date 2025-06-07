@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 03:09:59
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-06 07:47:13
+ * @LastEditTime: 2025-06-07 00:03:58
  */
 import React, { useState, useEffect } from 'react';
 import MapGenerationVisualizer from './MapGenerationVisualizer';

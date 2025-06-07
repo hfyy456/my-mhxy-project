@@ -482,10 +482,7 @@ class SummonManager extends EventEmitter {
     this.currentSummonId = null;
     this.maxSummons = maxSummons;
 
-    // 自动保存机制
-    this.setupAutoSave();
-
-    console.log("[SummonManager] 召唤兽管理器初始化完成");
+    console.log("[SummonManager] 召唤兽管理器初始化完成（无持久化）");
   }
 
   // 获取状态
@@ -514,54 +511,41 @@ class SummonManager extends EventEmitter {
 
   // 添加召唤兽
   addSummon(summonData) {
-    try {
-      if (this.summons.size >= this.maxSummons) {
-        this.emit("error", {
-          type: "summons_full",
-          message: "召唤兽数量已达上限",
-        });
-        return null;
-      }
+    const summon = SummonFactory.createSummon(summonData);
+    summon.setManager(this);
 
-      const summon = SummonFactory.createSummon(summonData);
-      summon.setManager(this);
-      this.summons.set(summon.id, summon);
+    this.summons.set(summon.id, summon);
 
-      this.emit("summon_added", { summon: summon.toJSON() });
-      this.emit("state_changed", this.getState());
-      this.scheduleAutoSave();
+    this.emit("summon_added", { summon: summon.toJSON() });
+    this.emit("state_changed", this.getState());
 
-      console.log(
-        `[SummonManager] 添加召唤兽: ${summon.nickname || summon.id}`
-      );
-      return summon;
-    } catch (error) {
-      this.emit("error", { type: "add_summon_failed", message: error.message });
-      return null;
-    }
+    console.log(`[SummonManager] 召唤兽 ${summon.nickname} 已添加`);
+    return summon.id;
   }
 
   // 移除召唤兽
   removeSummon(summonId) {
-    const summon = this.summons.get(summonId);
-    if (!summon) {
-      console.warn(`[SummonManager] 找不到召唤兽ID: ${summonId}`);
-      return false;
-    }
+    const summon = this.getSummonById(summonId);
+    if (!summon) return false;
 
-    // 如果是当前选中的召唤兽，清除选中状态
-    if (this.currentSummonId === summonId) {
-      this.setCurrentSummon(null);
-    }
-
-    summon.setManager(null);
     this.summons.delete(summonId);
 
-    this.emit("summon_removed", { summonId, summon: summon.toJSON() });
-    this.emit("state_changed", this.getState());
-    this.scheduleAutoSave();
+    if (this.currentSummonId === summonId) {
+      const remainingSummons = Array.from(this.summons.keys());
+      this.currentSummonId = remainingSummons.length > 0 ? remainingSummons[0] : null;
 
-    console.log(`[SummonManager] 移除召唤兽: ${summon.nickname || summonId}`);
+      this.emit("current_summon_changed", {
+        currentSummonId: this.currentSummonId,
+        currentSummonFullData: this.currentSummonId 
+          ? this.getSummonById(this.currentSummonId).getFullData() 
+          : null,
+      });
+    }
+
+    this.emit("summon_removed", { summonId });
+    this.emit("state_changed", this.getState());
+
+    console.log(`[SummonManager] 召唤兽 ${summonId} 已移除`);
     return true;
   }
 
@@ -657,137 +641,8 @@ class SummonManager extends EventEmitter {
     return true;
   }
 
-  // 自动保存设置
-  setupAutoSave() {
-    this.saveTimeout = null;
-  }
-
-  scheduleAutoSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    this.saveTimeout = setTimeout(() => {
-      this.saveToElectronStore();
-    }, 1000);
-  }
-
-  // 保存到Electron Store
-  async saveToElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const stateToSave = this.serializeForStorage();
-
-        // DEBUG: Log the state object just before it's written to Electron Store
-        // console.log(
-        //   "[SummonManager saveToElectronStore] State being saved to Electron Store:",
-        //   JSON.parse(JSON.stringify(stateToSave))
-        // );
-        // Specifically log equippedItemIds for the first summon, if any
-        // if (
-        //   stateToSave.summons &&
-        //   stateToSave.summons.length > 0 &&
-        //   stateToSave.summons[0][1]
-        // ) {
-        //   console.log(
-        //     "[SummonManager saveToElectronStore] First summon's equippedItemIds in stateToSave:",
-        //     JSON.parse(
-        //       JSON.stringify(stateToSave.summons[0][1].equippedItemIds || {})
-        //     )
-        //   );
-        // }
-
-        await window.electronAPI.store.set("summonState", stateToSave);
-        this.emit("state_saved");
-      } catch (error) {
-        console.error("保存召唤兽状态失败:", error);
-        this.emit("error", { type: "save_failed", message: error.message });
-      }
-    }
-  }
-
-  // 从Electron Store加载
-  async loadFromElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const savedState = await window.electronAPI.store.get("summonState");
-
-        // DEBUG: Log the raw savedState loaded from Electron Store
-        // if (savedState && savedState.summons && savedState.summons.length > 0) {
-        //   console.log("[SummonManager loadFromElectronStore] Raw savedState from Electron Store:", JSON.parse(JSON.stringify(savedState)));
-        //   const firstSummonEntry = savedState.summons[0];
-        //   if (firstSummonEntry && firstSummonEntry[1]) {
-        //     console.log("[SummonManager loadFromElectronStore] First summonData from savedState (equippedItemIds check):", JSON.parse(JSON.stringify(firstSummonEntry[1].equippedItemIds || {})));
-        //   }
-        // } else if (savedState) {
-        //   console.log("[SummonManager loadFromElectronStore] savedState from Electron Store (no summons or empty):", JSON.parse(JSON.stringify(savedState)));
-        // } else {
-        //   console.log("[SummonManager loadFromElectronStore] No savedState found in Electron Store.");
-        // }
-
-        if (savedState) {
-          this.deserializeFromStorage(savedState);
-          this.emit("state_loaded", this.getState());
-          console.log("[SummonManager] 加载已保存的召唤兽状态");
-        } else {
-          console.log("[SummonManager] 没有保存数据");
-        }
-      } catch (error) {
-        console.error("加载召唤兽状态失败:", error);
-        this.emit("error", { type: "load_failed", message: error.message });
-      }
-    } else {
-      console.log("[SummonManager] 没有Electron Store");
-    }
-  }
-
-  // 序列化存储
-  serializeForStorage() {
-    let summons = Array.from(this.summons.entries()).map(([id, summon]) => [
-      id,
-      summon.toJSON(),
-    ]);
-    console.log(
-      "[SummonManager serializeForStorage] Serializing summons:",
-      summons
-    );
-    return {
-      summons: summons,
-      currentSummonId: this.currentSummonId,
-      maxSummons: this.maxSummons,
-      timestamp: Date.now(),
-    };
-  }
-
-  // 反序列化
-  deserializeFromStorage(savedState) {
-    this.summons.clear();
-
-    this.currentSummonId = savedState.currentSummonId || null;
-    this.maxSummons = savedState.maxSummons || 6;
-
-    if (savedState.summons) {
-      savedState.summons.forEach(([id, summonData]) => {
-        // DEBUG: Log removed equippedItemIds reference
-        // console.log(
-        //   `[SummonManager deserializeFromStorage] Processing summonId: ${id}. summonData.equippedItemIds before createSummon:`,
-        //   JSON.parse(JSON.stringify(summonData.equippedItemIds || {}))
-        // );
-
-        const summon = SummonFactory.createSummon(summonData);
-        summon.setManager(this);
-        this.summons.set(id, summon);
-      });
-    }
-
-    console.log("[SummonManager] 反序列化完成");
-  }
-
   // 清理资源
   destroy() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
     this.removeAllListeners();
   }
 }

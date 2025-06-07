@@ -13,20 +13,8 @@ export function useInventoryManager() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // 初始加载
-    const loadInitialState = async () => {
-      setIsLoading(true);
-      try {
-        await inventoryManager.loadFromElectronStore();
-        setState(inventoryManager.getState());
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInitialState();
+    // 设置初始状态
+    setState(inventoryManager.getState());
 
     // 监听状态变化
     const handleInventoryChange = (newState) => {
@@ -55,25 +43,13 @@ export function useInventoryManager() {
       }
       
       if (criticalErrors.some(err => errorData.message.includes(err)) || 
-          errorData.type === "add_item_failed" || 
-          errorData.type === "save_failed" || 
-          errorData.type === "load_failed") {
+          errorData.type === "add_item_failed") {
         console.error('[useInventoryManager] 关键错误:', errorData.message);
         setError(errorData.message);
       } else {
         console.log('[useInventoryManager] 一般错误:', errorData.message);
         // 一般错误也不传播到UI层
       }
-    };
-
-    const handleStateLoaded = (loadedState) => {
-      setState(loadedState);
-      setError(null);
-    };
-
-    const handleStateSaved = () => {
-      // 可以在这里添加保存成功的提示
-      setError(null);
     };
 
     // 处理物品添加事件 - 强制刷新状态
@@ -103,8 +79,6 @@ export function useInventoryManager() {
     // 注册事件监听器
     inventoryManager.on('inventory_changed', handleInventoryChange);
     inventoryManager.on('error', handleError);
-    inventoryManager.on('state_loaded', handleStateLoaded);
-    inventoryManager.on('state_saved', handleStateSaved);
     inventoryManager.on('item_added', handleItemAdded);
     inventoryManager.on('item_stacked', handleItemStacked);
     inventoryManager.on('item_removed', handleItemRemoved);
@@ -114,8 +88,6 @@ export function useInventoryManager() {
     return () => {
       inventoryManager.off('inventory_changed', handleInventoryChange);
       inventoryManager.off('error', handleError);
-      inventoryManager.off('state_loaded', handleStateLoaded);
-      inventoryManager.off('state_saved', handleStateSaved);
       inventoryManager.off('item_added', handleItemAdded);
       inventoryManager.off('item_stacked', handleItemStacked);
       inventoryManager.off('item_removed', handleItemRemoved);
@@ -149,10 +121,6 @@ export function useInventoryActions() {
     // 查询操作 - 基于物品ID
     getItemById: (itemId) => inventoryManager.getItemById(itemId),
     searchItems: (query, filters) => inventoryManager.searchItems(query, filters),
-    
-    // 存档操作
-    saveToStore: () => inventoryManager.saveToElectronStore(),
-    loadFromStore: () => inventoryManager.loadFromElectronStore(),
 
     // 获取可装备物品列表
     getEquippableItems: (slotType = null, includeEquipped = false) => inventoryManager.getEquippableItems(slotType, includeEquipped),
@@ -537,8 +505,7 @@ export function useInventoryMigration() {
         }
       }
       
-      // 保存迁移后的状态
-      await inventoryManager.saveToElectronStore();
+      // 迁移完成，更新状态
       
       console.log('数据迁移完成');
       setMigrationStatus('迁移成功！');

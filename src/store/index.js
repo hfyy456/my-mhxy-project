@@ -7,7 +7,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import incubatorReducer from '@/store/slices/incubatorSlice';
 import summonCatalogReducer from '@/store/slices/summonCatalogSlice';
-import saveReducer from '@/store/slices/saveSlice';
 import questReducer from '@/store/slices/questSlice';
 import mapReducer from '@/store/slices/mapSlice';
 import npcReducer from '@/store/slices/npcSlice';
@@ -17,13 +16,13 @@ import battleReducer from '@/store/slices/battleSlice';
 import towerReducer from '@/store/slices/towerSlice';
 import playerReducer from '@/store/slices/playerSlice'; // 导入 playerReducer
 import homesteadReducer from '@/store/slices/homesteadSlice'; // 导入 homesteadReducer
+import enhancedHomesteadReducer from '@/store/slices/enhancedHomesteadSlice'; // 导入增强家园系统
 
 const store = configureStore({
   reducer: {
     player: playerReducer, // 注册 playerReducer
     incubator: incubatorReducer,
     summonCatalog: summonCatalogReducer,
-    saves: saveReducer,
     quests: questReducer,
     map: mapReducer,
     npcs: npcReducer,
@@ -32,6 +31,7 @@ const store = configureStore({
     battle: battleReducer,
     tower: towerReducer,
     homestead: homesteadReducer, // 注册 homesteadReducer
+    enhancedHomestead: enhancedHomesteadReducer, // 注册增强家园系统
   },
 });
 

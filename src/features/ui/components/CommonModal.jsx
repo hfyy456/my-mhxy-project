@@ -83,7 +83,7 @@ const CommonModal = ({
             {!hideCloseButton && (
               <button 
                 ref={closeButtonRef} 
-                className="text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-md p-1"
+                className="text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-purple-400 rounded-md p-1"
                 onClick={onClose}
                 aria-label="Close modal"
               >

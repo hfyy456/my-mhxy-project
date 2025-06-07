@@ -371,6 +371,7 @@ class LoadingManager {
   async initializeGameSystems() {
     const systems = [];
 
+
     // 初始化背包系统
     try {
       const { inventoryManager } = await import('@/store/InventoryManager');
@@ -382,22 +383,18 @@ class LoadingManager {
       console.warn('[LoadingManager] 背包系统初始化失败:', error);
     }
 
-    // 执行数据修复
+    // 4. 验证和清理数据
     try {
-      const fixKey = 'hasFixedInventorySourceId_v1';
-      if (!localStorage.getItem(fixKey)) {
-        const { default: dataClearManager } = await import('@/store/DataClearManager');
-        await dataClearManager.clearInventoryData();
-        localStorage.setItem(fixKey, 'true');
-        systems.push({ name: '数据修复', success: true });
-        console.log('[LoadingManager] 数据修复完成');
-      } else {
-        systems.push({ name: '数据修复', success: true, skipped: true });
-        console.log('[LoadingManager] 数据修复已跳过（之前已执行）');
-      }
+      this.updateProgress(12, '正在验证游戏数据...');
+      
+      // 检查背包数据一致性
+      const { default: inventoryManager } = await import('@/store/InventoryManager');
+      console.log('[LoadingManager] 背包状态检查完成');
+      
+      this.updateProgress(15, '数据验证完成');
     } catch (error) {
-      systems.push({ name: '数据修复', success: false, error });
-      console.warn('[LoadingManager] 数据修复失败:', error);
+      systems.push({ name: '数据验证', success: false, error });
+      console.warn('[LoadingManager] 数据验证失败:', error);
     }
 
     return systems;

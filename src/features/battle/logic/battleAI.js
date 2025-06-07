@@ -1,8 +1,14 @@
 /*
  * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-02 01:59:49
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-07 04:26:36
+ */
+/*
+ * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-23 01:54:30
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-23 01:54:30
+ * @LastEditTime: 2025-06-07 04:23:41
  * @FilePath: \my-mhxy-project\src\features\battle\logic\battleAI.js
  * @Description: 战斗AI逻辑系统
  */

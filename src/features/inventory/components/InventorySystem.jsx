@@ -36,11 +36,11 @@ function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, i
   return (
     <div
       className={`
-        w-16 h-16 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200
+        w-16 h-16 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors duration-200
         ${isEmpty ? 'border-neutral-600 bg-neutral-700 hover:border-neutral-500' : getQualityColor(item.quality)}
-        ${isDragTarget ? 'border-sky-400 bg-sky-300 ring-4 ring-sky-400 ring-opacity-50 shadow-xl scale-105' : ''}
-        ${isSelected ? 'ring-2 ring-yellow-400 ring-inset shadow-md shadow-yellow-400/50 scale-105' : ''}
-        hover:shadow-xl active:scale-95 relative group
+        ${isDragTarget ? 'border-sky-400 bg-sky-300 ring-4 ring-sky-400 ring-opacity-50 shadow-xl' : ''}
+        ${isSelected ? ' ring-yellow-400 ring-inset shadow-md shadow-yellow-400/50' : ''}
+        hover:shadow-xl relative group
       `}
       onClick={() => onSlotClick(slotIndex)}
       onDragStart={(e) => onDragStart(e, slotIndex)}
@@ -209,7 +209,6 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
       case 'consumable': return '消耗品';
       case 'material': return '材料';
       case 'quest': return '任务道具';
-      case 'misc': return '杂物';
       default: return type;
     }
   };
@@ -338,7 +337,7 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
           <button
             onClick={() => onUse(item)}
             disabled={isProcessing}
-            className="flex-1 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-75 transition-all"
+            className="flex-1 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none  focus:ring-teal-500 focus:ring-opacity-75 transition-all"
           >
             使用
           </button>
@@ -348,7 +347,7 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
           <button
             onClick={() => setShowSummonSelector(true)}
             disabled={isProcessing}
-            className="flex-1 bg-sky-600 hover:bg-sky-700 disabled:bg-sky-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-75 transition-all"
+            className="flex-1 bg-sky-600 hover:bg-sky-700 disabled:bg-sky-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none  focus:ring-sky-500 focus:ring-opacity-75 transition-all"
           >
             {uiText.buttons.equipItem}
           </button>
@@ -362,7 +361,7 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
               onUnequip(item).finally(() => setIsProcessing(false));
             }}
             disabled={isProcessing}
-            className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition-all"
+            className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none  focus:ring-red-500 focus:ring-opacity-75 transition-all"
           >
             {uiText.buttons.unequipItem}
           </button>
@@ -372,7 +371,7 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
           <button
             onClick={() => onSplit(item)}
             disabled={isProcessing}
-            className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-75 transition-all"
+            className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-amber-500 focus:ring-opacity-75 transition-all"
           >
             拆分
           </button>

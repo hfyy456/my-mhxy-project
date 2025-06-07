@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-02 20:54:52
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-07 05:52:50
+ */
 // src/config/homestead/homesteadConfig.js
 export const HOMESTEAD_GENERAL_CONFIG = {
   INITIAL_PLOTS: 9, // 初始地块数量 (例如 3x3 网格)

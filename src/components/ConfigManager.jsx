@@ -14,6 +14,7 @@ const ConfigManager = () => {
   const [activeSkillsConfig, setActiveSkillsConfig] = useState(null);
   const [passiveSkillsConfig, setPassiveSkillsConfig] = useState(null);
   const [buffsConfig, setBuffsConfig] = useState(null);
+  const [worldMapConfig, setWorldMapConfig] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('equipments');
   const [selectedItem, setSelectedItem] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,12 +32,15 @@ const ConfigManager = () => {
         const activeSkillsModule = await import('/src/config/skill/activeSkills.json');
         const passiveSkillsModule = await import('/src/config/skill/passiveSkills.json');
         const buffsModule = await import('/src/config/buff/buffs.json');
+        // 导入世界地图配置JSON文件
+        const worldMapModule = await import('/src/config/map/worldMapConfig.json');
         
         setItemsConfig(itemsModule.default);
         setSummonsConfig(summonsModule.default);
         setActiveSkillsConfig(activeSkillsModule.default);
         setPassiveSkillsConfig(passiveSkillsModule.default);
         setBuffsConfig(buffsModule.default);
+        setWorldMapConfig(worldMapModule.default);
         showResult('配置文件加载成功', 'success');
       } catch (error) {
         console.error('加载配置文件失败:', error);
@@ -75,6 +79,10 @@ const ConfigManager = () => {
             fileName = 'buffs.json';
             apiConfigType = 'buffs';
             break;
+          case 'worldMap':
+            fileName = 'worldMapConfig.json';
+            apiConfigType = 'map';
+            break;
           default:
             throw new Error('未知的配置类型');
         }
@@ -94,7 +102,8 @@ const ConfigManager = () => {
             summons: '召唤兽',
             activeSkills: '主动技能',
             passiveSkills: '被动技能',
-            buffs: 'Buff效果'
+            buffs: 'Buff效果',
+            worldMap: '世界地图'
           };
           showResult(`${typeNames[configType]}配置保存到文件成功`, 'success');
           console.log('文件保存路径:', result.path);
@@ -110,7 +119,8 @@ const ConfigManager = () => {
           summons: '召唤兽',
           activeSkills: '主动技能',
           passiveSkills: '被动技能',
-          buffs: 'Buff效果'
+          buffs: 'Buff效果',
+          worldMap: '世界地图'
         };
         showResult(`${typeNames[configType]}配置保存到本地存储成功`, 'success');
       }
@@ -131,6 +141,9 @@ const ConfigManager = () => {
           break;
         case 'buffs':
           setBuffsConfig(data);
+          break;
+        case 'worldMap':
+          setWorldMapConfig(data);
           break;
       }
     } catch (error) {
@@ -197,6 +210,10 @@ const ConfigManager = () => {
           newBuffsConfig.push(editingData);
         }
         saveConfig('buffs', newBuffsConfig);
+        break;
+      case 'worldMap':
+        // 世界地图配置的保存逻辑
+        saveConfig('worldMap', editingData);
         break;
     }
     setIsEditing(false);
@@ -349,6 +366,18 @@ const ConfigManager = () => {
           valueMultiplier: 0,
           maxStacks: 1,
           durationRounds: 3
+        };
+        break;
+      case 'worldMap':
+        newItem = {
+          id: newId,
+          name: '新地图区域',
+          description: '新地图区域描述',
+          position: { top: '50%', left: '50%' },
+          color: 'blue',
+          icon: '🏔️',
+          unlocked: true,
+          nodes: []
         };
         break;
       default:
@@ -1048,6 +1077,93 @@ const ConfigManager = () => {
     );
   };
 
+  // 渲染世界地图列表
+  const renderWorldMapList = () => {
+    if (!worldMapConfig) {
+      return (
+        <div className="text-center py-12">
+          <i className="fas fa-map text-4xl text-slate-400 mb-4"></i>
+          <p className="text-slate-400">暂无世界地图配置数据</p>
+        </div>
+      );
+    }
+
+    const getRegionColor = (regionId) => {
+      const colors = {
+        dongsheng_region: 'from-emerald-500 to-emerald-600',
+        xiniu_region: 'from-amber-500 to-amber-600',
+        nanzhan_region: 'from-blue-500 to-blue-600',
+        beijulu_region: 'from-purple-500 to-purple-600'
+      };
+      return colors[regionId] || 'from-gray-500 to-gray-600';
+    };
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Object.values(worldMapConfig).map((region) => (
+          <div
+            key={region.id}
+            className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105 cursor-pointer"
+            onClick={() => startEdit(region)}
+          >
+                         <div className={`h-32 bg-gradient-to-br ${getRegionColor(region.id)} p-4 relative overflow-hidden`}>
+               <div className="absolute inset-0 bg-black/20"></div>
+               <div className="relative z-10 h-full flex flex-col justify-between">
+                 <div className="flex justify-between items-start">
+                   <div className="text-3xl">🏔️</div>
+                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                     region.isUnlocked ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'
+                   }`}>
+                     {region.isUnlocked ? '已解锁' : '未解锁'}
+                   </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">{region.name}</h3>
+                  <p className="text-white/80 text-sm">{region.description}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-slate-300">节点数量</span>
+                                 <span className="px-2 py-1 bg-slate-700 rounded-full text-xs font-medium text-slate-300">
+                   {Object.keys(region.nodes || {}).length}
+                 </span>
+              </div>
+              
+                             {region.nodes && Object.keys(region.nodes).length > 0 && (
+                 <div className="space-y-2">
+                   <div className="text-xs text-slate-400 mb-2">包含节点：</div>
+                   <div className="grid grid-cols-2 gap-1">
+                     {Object.values(region.nodes).slice(0, 4).map((node) => (
+                       <div key={node.id} className="flex items-center gap-1 text-xs text-slate-300 truncate">
+                         <span>🏛️</span>
+                         <span className="truncate">{node.name}</span>
+                       </div>
+                     ))}
+                     {Object.keys(region.nodes).length > 4 && (
+                       <div className="text-xs text-slate-400 col-span-2">
+                         +{Object.keys(region.nodes).length - 4} 更多...
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               )}
+              
+              <div className="text-xs text-slate-400 pt-3 border-t border-slate-600/30">
+                <div className="flex items-center gap-2">
+                  <i className="fas fa-fingerprint text-slate-500"></i>
+                  <span>ID: {region.id}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // 渲染编辑表单
   const renderEditForm = () => {
     if (!isEditing || !editingData) return null;
@@ -1276,6 +1392,391 @@ const ConfigManager = () => {
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'worldMap' && (
+              <>
+                {/* 基础信息 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">描述</label>
+                  <textarea
+                    value={editingData.description || ''}
+                    onChange={(e) => updateField('description', e.target.value)}
+                    className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                    rows="3"
+                    placeholder="请输入区域描述"
+                  />
+                </div>
+
+                {/* 位置配置 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">X坐标</label>
+                    <input
+                      type="number"
+                      value={editingData.position?.x || 0}
+                      onChange={(e) => updateField('position.x', parseInt(e.target.value) || 0)}
+                      className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                      placeholder="X坐标"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Y坐标</label>
+                    <input
+                      type="number"
+                      value={editingData.position?.y || 0}
+                      onChange={(e) => updateField('position.y', parseInt(e.target.value) || 0)}
+                      className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                      placeholder="Y坐标"
+                    />
+                  </div>
+                </div>
+
+                {/* 等级要求和解锁状态 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">等级要求</label>
+                    <input
+                      type="number"
+                      value={editingData.levelRequirement || 1}
+                      onChange={(e) => updateField('levelRequirement', parseInt(e.target.value) || 1)}
+                      className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                      placeholder="等级要求"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">解锁状态</label>
+                    <select
+                      value={editingData.isUnlocked ? 'true' : 'false'}
+                      onChange={(e) => updateField('isUnlocked', e.target.value === 'true')}
+                      className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                    >
+                      <option value="true">已解锁</option>
+                      <option value="false">未解锁</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 背景图片 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">背景图片</label>
+                  <input
+                    type="text"
+                    value={editingData.backgroundImage || ''}
+                    onChange={(e) => updateField('backgroundImage', e.target.value)}
+                    className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
+                    placeholder="背景图片文件名（如：dongsheng_bg.jpg）"
+                  />
+                </div>
+
+                {/* 解锁条件 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">解锁条件</label>
+                  <div className="space-y-3">
+                    {(editingData.unlockConditions || []).map((condition, index) => (
+                      <div key={index} className="p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">条件类型</label>
+                            <select
+                              value={condition.type || 'level'}
+                              onChange={(e) => updateField(`unlockConditions.${index}.type`, e.target.value)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            >
+                              <option value="level">等级要求</option>
+                              <option value="quest">任务完成</option>
+                              <option value="item">道具持有</option>
+                              <option value="region">区域访问</option>
+                              <option value="node">节点完成</option>
+                              <option value="story">剧情进度</option>
+                            </select>
+                          </div>
+                          
+                          {condition.type === 'level' && (
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">等级值</label>
+                              <input
+                                type="number"
+                                value={condition.value || 1}
+                                onChange={(e) => updateField(`unlockConditions.${index}.value`, parseInt(e.target.value) || 1)}
+                                className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                                min="1"
+                              />
+                            </div>
+                          )}
+                          
+                          {condition.type === 'quest' && (
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">任务ID</label>
+                              <input
+                                type="text"
+                                value={condition.questId || ''}
+                                onChange={(e) => updateField(`unlockConditions.${index}.questId`, e.target.value)}
+                                className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                                placeholder="任务ID"
+                              />
+                            </div>
+                          )}
+                          
+                          {condition.type === 'item' && (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">道具ID</label>
+                                <input
+                                  type="text"
+                                  value={condition.itemId || ''}
+                                  onChange={(e) => updateField(`unlockConditions.${index}.itemId`, e.target.value)}
+                                  className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                                  placeholder="道具ID"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">数量</label>
+                                <input
+                                  type="number"
+                                  value={condition.amount || 1}
+                                  onChange={(e) => updateField(`unlockConditions.${index}.amount`, parseInt(e.target.value) || 1)}
+                                  className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                                  min="1"
+                                />
+                              </div>
+                            </>
+                          )}
+                          
+                          <div className="flex items-end">
+                            <button
+                              onClick={() => {
+                                const newConditions = [...(editingData.unlockConditions || [])];
+                                newConditions.splice(index, 1);
+                                updateField('unlockConditions', newConditions);
+                              }}
+                              className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
+                            >
+                              删除
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button
+                      onClick={() => {
+                        const newConditions = [...(editingData.unlockConditions || []), { type: 'level', value: 1 }];
+                        updateField('unlockConditions', newConditions);
+                      }}
+                      className="w-full p-3 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      + 添加解锁条件
+                    </button>
+                  </div>
+                </div>
+
+                {/* 节点管理 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">节点列表</label>
+                  <div className="space-y-4">
+                    {Object.entries(editingData.nodes || {}).map(([nodeId, node]) => (
+                      <div key={nodeId} className="p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="text-lg font-semibold text-white">{node.name}</h4>
+                          <button
+                            onClick={() => {
+                              const newNodes = { ...editingData.nodes };
+                              delete newNodes[nodeId];
+                              updateField('nodes', newNodes);
+                            }}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
+                          >
+                            删除节点
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">节点ID</label>
+                            <input
+                              type="text"
+                              value={node.id || ''}
+                              onChange={(e) => updateField(`nodes.${nodeId}.id`, e.target.value)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">节点名称</label>
+                            <input
+                              type="text"
+                              value={node.name || ''}
+                              onChange={(e) => updateField(`nodes.${nodeId}.name`, e.target.value)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">等级要求</label>
+                            <input
+                              type="number"
+                              value={node.levelRequirement || 1}
+                              onChange={(e) => updateField(`nodes.${nodeId}.levelRequirement`, parseInt(e.target.value) || 1)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">解锁状态</label>
+                            <select
+                              value={node.isUnlocked ? 'true' : 'false'}
+                              onChange={(e) => updateField(`nodes.${nodeId}.isUnlocked`, e.target.value === 'true')}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            >
+                              <option value="true">已解锁</option>
+                              <option value="false">未解锁</option>
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">描述</label>
+                          <textarea
+                            value={node.description || ''}
+                            onChange={(e) => updateField(`nodes.${nodeId}.description`, e.target.value)}
+                            className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            rows="2"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">位置X</label>
+                            <input
+                              type="number"
+                              value={node.position?.x || 0}
+                              onChange={(e) => updateField(`nodes.${nodeId}.position.x`, parseInt(e.target.value) || 0)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">位置Y</label>
+                            <input
+                              type="number"
+                              value={node.position?.y || 0}
+                              onChange={(e) => updateField(`nodes.${nodeId}.position.y`, parseInt(e.target.value) || 0)}
+                              className="w-full p-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* 交互配置 */}
+                        <div className="mt-4">
+                          <label className="block text-xs font-medium text-slate-400 mb-2">交互配置</label>
+                          <div className="space-y-2">
+                            {(node.interactions || []).map((interaction, interactionIndex) => (
+                              <div key={interactionIndex} className="p-3 bg-slate-600/30 rounded border border-slate-500">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-slate-400 mb-1">交互ID</label>
+                                    <input
+                                      type="text"
+                                      value={interaction.id || ''}
+                                      onChange={(e) => updateField(`nodes.${nodeId}.interactions.${interactionIndex}.id`, e.target.value)}
+                                      className="w-full p-1 bg-slate-500/50 border border-slate-400 rounded text-white text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-slate-400 mb-1">交互类型</label>
+                                    <select
+                                      value={interaction.type || 'NPC'}
+                                      onChange={(e) => updateField(`nodes.${nodeId}.interactions.${interactionIndex}.type`, e.target.value)}
+                                      className="w-full p-1 bg-slate-500/50 border border-slate-400 rounded text-white text-xs"
+                                    >
+                                      <option value="NPC">NPC对话</option>
+                                      <option value="BATTLE">进入战斗</option>
+                                      <option value="DUNGEON">副本挑战</option>
+                                      <option value="SHOP">商店购买</option>
+                                      <option value="EVENT">触发事件</option>
+                                      <option value="QUEST">任务委托</option>
+                                      <option value="TELEPORT">传送点</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-slate-400 mb-1">交互名称</label>
+                                    <input
+                                      type="text"
+                                      value={interaction.name || ''}
+                                      onChange={(e) => updateField(`nodes.${nodeId}.interactions.${interactionIndex}.name`, e.target.value)}
+                                      className="w-full p-1 bg-slate-500/50 border border-slate-400 rounded text-white text-xs"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="mt-2">
+                                  <label className="block text-xs text-slate-400 mb-1">描述</label>
+                                  <input
+                                    type="text"
+                                    value={interaction.description || ''}
+                                    onChange={(e) => updateField(`nodes.${nodeId}.interactions.${interactionIndex}.description`, e.target.value)}
+                                    className="w-full p-1 bg-slate-500/50 border border-slate-400 rounded text-white text-xs"
+                                  />
+                                </div>
+                                
+                                <div className="flex justify-end mt-2">
+                                  <button
+                                    onClick={() => {
+                                      const newInteractions = [...(node.interactions || [])];
+                                      newInteractions.splice(interactionIndex, 1);
+                                      updateField(`nodes.${nodeId}.interactions`, newInteractions);
+                                    }}
+                                    className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition-colors"
+                                  >
+                                    删除交互
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            
+                            <button
+                              onClick={() => {
+                                const newInteractions = [...(node.interactions || []), {
+                                  id: `new_interaction_${Date.now()}`,
+                                  type: 'NPC',
+                                  name: '新交互',
+                                  description: '新交互描述'
+                                }];
+                                updateField(`nodes.${nodeId}.interactions`, newInteractions);
+                              }}
+                              className="w-full p-2 border border-dashed border-slate-500 rounded text-slate-400 hover:border-slate-400 hover:text-slate-300 transition-colors text-xs"
+                            >
+                              + 添加交互
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button
+                      onClick={() => {
+                        const newNodeId = `new_node_${Date.now()}`;
+                        const newNodes = {
+                          ...editingData.nodes,
+                          [newNodeId]: {
+                            id: newNodeId,
+                            name: '新节点',
+                            description: '新节点描述',
+                            position: { x: 100, y: 100 },
+                            levelRequirement: 1,
+                            unlockConditions: [],
+                            isUnlocked: false,
+                            interactions: []
+                          }
+                        };
+                        updateField('nodes', newNodes);
+                      }}
+                      className="w-full p-4 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      + 添加新节点
+                    </button>
                   </div>
                 </div>
               </>
@@ -1534,6 +2035,20 @@ const ConfigManager = () => {
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-blue-400"></div>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab('worldMap')}
+                className={`relative py-3 px-6 font-medium text-sm rounded-t-lg transition-all duration-300 ${
+                  activeTab === 'worldMap'
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg border-b-2 border-purple-400'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <i className="fas fa-globe mr-2"></i>
+                世界地图
+                {activeTab === 'worldMap' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-blue-400"></div>
+                )}
+              </button>
             </nav>
           </div>
 
@@ -1595,7 +2110,8 @@ const ConfigManager = () => {
                 activeTab === 'summons' ? '召唤兽' :
                 activeTab === 'activeSkills' ? '主动技能' :
                 activeTab === 'passiveSkills' ? '被动技能' :
-                activeTab === 'buffs' ? 'Buff效果' : '项目'
+                activeTab === 'buffs' ? 'Buff效果' :
+                activeTab === 'worldMap' ? '地图区域' : '项目'
               }</span>
             </button>
           </div>
@@ -1634,6 +2150,8 @@ const ConfigManager = () => {
                             ? (passiveSkillsConfig?.skills?.length || 0)
                             : activeTab === 'buffs'
                             ? (buffsConfig?.length || 0)
+                            : activeTab === 'worldMap'
+                            ? Object.keys(worldMapConfig || {}).length
                             : 0
                           }
                         </div>
@@ -1642,7 +2160,8 @@ const ConfigManager = () => {
                            activeTab === 'summons' ? '召唤兽总数' :
                            activeTab === 'activeSkills' ? '主动技能总数' :
                            activeTab === 'passiveSkills' ? '被动技能总数' :
-                           activeTab === 'buffs' ? 'Buff总数' : '总数'}
+                           activeTab === 'buffs' ? 'Buff总数' :
+                           activeTab === 'worldMap' ? '地图区域总数' : '总数'}
                         </div>
                       </div>
                     </div>
@@ -1679,7 +2198,8 @@ const ConfigManager = () => {
                  activeTab === 'summons' ? renderSummonsList() :
                  activeTab === 'activeSkills' ? renderActiveSkillsList() :
                  activeTab === 'passiveSkills' ? renderPassiveSkillsList() :
-                 activeTab === 'buffs' ? renderBuffsList() : null}
+                 activeTab === 'buffs' ? renderBuffsList() :
+                 activeTab === 'worldMap' ? renderWorldMapList() : null}
               </div>
             )}
           </div>

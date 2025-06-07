@@ -1,0 +1,591 @@
+{
+  "dongsheng_region": {
+    "id": "dongsheng_region",
+    "name": "东胜神州",
+    "description": "花果山水帘洞的故乡，充满仙气的神秘之地",
+    "backgroundImage": "dongsheng_bg.jpg",
+    "position": { "x": 500, "y": 200 },
+    "levelRequirement": 1,
+    "unlockConditions": [],
+    "isUnlocked": true,
+    "nodes": {
+      "liusha_river": {
+        "id": "liusha_river",
+        "name": "流沙河",
+        "description": "流沙肆虐的河流，沙僧的盘踞地",
+        "position": { "x": 320, "y": 280 },
+        "levelRequirement": 6,
+        "unlockConditions": [
+          {
+            "type": "node",
+            "nodeId": "aolai_country",
+            "interactionId": "aolai_king_npc"
+          }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "sha_seng_battle",
+            "type": "BATTLE",
+            "name": "收服沙僧",
+            "description": "与沙悟净战斗并说服其加入队伍",
+            "battleId": "liusha_river_fight",
+            "enemyTeam": ["sha_wujing"],
+            "levelRange": { "min": 6, "max": 8 },
+            "rewards": [{ "type": "companion", "id": "sha_seng" }]
+          }
+        ]
+      },
+      "huaguo_mountain": {
+        "id": "huaguo_mountain",
+        "name": "花果山",
+        "description": "美猴王的故乡，桃花满山",
+        "position": { "x": 100, "y": 80 },
+        "levelRequirement": 1,
+        "unlockConditions": [],
+        "isUnlocked": true,
+        "interactions": [
+          {
+            "id": "monkey_king_npc",
+            "type": "NPC",
+            "name": "美猴王",
+            "description": "与传说中的美猴王对话",
+            "npcId": "monkey_king",
+            "rewards": [{ "type": "exp", "amount": 100 }]
+          },
+          {
+            "id": "peach_garden_event",
+            "type": "EVENT",
+            "name": "蟠桃园奇遇",
+            "description": "有机会获得仙桃",
+            "eventId": "peach_garden_encounter",
+            "rewards": [{ "type": "item", "id": "fairy_peach", "amount": 1 }]
+          },
+          {
+            "id": "mountain_demons_battle",
+            "type": "BATTLE",
+            "name": "山精野怪",
+            "description": "挑战花果山的守护妖怪",
+            "battleId": "huaguo_demons",
+            "enemyTeam": ["mountain_demon", "wild_boar"],
+            "levelRange": { "min": 1, "max": 3 }
+          }
+        ]
+      },
+      "aolai_country": {
+        "id": "aolai_country",
+        "name": "傲来国",
+        "description": "繁华的海岛王国",
+        "position": { "x": 250, "y": 150 },
+        "levelRequirement": 3,
+        "unlockConditions": [
+          {
+            "type": "node",
+            "nodeId": "huaguo_mountain",
+            "interactionId": "monkey_king_npc"
+          }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "aolai_king_npc",
+            "type": "NPC",
+            "name": "傲来国王",
+            "description": "与傲来国王交谈了解王国情况",
+            "npcId": "aolai_king"
+          },
+          {
+            "id": "aolai_dungeon",
+            "type": "DUNGEON",
+            "name": "血战傲来国",
+            "description": "协助傲来国抵御外敌入侵",
+            "dungeonId": "aolai_defense",
+            "difficulty": "normal",
+            "levelRequirement": 5,
+            "rewards": [
+              { "type": "exp", "amount": 500 },
+              { "type": "item", "id": "royal_sword", "amount": 1 }
+            ]
+          },
+          {
+            "id": "harbor_shop",
+            "type": "SHOP",
+            "name": "海港商店",
+            "description": "购买海产品和船只用品",
+            "shopId": "aolai_harbor_shop"
+          }
+        ]
+      },
+      "underwater_crystal_palace": {
+        "id": "underwater_crystal_palace",
+        "name": "水晶宫",
+        "description": "龙王的海底宫殿",
+        "position": { "x": 180, "y": 220 },
+        "levelRequirement": 8,
+        "unlockConditions": [
+          { "type": "item", "itemId": "dragon_scale", "amount": 1 }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "dragon_king_npc",
+            "type": "NPC",
+            "name": "东海龙王",
+            "description": "拜见东海龙王",
+            "npcId": "east_sea_dragon_king"
+          },
+          {
+            "id": "dragon_trial",
+            "type": "DUNGEON",
+            "name": "龙族试炼",
+            "description": "接受龙族的试炼考验",
+            "dungeonId": "dragon_trial",
+            "difficulty": "hard",
+            "levelRequirement": 10
+          }
+        ]
+      }
+    }
+  },
+  "xiniu_region": {
+    "id": "xiniu_region",
+    "name": "西牛贺州",
+    "description": "佛法兴盛之地，有雷音寺等诸多圣地",
+    "backgroundImage": "xiniu_bg.jpg",
+    "position": { "x": 200, "y": 300 },
+    "levelRequirement": 10,
+    "unlockConditions": [
+      { "type": "level", "value": 10 },
+      { "type": "quest", "questId": "journey_to_west_begin" }
+    ],
+    "isUnlocked": false,
+    "nodes": {
+      "thunder_temple": {
+        "id": "thunder_temple",
+        "name": "雷音寺",
+        "description": "如来佛祖的道场",
+        "position": { "x": 150, "y": 100 },
+        "levelRequirement": 15,
+        "unlockConditions": [
+          { "type": "quest", "questId": "pilgrimage_start" }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "buddha_npc",
+            "type": "NPC",
+            "name": "如来佛祖",
+            "description": "拜见如来佛祖，获得佛法指导",
+            "npcId": "tathagata_buddha"
+          },
+          {
+            "id": "demon_battle",
+            "type": "BATTLE",
+            "name": "降魔伏妖",
+            "description": "协助降伏闯入雷音寺的妖魔",
+            "battleId": "temple_demons",
+            "enemyTeam": ["temple_demon", "shadow_spirit"]
+          }
+        ]
+      },
+      "flame_mountain": {
+        "id": "flame_mountain",
+        "name": "火焰山",
+        "description": "终年烈火燃烧的险恶之山",
+        "position": { "x": 80, "y": 180 },
+        "levelRequirement": 12,
+        "unlockConditions": [
+          { "type": "item", "itemId": "heat_resistance_potion", "amount": 1 }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "iron_fan_princess",
+            "type": "NPC",
+            "name": "铁扇公主",
+            "description": "请求铁扇公主借用芭蕉扇",
+            "npcId": "iron_fan_princess"
+          },
+          {
+            "id": "flame_dungeon",
+            "type": "DUNGEON",
+            "name": "穿越火焰山",
+            "description": "克服重重火焰考验",
+            "dungeonId": "flame_mountain_trial",
+            "difficulty": "hard",
+            "levelRequirement": 15
+          }
+        ]
+      },
+      "tianzhu_capital": {
+        "id": "tianzhu_capital",
+        "name": "天竺国",
+        "description": "唐僧取经的终点，佛教文化鼎盛之都",
+        "position": { "x": 50, "y": 50 },
+        "levelRequirement": 18,
+        "unlockConditions": [
+          { "type": "quest", "questId": "reach_western_land" },
+          { "type": "item", "itemId": "sutra_scroll", "amount": 3 }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "sutra_translation_npc",
+            "type": "NPC",
+            "name": "玄奘法师",
+            "description": "协助玄奘翻译佛经",
+            "npcId": "xuanzang",
+            "quests": ["translation_task"],
+            "rewards": [
+              { "type": "skill", "id": "buddhist_ritual", "level": 1 }
+            ]
+          },
+          {
+            "id": "holy_light_shop",
+            "type": "SHOP",
+            "name": "圣光宝阁",
+            "description": "出售佛经、佛珠等佛教圣物",
+            "shopId": "tianzhu_holy_shop",
+            "goods": [
+              {
+                "id": "holy_bead",
+                "type": "accessory",
+                "cost": { "gold": 2000 }
+              },
+              {
+                "id": "sutra_of_peace",
+                "type": "consumable",
+                "cost": { "gold": 3000 }
+              }
+            ]
+          }
+        ]
+      },
+      "chechi_country": {
+        "id": "chechi_country",
+        "name": "车迟国",
+        "description": "道教与佛教激烈冲突的王国",
+        "position": { "x": 280, "y": 220 },
+        "levelRequirement": 14,
+        "unlockConditions": [
+          { "type": "level", "value": 14 },
+          { "type": "quest", "questId": "choose_faith" }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "high_priest_npc",
+            "type": "NPC",
+            "name": "车迟国国师",
+            "description": "道教国师，可接取降妖任务",
+            "npcId": "chechi_high_priest",
+            "quests": ["exorcise_demons_task"],
+            "faction": "TAOISM"
+          },
+          {
+            "id": "monk_leader_npc",
+            "type": "NPC",
+            "name": "佛教方丈",
+            "description": "佛教领袖，可领取护教任务",
+            "npcId": "chechi_buddhist_leader",
+            "faction": "BUDDHISM"
+          },
+          {
+            "id": "temple_puzzle_dungeon",
+            "type": "DUNGEON",
+            "name": "法坛解谜",
+            "description": "破解道教法坛的机关谜题",
+            "dungeonId": "chechi_temple_puzzle",
+            "difficulty": "puzzle",
+            "rewards": [{ "type": "item", "id": "magic_talisman", "amount": 1 }]
+          }
+        ]
+      },
+      "thunder_temple_backhall": {
+        "id": "thunder_temple_backhall",
+        "name": "雷音寺后殿",
+        "description": "如来佛祖讲经的隐秘场所",
+        "position": { "x": 150, "y": 120 },
+        "levelRequirement": 20,
+        "unlockConditions": [
+          {
+            "type": "node",
+            "nodeId": "tianzhu_capital",
+            "interactionId": "sutra_translation_npc"
+          }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "tathagata_final_quest",
+            "type": "QUEST",
+            "name": "如来终极考验",
+            "description": "接受佛祖的智慧试炼",
+            "questId": "buddha_wisdom_trial",
+            "rewards": [
+              { "type": "title", "id": "enlightened_one", "name": "觉悟者" }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "nanzhan_region": {
+    "id": "nanzhan_region",
+    "name": "南赡部洲",
+    "description": "人间繁华之地，有长安等大城",
+    "backgroundImage": "nanzhan_bg.jpg",
+    "position": { "x": 350, "y": 400 },
+    "levelRequirement": 1,
+    "unlockConditions": [],
+    "isUnlocked": true,
+    "nodes": {
+      "five_finger_mountain": {
+        "id": "five_finger_mountain",
+        "name": "五指山",
+        "description": "镇压美猴王的五行山，触发关键剧情",
+        "position": { "x": 380, "y": 180 },
+        "levelRequirement": 3,
+        "unlockConditions": [
+          { "type": "quest", "questId": "find_monkey_king" }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "free_monkey_event",
+            "type": "EVENT",
+            "name": "解救美猴王",
+            "description": "揭下如来符咒，释放孙悟空",
+            "eventId": "free_son_goku",
+            "choices": [
+              { "text": "立即揭符", "rewards": { "companion": "sun_wukong" } }
+            ]
+          }
+        ]
+      },
+      "changan_city": {
+        "id": "changan_city",
+        "name": "长安城",
+        "description": "大唐的都城，人文荟萃",
+        "position": { "x": 200, "y": 100 },
+        "levelRequirement": 1,
+        "unlockConditions": [],
+        "isUnlocked": true,
+        "interactions": [
+          {
+            "id": "emperor_npc",
+            "type": "NPC",
+            "name": "唐太宗",
+            "description": "拜见大唐皇帝",
+            "npcId": "tang_emperor"
+          },
+          {
+            "id": "imperial_shop",
+            "type": "SHOP",
+            "name": "皇宫商店",
+            "description": "购买高级装备和道具",
+            "shopId": "imperial_shop"
+          }
+        ]
+      },
+      "putuo_mountain": {
+        "id": "putuo_mountain",
+        "name": "普陀山",
+        "description": "观音菩萨的道场",
+        "position": { "x": 100, "y": 200 },
+        "levelRequirement": 5,
+        "unlockConditions": [{ "type": "level", "value": 5 }],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "guanyin_npc",
+            "type": "NPC",
+            "name": "观音菩萨",
+            "description": "拜见观音菩萨，获得慈悲指导",
+            "npcId": "guanyin"
+          }
+        ]
+      }
+    }
+  },
+  "beijulu_region": {
+    "id": "beijulu_region",
+    "name": "北俱芦洲",
+    "description": "妖魔横行的蛮荒之地",
+    "backgroundImage": "beijulu_bg.jpg",
+    "position": { "x": 300, "y": 100 },
+    "levelRequirement": 20,
+    "unlockConditions": [
+      { "type": "level", "value": 20 },
+      { "type": "quest", "questId": "demon_realm_access" }
+    ],
+    "isUnlocked": false,
+    "nodes": {
+      "mowang_stronghold": {
+        "id": "mowang_stronghold",
+        "name": "魔王寨",
+        "description": "妖魔聚集的险恶山寨",
+        "position": { "x": 150, "y": 80 },
+        "levelRequirement": 25,
+        "unlockConditions": [{ "type": "level", "value": 25 }],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "demon_king_battle",
+            "type": "BATTLE",
+            "name": "挑战魔王",
+            "description": "与强大的魔王决一死战",
+            "battleId": "demon_king_fight",
+            "enemyTeam": ["demon_king", "demon_guard"],
+            "levelRange": { "min": 25, "max": 30 }
+          }
+        ]
+      },
+      "pansi_cave": {
+        "id": "pansi_cave",
+        "name": "盘丝洞",
+        "description": "蜘蛛精的巢穴",
+        "position": { "x": 220, "y": 150 },
+        "levelRequirement": 22,
+        "unlockConditions": [{ "type": "level", "value": 22 }],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "spider_spirit_battle",
+            "type": "BATTLE",
+            "name": "蜘蛛精大战",
+            "description": "与美丽而危险的蜘蛛精战斗",
+            "battleId": "spider_spirit_fight",
+            "enemyTeam": ["spider_spirit", "spider_minion"],
+            "levelRange": { "min": 22, "max": 25 }
+          }
+        ]
+      }
+    }
+  },
+  "difu_region": {
+    "id": "difu_region",
+    "name": "地府",
+    "description": "阴曹地府，亡魂归处，阎罗天子掌管轮回之所",
+    "backgroundImage": "difu_bg.jpg",
+    "position": { "x": 600, "y": 500 },
+    "levelRequirement": 15,
+    "unlockConditions": [
+      { "type": "quest", "questId": "enter_underworld" },
+      { "type": "item", "itemId": "yin魂引", "amount": 1 }
+    ],
+    "isUnlocked": false,
+    "nodes": {
+      "wangchuan_river": {
+        "id": "wangchuan_river",
+        "name": "忘川河",
+        "description": "流淌着亡魂记忆的冥河，河畔孟婆施汤",
+        "position": { "x": 100, "y": 100 },
+        "levelRequirement": 15,
+        "unlockConditions": [],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "mengpo_npc",
+            "type": "NPC",
+            "name": "孟婆",
+            "description": "向孟婆讨取孟婆汤，忘却烦恼",
+            "npcId": "mengpo",
+            "rewards": [{ "type": "item", "id": "mengpo_soup", "amount": 1 }]
+          },
+          {
+            "id": "river_monster_battle",
+            "type": "BATTLE",
+            "name": "击退河妖",
+            "description": "抵御忘川河中作祟的河妖",
+            "battleId": "wangchuan_monster_fight",
+            "enemyTeam": ["river_monster"],
+            "levelRange": { "min": 15, "max": 17 },
+            "rewards": [
+              { "type": "exp", "amount": 300 },
+              { "type": "item", "id": "river_scale", "amount": 1 }
+            ]
+          }
+        ]
+      },
+      "yama_palace": {
+        "id": "yama_palace",
+        "name": "阎罗殿",
+        "description": "阎罗天子审判亡魂之地，庄严肃穆",
+        "position": { "x": 250, "y": 180 },
+        "levelRequirement": 18,
+        "unlockConditions": [
+          {
+            "type": "node",
+            "nodeId": "wangchuan_river",
+            "interactionId": "mengpo_npc"
+          }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "yama_npc",
+            "type": "NPC",
+            "name": "阎罗天子",
+            "description": "接受阎罗天子的任务或审判",
+            "npcId": "yama",
+            "quests": ["judge_ghosts_task"],
+            "rewards": [
+              { "type": "title", "id": "yinjian使者", "name": "阴曹使者" }
+            ]
+          },
+          {
+            "id": "evil_ghost_dungeon",
+            "type": "DUNGEON",
+            "name": "镇压恶鬼",
+            "description": "进入阎罗殿地牢，镇压逃脱的恶鬼",
+            "dungeonId": "yama_palace_dungeon",
+            "difficulty": "hard",
+            "levelRequirement": 20,
+            "rewards": [
+              { "type": "exp", "amount": 800 },
+              { "type": "item", "id": "yin魂锁链", "amount": 1 }
+            ]
+          }
+        ]
+      },
+      "six_pathways_of_reincarnation": {
+        "id": "six_pathways_of_reincarnation",
+        "name": "六道轮回",
+        "description": "掌管世间生灵轮回转世的神秘之地",
+        "position": { "x": 120, "y": 250 },
+        "levelRequirement": 20,
+        "unlockConditions": [
+          {
+            "type": "node",
+            "nodeId": "yama_palace",
+            "interactionId": "yama_npc"
+          }
+        ],
+        "isUnlocked": false,
+        "interactions": [
+          {
+            "id": "reincarnation_event",
+            "type": "EVENT",
+            "name": "窥探轮回",
+            "description": "尝试窥探轮回奥秘，可能获得特殊机缘",
+            "eventId": "peek_reincarnation",
+            "choices": [
+              {
+                "text": "静心感悟",
+                "rewards": [{ "type": "skill", "id": "轮回之力", "level": 1 }]
+              },
+              {
+                "text": "强行窥探",
+                "penalties": [
+                  { "type": "health", "amount": -200 },
+                  { "type": "random_item_loss", "amount": 1 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

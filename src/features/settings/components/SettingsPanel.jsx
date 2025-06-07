@@ -1,5 +1,4 @@
 import React from 'react';
-import SaveManager from '@/features/save/components/SaveManager';
 
 // SettingsPanel no longer needs isOpen or onClose, as Modal wrapper handles it.
 const SettingsPanel = ({ toasts, setToasts }) => {
@@ -22,21 +21,7 @@ const SettingsPanel = ({ toasts, setToasts }) => {
       <div className="p-6">
         {/* 设置选项卡 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 存档管理 */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="bg-slate-800 rounded-lg overflow-hidden">
-              <div className="p-4 bg-slate-700">
-                <h3 className="text-xl font-semibold text-white">
-                  <i className="fas fa-save mr-2 text-blue-400"></i>
-                  存档管理
-                </h3>
-              </div>
-              <div className="p-4">
-                <SaveManager toasts={toasts} setToasts={setToasts} />
-              </div>
-            </div>
-          </div>
-
+        
           {/* 其他设置选项可以在这里添加 */}
           <div className="bg-slate-800 rounded-lg p-4">
             <h3 className="text-xl font-semibold text-white mb-4">

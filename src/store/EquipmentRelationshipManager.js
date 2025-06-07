@@ -20,10 +20,7 @@ class EquipmentRelationshipManager extends EventEmitter {
     // 装备状态缓存
     this.equipmentStatusCache = new Map();
     
-    console.log('[EquipmentRelationshipManager] 装备关系管理器已初始化');
-    this.setupAutoSave(); // 设置自动保存
-    // 尝试在初始化时加载数据
-    // this.loadFromElectronStore(); // 考虑异步和初始化顺序，通常在应用启动时统一加载
+    console.log('[EquipmentRelationshipManager] 装备关系管理器已初始化（无持久化）');
   }
 
   /**
@@ -90,7 +87,6 @@ class EquipmentRelationshipManager extends EventEmitter {
 
       this.clearCache(itemId, summonId); // 清除ERM内部缓存
       this.emit('item_equipped', { itemId, summonId, slotType, relation: newRelation });
-      this.scheduleAutoSave(); // 添加自动保存调度
       console.log(`[ERM] equip: 装备成功: ${itemId} (${slotType}) -> ${summonId}`);
       return true;
 
@@ -144,13 +140,12 @@ class EquipmentRelationshipManager extends EventEmitter {
       }
 
       this.clearCache(itemId, summonId); // 清除ERM内部缓存
-      this.emit('item_unequipped', { itemId, summonId, slotType, relation }); // relation 是旧的
-      this.scheduleAutoSave(); // 添加自动保存调度
-      console.log(`[ERM] unequip: 卸装成功: ${itemId} 从 ${summonId}:${slotType}`);
+      this.emit('item_unequipped', { itemId, summonId, slotType: relation.slotType });
+      console.log(`[ERM] unequip: 卸载成功: ${itemId} from ${summonId}`);
       return true;
 
     } catch (error) {
-      console.error('[ERM] unequip: 卸装失败:', error);
+      console.error('[ERM] unequip: 卸载失败:', error);
       return false;
     }
   }
@@ -535,88 +530,6 @@ class EquipmentRelationshipManager extends EventEmitter {
       summonEquipmentCounts,
       lastUpdate: Date.now()
     };
-  }
-
-  setupAutoSave() {
-    this.saveTimeout = null;
-  }
-
-  scheduleAutoSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    this.saveTimeout = setTimeout(() => {
-      this.saveToElectronStore();
-    }, 1000); // 延迟1秒保存，避免频繁操作导致多次保存
-  }
-
-  serializeForStorage() {
-    return {
-      equipmentRelations: Array.from(this.equipmentRelations.entries()),
-      summonEquipmentIndex: Array.from(this.summonEquipmentIndex.entries()),
-      timestamp: Date.now(),
-    };
-  }
-
-  deserializeFromStorage(savedState) {
-    this.equipmentRelations.clear();
-    this.summonEquipmentIndex.clear();
-    this.equipmentStatusCache.clear(); // 清空缓存
-
-    if (savedState.equipmentRelations) {
-      this.equipmentRelations = new Map(savedState.equipmentRelations);
-    }
-    if (savedState.summonEquipmentIndex) {
-      this.summonEquipmentIndex = new Map(savedState.summonEquipmentIndex);
-    }
-
-    console.log('[EquipmentRelationshipManager] 从存储反序列化完成');
-    // 验证导入的数据，如果需要可以修复
-    const validation = this.validateConsistency();
-    if (!validation.isConsistent) {
-      console.warn('[EquipmentRelationshipManager] 导入的数据不一致，尝试修复...');
-      this.repairConsistency();
-    }
-  }
-
-  async saveToElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const stateToSave = this.serializeForStorage();
-        await window.electronAPI.store.set('equipmentRelationshipState', stateToSave);
-        this.emit('state_saved');
-        console.log('[EquipmentRelationshipManager] 状态已保存到 Electron Store');
-      } catch (error) {
-        console.error('[EquipmentRelationshipManager] 保存状态到 Electron Store 失败:', error);
-        this.emit('error', { type: 'save_failed', message: error.message });
-      }
-    } else {
-      console.warn('[EquipmentRelationshipManager] Electron Store API 不可用，无法保存状态。');
-    }
-  }
-
-  async loadFromElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const savedState = await window.electronAPI.store.get('equipmentRelationshipState');
-        if (savedState) {
-          this.deserializeFromStorage(savedState);
-          this.emit('state_loaded', this.getState ? this.getState() : {}); // 如果有getState方法
-          console.log('[EquipmentRelationshipManager] 已从 Electron Store 加载状态');
-          return true;
-        } else {
-          console.log('[EquipmentRelationshipManager] Electron Store 中没有找到保存的状态。');
-          return false;
-        }
-      } catch (error) {
-        console.error('[EquipmentRelationshipManager] 从 Electron Store 加载状态失败:', error);
-        this.emit('error', { type: 'load_failed', message: error.message });
-        return false;
-      }
-    } else {
-      console.warn('[EquipmentRelationshipManager] Electron Store API 不可用，无法加载状态。');
-      return false;
-    }
   }
 }
 

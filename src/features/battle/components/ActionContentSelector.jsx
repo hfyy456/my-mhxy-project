@@ -140,7 +140,7 @@ const ActionContentSelector = ({
           </div>
           
           <button 
-            className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white rounded-lg transition-all duration-300 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 shadow-lg"
+            className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white rounded-lg transition-all duration-300 font-bold text-sm focus:outline-none focus:ring-gray-400 shadow-lg"
             onClick={() => dispatch(endBattle())}
           >
             <div className="flex items-center justify-center">
@@ -178,7 +178,7 @@ const ActionContentSelector = ({
           </div>
           
           <button 
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg transition-all duration-300 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-green-500 shadow-lg"
+            className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg transition-all duration-300 font-bold text-sm focus:outline-none focus:ring-green-500 shadow-lg"
             onClick={confirmAction}
           >
             <div className="flex items-center justify-center">
@@ -216,7 +216,7 @@ const ActionContentSelector = ({
                 {targets.map(target => (
                   <button
                     key={target.id}
-                    className={`p-3 rounded-lg transition-all duration-200 shadow-sm ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
+                    className={`p-3 rounded-lg transition-colors duration-200 shadow-sm ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
                     onClick={() => setSelectedTarget(target.id)}
                   >
                     <div className="flex items-center text-xs">
@@ -287,7 +287,7 @@ const ActionContentSelector = ({
                     {activeSkills.map(skill => (
                       <button
                         key={skill.id}
-                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${selectedSkill === skill.id ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white font-medium ring-1 ring-purple-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-colors duration-200 shadow-sm ${selectedSkill === skill.id ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white font-medium ring-1 ring-purple-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
                         onClick={() => {
                           setSelectedSkill(skill.id);
                           console.log('选择技能:', skill.name, '影响范围将被高亮显示');
@@ -347,7 +347,7 @@ const ActionContentSelector = ({
                     {getTargets().map(target => (
                       <button
                         key={target.id}
-                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm text-xs ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-colors duration-200 shadow-sm text-xs ${selectedTarget === target.id ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium ring-1 ring-red-400' : 'bg-gradient-to-b from-gray-700 to-gray-800 text-gray-200'}`}
                         onClick={() => setSelectedTarget(target.id)}
                       >
                         <div className="flex items-center">

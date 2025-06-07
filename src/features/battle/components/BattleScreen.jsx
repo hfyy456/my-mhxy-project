@@ -9,9 +9,11 @@ import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import BattleUnitDetailPanel from './BattleUnitDetailPanel';
+import BattleStateMachineVisualizer from './BattleStateMachineVisualizer';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
 import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
+import { useBattleStateMachine, useBattleStateMachineState } from '../hooks/useBattleStateMachine';
 
 import {
   selectIsBattleActive,
@@ -39,16 +41,35 @@ import {
 
 const BattleScreen = () => {
   const dispatch = useDispatch();
-  const isBattleActive = useSelector(selectIsBattleActive);
-  const currentPhase = useSelector(selectCurrentPhase);
-  const currentRound = useSelector(selectCurrentRound);
-  const currentTurnUnitId = useSelector(selectCurrentTurnUnitId);
-  const battleUnits = useSelector(selectBattleUnits);
+  
+  // 集成状态机
+  const {
+    startBattle,
+    endBattle: stateMachineEndBattle,
+    resetBattle,
+    completePreparation,
+    getCurrentState,
+    state: stateMachineState
+  } = useBattleStateMachine();
+  
+  const {
+    isActive: isBattleActive,
+    currentPhase,
+    currentRound,
+    battleUnits,
+    unitActions,
+    battleResult,
+    isInPreparation,
+    isInExecution,
+    isInResolution,
+    isBattleOver
+  } = useBattleStateMachineState();
+  
+  // 原有的选择器保持不变，以便向后兼容
   const playerFormation = useSelector(selectPlayerFormation);
   const enemyFormation = useSelector(selectEnemyFormation);
-  const unitActions = useSelector(selectUnitActions);
+  const currentTurnUnitId = useSelector(selectCurrentTurnUnitId);
   const allUnitsHaveActions = useSelector(selectAllUnitsHaveActions);
-  const battleResult = useSelector(selectBattleResult);
   
   // 添加选中召唤兽的状态
   const [selectedUnitId, setSelectedUnitId] = useState(null);
@@ -350,12 +371,20 @@ const BattleScreen = () => {
     }
   };
   
-  // 初始化战斗时进入准备阶段
+  // 状态机状态监控（开发模式）
   useEffect(() => {
-    if (isBattleActive && currentPhase === 'idle') {
-      dispatch(startPreparationPhase());
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BattleScreen] 状态机状态:', stateMachineState);
+      console.log('[BattleScreen] Redux战斗状态:', { currentPhase, currentRound, isBattleActive });
     }
-  }, [isBattleActive, currentPhase, dispatch]);
+  }, [stateMachineState, currentPhase, currentRound, isBattleActive]);
+  
+  // 状态机与Redux状态同步监控
+  useEffect(() => {
+    if (isInPreparation && allUnitsHaveActions) {
+      console.log('[BattleScreen] 所有单位已准备就绪，可以进入执行阶段');
+    }
+  }, [isInPreparation, allUnitsHaveActions]);
   
   // 在准备阶段开始时设置敌方AI行动
   useEffect(() => {
@@ -512,6 +541,11 @@ const BattleScreen = () => {
 
   return (
     <div className="relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
+      {/* 状态机可视化组件 - 开发模式显示 */}
+      {process.env.NODE_ENV === 'development' && (
+        <BattleStateMachineVisualizer isVisible={true} />
+      )}
+      
       {/* 战斗动画层 - 绝对定位在最上层 */}
       <BattleAnimations />
       
@@ -547,6 +581,37 @@ const BattleScreen = () => {
           />
         </div>
       </div>
+      
+      {/* 状态机调试面板 - 开发模式显示 */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute top-4 right-4 z-30 bg-black bg-opacity-80 text-white p-4 rounded-lg text-sm">
+          <h4 className="font-bold mb-2">状态机调试</h4>
+          <div>主状态: {stateMachineState.currentState}</div>
+          <div>子状态: {stateMachineState.currentSubState || '无'}</div>
+          <div>Redux阶段: {currentPhase}</div>
+          <div className="mt-2 space-y-1">
+            <button 
+              onClick={completePreparation}
+              disabled={!isInPreparation}
+              className="block w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-xs"
+            >
+              完成准备阶段
+            </button>
+            <button 
+              onClick={() => stateMachineEndBattle()}
+              className="block w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
+            >
+              结束战斗
+            </button>
+            <button 
+              onClick={resetBattle}
+              className="block w-full px-2 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs"
+            >
+              重置战斗
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* 回合和阶段信息已移至VS上方显示 */}
       

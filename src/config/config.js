@@ -135,9 +135,6 @@ export const TOAST_ICON_CLASSES = {
   [TOAST_TYPES.INFO]: "fa-solid fa-info-circle text-blue-500",
 };
 
-// Local Storage Keys
-export const LOCAL_STORAGE_SAVES_KEY = 'mhxy_saves';
-
 // Inventory Config
 export const INITIAL_INVENTORY_CAPACITY = 20;
 export const INITIAL_GOLD = 0;

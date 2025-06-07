@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useGameState } from '../../../hooks/useGameState';
+import { useSummonManager } from '../../../hooks/useSummonManager';
 // import { useGameActions } from '../../../hooks/useGameActions'; // Game actions are now mostly in components
 import { useToast } from '../../../hooks/useToast';
 
 export const useSummonSystem = (toasts, setToasts) => {
-  // gameManager and setSummon are removed as state is from Redux and actions are dispatched directly
-  const { summon, historyList } = useGameState(); 
+  // 使用现有的 OOP 召唤兽管理器
+  const { state: summonState, currentSummon, operations } = useSummonManager();
   
   // 使用useRef跟踪初始化状态，避免在每次渲染时都执行副作用
   const [initialized, setInitialized] = useState(false);
@@ -41,18 +41,19 @@ export const useSummonSystem = (toasts, setToasts) => {
     if (!initialized) {
       setInitialized(true);
       // 任何需要在组件挂载时执行一次的初始化逻辑
-      console.log("[useSummonSystem] 初始化完成");
+      console.log("[useSummonSystem] 初始化完成，使用OOP召唤兽管理器");
     }
   }, [initialized]);
 
   return {
-    historyList, // Still useful for HistoryModal
-    summon, // Current summon data, if needed by SummonSystem directly (though SummonInfo gets it from Redux)
+    summon: currentSummon,
+    summonState,
+    operations,
+    showResult,
     isHistoryModalOpen,
     setIsHistoryModalOpen,
     isSummonCatalogModalOpen,
     setIsSummonCatalogModalOpen,
-    showResult, // expose showResult for any direct use in SummonSystem if needed
     // Actions like handleRefineMonster, etc., are now part of SummonSystem.jsx component logic
   };
 }; 

@@ -2,14 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 04:01:49
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-06 07:45:00
+ * @LastEditTime: 2025-06-07 04:01:33
  */
 import React, { useState, useEffect } from 'react';
-import SaveManager from '@/features/save/components/SaveManager';
 import { useToast } from "@/hooks/useToast";
 
-const HomePage = ({ onStartGame, onOpenSettings }) => {
-  const [showLoadGame, setShowLoadGame] = useState(false);
+const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
   const [toasts, setToasts] = useState([]);
   const [hoveredButton, setHoveredButton] = useState(null);
   const [glowIntensity, setGlowIntensity] = useState(0.5);
@@ -46,16 +44,6 @@ const HomePage = ({ onStartGame, onOpenSettings }) => {
       hoverColor: 'from-amber-600 to-amber-800',
       shadowColor: 'shadow-amber-500/30',
       action: handleNewGame
-    },
-    {
-      id: 'load-game',
-      label: '加载游戏',
-      icon: 'fa-folder-open',
-      description: '继续之前的冒险',
-      color: 'from-blue-500 to-blue-700',
-      hoverColor: 'from-blue-600 to-blue-800',
-      shadowColor: 'shadow-blue-500/30',
-      action: () => setShowLoadGame(true)
     },
     {
       id: 'settings',
@@ -142,7 +130,7 @@ const HomePage = ({ onStartGame, onOpenSettings }) => {
         </div>
 
         {/* 主菜单区域 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {menuItems.map((item, index) => (
             <button
               key={item.id}
@@ -225,41 +213,6 @@ const HomePage = ({ onStartGame, onOpenSettings }) => {
           </div>
         </div>
       </div>
-
-      {/* 加载游戏面板 */}
-      {showLoadGame && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-            {/* 面板头部 */}
-            <div className="flex justify-between items-center p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800 to-slate-700">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg">
-                  <i className="fas fa-folder-open text-2xl text-white"></i>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">加载游戏</h2>
-                  <p className="text-sm text-slate-400">选择一个存档继续您的冒险</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowLoadGame(false)}
-                className="group p-3 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all duration-300"
-              >
-                <i className="fas fa-times text-xl group-hover:rotate-90 transition-transform duration-300"></i>
-              </button>
-            </div>
-
-            {/* 面板内容 */}
-            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-              <SaveManager 
-                toasts={toasts} 
-                setToasts={setToasts} 
-                onLoadSuccess={onStartGame} 
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast消息 */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">

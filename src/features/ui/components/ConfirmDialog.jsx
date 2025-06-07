@@ -16,13 +16,13 @@ const ConfirmDialog = ({ isOpen, onConfirm, onCancel }) => {
         </p>
         <div className="flex justify-end gap-4 mt-8">
           <button
-            className="px-4 py-2 border border-slate-600 rounded-lg hover:bg-slate-700 hover:text-gray-100 text-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="px-4 py-2 border border-slate-600 rounded-lg hover:bg-slate-700 hover:text-gray-100 text-gray-300 transition-colors duration-200 focus:outline-none  focus:ring-slate-500"
             onClick={onCancel}
           >
             否
           </button>
           <button
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 border border-purple-700 hover:border-purple-400 shadow-md hover:shadow-lg shadow-purple-500/30"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors duration-200 focus:outline-none  focus:ring-purple-400 border border-purple-700 hover:border-purple-400 shadow-md hover:shadow-lg shadow-purple-500/30"
             onClick={onConfirm}
           >
             是

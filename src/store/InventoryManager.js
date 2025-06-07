@@ -2,6 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-03 04:42:45
  * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-07 03:46:42
+ */
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-03 04:42:45
+ * @LastEditors: Sirius 540363975@qq.com
  * @LastEditTime: 2025-06-06 03:38:29
  */
 /**
@@ -545,10 +551,7 @@ class InventoryManager extends EventEmitter {
     // 初始化插槽
     this.initializeSlots();
 
-    // 自动保存机制
-    this.setupAutoSave();
-
-    console.log('[InventoryManager] 背包管理器初始化完成');
+    console.log('[InventoryManager] 背包管理器初始化完成（无持久化）');
   }
 
   // 获取状态快照 - 为了兼容性，仍然模拟slots结构
@@ -610,7 +613,6 @@ class InventoryManager extends EventEmitter {
           console.log(`[InventoryManager] 物品${item.name}已堆叠，数量：${stackableItem.quantity}`);
           this.emit("item_stacked", { item: stackableItem.toJSON() });
           this.emit("inventory_changed", this.getState());
-          this.scheduleAutoSave();
           return true;
         }
       }
@@ -627,7 +629,6 @@ class InventoryManager extends EventEmitter {
 
       this.emit("item_added", { item: item.toJSON() });
       this.emit("inventory_changed", this.getState());
-      this.scheduleAutoSave();
 
       console.log(`[InventoryManager] 物品${item.name}(${item.id})已添加到背包`);
       return true;
@@ -683,7 +684,6 @@ class InventoryManager extends EventEmitter {
       removedQuantity: quantity || removedItem.quantity
     });
     this.emit("inventory_changed", this.getState());
-    this.scheduleAutoSave();
 
     return removedItem;
   }
@@ -715,7 +715,6 @@ class InventoryManager extends EventEmitter {
           success: true
         });
         this.emit("inventory_changed", this.getState());
-        this.scheduleAutoSave();
       } else {
         console.log(`[InventoryManager] 使用物品${item.name}失败`);
         this.emit("item_used", {
@@ -831,7 +830,6 @@ class InventoryManager extends EventEmitter {
       this.gold += amount;
       this.emit('gold_changed', this.gold);
       this.emit('inventory_changed', this.getState());
-      this.scheduleAutoSave();
       console.log(`[InventoryManager] 添加金币: ${amount}，当前金币: ${this.gold}`);
     }
   }
@@ -842,7 +840,6 @@ class InventoryManager extends EventEmitter {
       this.gold -= amount;
       this.emit('gold_changed', this.gold);
       this.emit('inventory_changed', this.getState());
-      this.scheduleAutoSave();
       console.log(`[InventoryManager] 移除金币: ${amount}，剩余金币: ${this.gold}`);
       return true;
     }
@@ -856,7 +853,6 @@ class InventoryManager extends EventEmitter {
     
     this.emit('capacity_expanded', { oldCapacity, newCapacity: this.capacity });
     this.emit('inventory_changed', this.getState());
-    this.scheduleAutoSave();
     console.log(`[InventoryManager] 背包容量扩展: ${oldCapacity} -> ${this.capacity}`);
   }
 
@@ -902,92 +898,8 @@ class InventoryManager extends EventEmitter {
   //   return { success: false, error: "Deprecated method", canEquip: false };
   // }
 
-  setupAutoSave() {
-    this.saveTimeout = null;
-  }
-
-  scheduleAutoSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    this.saveTimeout = setTimeout(() => {
-      this.saveToElectronStore();
-    }, 1000);
-  }
-
-  // 保存到Electron Store
-  async saveToElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const stateToSave = this.serializeForStorage();
-        await window.electronAPI.store.set("inventoryState", stateToSave);
-        this.emit("state_saved");
-      } catch (error) {
-        console.error("保存背包状态失败:", error);
-        this.emit("error", { type: "save_failed", message: error.message });
-      }
-    }
-  }
-
-  // 从Electron Store加载
-  async loadFromElectronStore() {
-    if (window.electronAPI?.store) {
-      try {
-        const savedState = await window.electronAPI.store.get("inventoryState");
-        if (savedState) {
-          this.deserializeFromStorage(savedState);
-          this.emit("state_loaded", this.getState());
-          console.log("[InventoryManager] 加载已保存的背包状态");
-        } else {
-          console.log("[InventoryManager] 没有保存数据");
-        }
-      } catch (error) {
-        console.error("加载背包状态失败:", error);
-        this.emit("error", { type: "load_failed", message: error.message });
-      }
-    } else {
-      console.log("[InventoryManager] 没有Electron Store");
-    }
-  }
-
-  // 序列化存储
-  serializeForStorage() {
-    return {
-      items: Array.from(this.items.entries()).map(([id, item]) => [
-        id,
-        item.toJSON(),
-      ]),
-      capacity: this.capacity,
-      gold: this.gold,
-      timestamp: Date.now(),
-    };
-  }
-
-  // 反序列化
-  deserializeFromStorage(savedState) {
-    this.items.clear();
-
-    this.capacity = savedState.capacity || 100;
-    this.gold = savedState.gold || 0;
-
-    if (savedState.items) {
-      savedState.items.forEach(([id, itemData]) => {
-        // 添加一个标志，表示这是从存储中恢复的，数据是完整的
-        const item = ItemFactory.createItem({ ...itemData, isFromDeserialization: true });
-        item.setInventory(this);
-        this.items.set(id, item);
-      });
-    }
-
-    console.log('[InventoryManager] 反序列化完成');
-  }
-
   // 清理资源
   destroy() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
     this.removeAllListeners();
   }
 
@@ -996,30 +908,36 @@ class InventoryManager extends EventEmitter {
     // 只在背包为空时添加新手物品
     if (this.items.size === 0) {
       console.log('[InventoryManager] 首次初始化，添加新手物品');
-      
-      // 修正：使用 sourceId 来匹配新的 ItemFactory 逻辑
-      const starterItemDefs = [
-        { sourceId: 'starterHpPotion', quantity: 3 },
-        { sourceId: 'qualityMpPotion', quantity: 2 },
-        { sourceId: 'fineIronSword', quantity: 1, quality: QUALITY_TYPES.RARE },
-        { sourceId: 'legendaryAmulet', quantity: 1, quality: QUALITY_TYPES.LEGENDARY },
-        { sourceId: 'epicExpPill', quantity: 1 },
-        { sourceId: 'refinementStone', quantity: 5 },
-        { sourceId: 'advancedRefinementStone', quantity: 2 }
-      ];
-
-      starterItemDefs.forEach(itemDef => {
-        // 直接传递定义给 addItem，工厂会在内部处理
-        this.addItem(itemDef);
-      });
-
-      // 添加初始金币
-      this.addGold(1000);
-
-      console.log('[InventoryManager] 新手物品添加完成');
+      this.forceInitializeStarterItems();
     } else {
       console.log('[InventoryManager] 背包已有物品，跳过新手物品初始化');
     }
+  }
+
+  // 强制初始化新手物品（用于新游戏）
+  forceInitializeStarterItems() {
+    console.log('[InventoryManager] 强制初始化新手物品');
+    
+    // 修正：使用 sourceId 来匹配新的 ItemFactory 逻辑
+    const starterItemDefs = [
+      { sourceId: 'starterHpPotion', quantity: 3 },
+      { sourceId: 'qualityMpPotion', quantity: 2 },
+      { sourceId: 'fineIronSword', quantity: 1, quality: QUALITY_TYPES.RARE },
+      { sourceId: 'legendaryAmulet', quantity: 1, quality: QUALITY_TYPES.LEGENDARY },
+      { sourceId: 'epicExpPill', quantity: 1 },
+      { sourceId: 'refinementStone', quantity: 5 },
+      { sourceId: 'advancedRefinementStone', quantity: 2 }
+    ];
+
+    starterItemDefs.forEach(itemDef => {
+      // 直接传递定义给 addItem，工厂会在内部处理
+      this.addItem(itemDef);
+    });
+
+    // 添加初始金币
+    this.addGold(1000);
+
+    console.log('[InventoryManager] 新手物品添加完成');
   }
 }
 

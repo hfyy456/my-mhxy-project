@@ -136,8 +136,8 @@ export const initiateMapBattleAction = createAsyncThunk(
       throw new Error(`Region configuration not found for area ${areaId}.`);
     }
 
-    const regionEncounterConfig = currentRegion.encounterConfig;
-    const encounter = selectEncounterForRegion(regionEncounterConfig, playerLevel);
+    // 直接使用regionId来获取遭遇配置
+    const encounter = selectEncounterForRegion(areaId, playerLevel);
 
     if (!encounter || !encounter.team || encounter.team.length === 0) {
       console.warn(`[battleSlice] No suitable encounter found for areaId: ${areaId} and playerLevel: ${playerLevel}. Aborting battle setup.`);

@@ -15,22 +15,10 @@ export const useEquipmentRelationship = () => {
   const [error, setError] = useState(null);
   const dispatch = useDispatch();
 
-  // Initial data load
+  // 初始化状态
   useEffect(() => {
-    const loadData = async () => {
-      // Consider setting a specific loading state for initial load if needed
-      // setIsLoading(true); // This might conflict with operational isLoading
-      try {
-        await equipmentRelationshipManager.loadFromElectronStore();
-        // Update statistics or any other state derived from loaded data
-        setStatistics(equipmentRelationshipManager.getStatistics()); 
-      } catch (loadError) {
-        console.error('[useEquipmentRelationship] Initial data load failed:', loadError);
-        setError({ type: 'load_failed', message: loadError.message });
-      }
-      // setIsLoading(false);
-    };
-    loadData();
+    // 设置初始统计数据
+    setStatistics(equipmentRelationshipManager.getStatistics()); 
   }, []); // Empty dependency array ensures this runs once on mount
 
   // 监听装备关系变化

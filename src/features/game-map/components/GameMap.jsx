@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-21 02:52:59
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-02 04:30:37
+ * @LastEditTime: 2025-06-07 05:48:31
  */
 import React, {
   useState,
@@ -40,7 +40,6 @@ import {
   selectCurrentRegionMapData, // 选择当前区域地图数据
   setWorldMapOpenAction // 打开/关闭世界地图
 } from "@/store/slices/mapSlice"; // Import action and selector
-import { startInteraction } from "@/store/slices/npcSlice"; // <--- 导入 startInteraction
 import PlayerMarker from "./PlayerMarker"; // <--- 导入 PlayerMarker
 import MapTilesRenderer from "./MapTilesRenderer"; // <--- IMPORTED MapTilesRenderer
 import PixiAppEventHandler from "./PixiAppEventHandler"; // <--- IMPORT PixiAppEventHandler
@@ -886,7 +885,8 @@ const GameMap = ({
       {/* 世界地图模态框 */}
       <WorldMapModal 
         isOpen={isWorldMapOpen} 
-        onClose={handleCloseWorldMap} 
+        onClose={handleCloseWorldMap}
+        showToast={showToast}
       />
 
     </div>

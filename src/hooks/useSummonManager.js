@@ -15,33 +15,33 @@ export const useSummonManager = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 监听状态变化
+  // 初始化状态
   useEffect(() => {
+    // 设置初始状态
+    setState(summonManager.getState());
+
     const handleStateChange = (newState) => {
       setState(newState);
     };
 
     const handleError = (errorData) => {
       setError(errorData);
-      console.error('[useSummonManager] 错误:', errorData);
     };
 
     const handleLoading = (loadingState) => {
-      setIsLoading(loadingState);
+      setIsLoading(loadingState.isLoading);
     };
 
-    // 监听召唤兽相关事件，确保状态同步
     const handleSummonEvent = (eventData) => {
       console.log('[useSummonManager] 召唤兽事件:', eventData);
+      // 强制更新状态
       setState(summonManager.getState());
     };
 
-    // 注册事件监听器
+    // 监听事件
     summonManager.on('state_changed', handleStateChange);
     summonManager.on('error', handleError);
     summonManager.on('loading', handleLoading);
-    
-    // 监听所有召唤兽相关事件
     summonManager.on('summon_level_up', handleSummonEvent);
     summonManager.on('summon_points_allocated', handleSummonEvent);
     summonManager.on('summon_points_reset', handleSummonEvent);
@@ -53,7 +53,6 @@ export const useSummonManager = () => {
     summonManager.on('summon_nickname_changed', handleSummonEvent);
     summonManager.on('summon_attributes_updated', handleSummonEvent);
 
-    // 清理函数
     return () => {
       summonManager.off('state_changed', handleStateChange);
       summonManager.off('error', handleError);
@@ -69,24 +68,6 @@ export const useSummonManager = () => {
       summonManager.off('summon_nickname_changed', handleSummonEvent);
       summonManager.off('summon_attributes_updated', handleSummonEvent);
     };
-  }, []);
-
-  // 初始化时加载保存的数据
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        await summonManager.loadFromElectronStore();
-        setState(summonManager.getState());
-      } catch (error) {
-        console.error('[useSummonManager] 加载数据失败:', error);
-        setError({ type: 'load_failed', message: error.message });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
   }, []);
 
   // 操作方法
