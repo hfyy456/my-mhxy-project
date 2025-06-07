@@ -118,7 +118,7 @@ const LoadingScreen = ({
                   filter: `drop-shadow(0 0 ${20 * glowIntensity}px rgba(251, 191, 36, ${glowIntensity}))`
                 }}
               >
-                梦幻西游
+                御灵录
               </h1>
               <p className="text-xl text-slate-300 font-medium tracking-wider">
                 炼妖打书模拟器
@@ -281,7 +281,7 @@ const LoadingScreen = ({
         
         {/* 版权信息 */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-slate-500 text-xs">
-          <p>© 2025 梦幻西游模拟器 | 正在为您准备精彩的游戏世界...</p>
+          <p>© 2025 御灵录模拟器 | 正在为您准备精彩的游戏世界...</p>
         </div>
 
         {/* CSS动画定义 */}

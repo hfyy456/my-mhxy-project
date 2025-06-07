@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-07 04:12:47
+ * @LastEditTime: 2025-06-08 06:05:29
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +32,7 @@ import EquipmentRelationshipDemo from '../components/EquipmentRelationshipDemo';
 import ConfigManager from '../components/ConfigManager';
 import ElectronStoreNotification from '../components/ElectronStoreNotification';
 import WorldMapModal from '@/features/world-map/components/WorldMapModal';
+import NpcOOPDemo from '@/features/npc/components/NpcOOPDemo';
 
 import { useAppModals } from "@/hooks/useAppModals";
 import { useInventoryManager } from "@/hooks/useInventoryManager";
@@ -41,9 +42,13 @@ import { uiText } from "@/config/ui/uiTextConfig";
 import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import { selectIsBattleActive } from "@/store/slices/battleSlice";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
+import { useBattleStateMachine } from '@/features/battle/hooks/useBattleStateMachine';
 
 const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeonDemo }) => {
   const dispatch = useDispatch();
+  const player = useSelector((state) => state.player);
+  const { isFighting } = useSelector((state) => state.battle);
+  const { startBattle } = useBattleStateMachine();
   
   // 只在游戏初始化后才启用这些Hook
   const inventoryState = gameInitialized ? useInventoryManager() : { 
@@ -64,8 +69,6 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
 
   // 使用OOP召唤兽系统 - 只在游戏初始化后
   const { allSummons } = gameInitialized ? useSummonManager() : { allSummons: {} };
-
- 
 
   const {
     isSummonModalOpen,
@@ -111,8 +114,6 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
   const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
   const isBattleActive = useSelector(selectIsBattleActive);
 
-
-
   const [isEquipmentRelationDemoOpen, setIsEquipmentRelationDemoOpen] = useState(false);
   
   // 添加配置管理器的状态管理
@@ -120,9 +121,13 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
   const openConfigManager = () => setIsConfigManagerOpen(true);
   const closeConfigManager = () => setIsConfigManagerOpen(false);
 
- 
   // 添加Electron Store通知的状态管理
   const [showElectronStoreNotification, setShowElectronStoreNotification] = useState(false);
+
+  // 添加NPC系统的状态管理
+  const [isNpcOOPDemoOpen, setIsNpcOOPDemoOpen] = useState(false);
+  const openNpcOOPDemo = () => setIsNpcOOPDemoOpen(true);
+  const closeNpcOOPDemo = () => setIsNpcOOPDemoOpen(false);
 
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
@@ -161,8 +166,6 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
     };
   }, []);
 
-
-
   // 装备关系管理
   useEquipmentRelationship();
 
@@ -178,6 +181,10 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
         <button onClick={openConfigManager} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#10b981', border: 'none', borderRadius: '3px' }}>配置管理</button>
       </div>
     );
+  };
+
+  const handleStartBattle = (payload) => {
+    startBattle(payload);
   };
 
   // 如果游戏未初始化，显示加载提示
@@ -248,6 +255,8 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
             {/* 测试战斗按钮 */}
             {!isWorldMapOpen && !isBattleActive && (
               <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
+                        <button onClick={openNpcOOPDemo} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#dc2626', border: 'none', borderRadius: '3px' }}>NPC系统</button>
+
                 <button
                   onClick={() => {
                     // 导入并准备战斗数据
@@ -298,7 +307,7 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
                           );
                           
                           // 触发战斗
-                          dispatch({ type: 'battle/setupBattle', payload });
+                          handleStartBattle(payload);
                         });
                       });
                     });
@@ -458,6 +467,17 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
           </CommonModal>
 
         
+
+          <CommonModal
+            isOpen={isNpcOOPDemoOpen}
+            onClose={closeNpcOOPDemo}
+            title="NPC面向对象配置系统"
+            maxWidthClass="max-w-7xl"
+            centerContent={false}
+            fullScreen={true}
+          >
+            <NpcOOPDemo />
+          </CommonModal>
 
           <CommonModal
             isOpen={isConfigManagerOpen}

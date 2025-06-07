@@ -300,6 +300,8 @@ export const UNIQUE_ID_PREFIXES = {
   SUMMON: "summon",
   TOAST: "toast",
   BATTLE_UNIT: "battle_unit", // 战斗单位 ID 前缀
+  NPC: "npc", // NPC ID 前缀
+  INTERACTION: "interaction", // 交互 ID 前缀
   DEFAULT: "id",
   // Add other prefixes as needed
 };
@@ -367,4 +369,31 @@ export const SUMMON_SOURCES = {
 export const SORT_ORDERS = {
   ASC: "asc",
   DESC: "desc",
+};
+
+// NPC相关枚举
+export const NPC_TYPES = {
+  COMMON: 'common',
+  MERCHANT: 'merchant', 
+  QUEST_GIVER: 'quest_giver',
+  TEACHER: 'teacher',
+  GUARD: 'guard',
+  SPECIAL: 'special',
+  BOSS: 'boss'
+};
+
+export const NPC_STATES = {
+  IDLE: 'idle',
+  BUSY: 'busy',
+  TALKING: 'talking',
+  MOVING: 'moving',
+  SLEEPING: 'sleeping',
+  DEAD: 'dead'
+};
+
+export const DIALOGUE_STATES = {
+  IDLE: 'idle',
+  ACTIVE: 'active',
+  WAITING: 'waiting',
+  ENDED: 'ended'
 }; 

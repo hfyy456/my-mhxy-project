@@ -797,7 +797,7 @@ const GameMap = ({
       </div>
 
       <div className="absolute bottom-4 right-4 flex flex-col gap-3 z-20">
-        {/* 梦幻西游风格的菜单按钮组 */}
+        {/* 御灵录风格的菜单按钮组 */}
         <div className="bg-gradient-to-r from-slate-800/80 to-slate-900/80 p-3 rounded-lg border border-slate-600/50 shadow-xl">
           <button
             onClick={onOpenSummonSystem}
@@ -872,7 +872,7 @@ const GameMap = ({
         </div>
       </div>
       
-      {/* 左侧信息面板 - 梦幻西游风格 */}
+      {/* 左侧信息面板 - 御灵录风格 */}
       <div className="absolute left-4 top-4 z-20">
         <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-1 rounded-lg border border-slate-600/60 shadow-xl">
           <TileInfoPanel 

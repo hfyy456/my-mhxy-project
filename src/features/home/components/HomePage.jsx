@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 04:01:49
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-07 04:01:33
+ * @LastEditTime: 2025-06-08 07:00:55
  */
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/useToast";
@@ -22,7 +22,7 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
   }, []);
 
   const handleNewGame = () => {
-    showResult('欢迎来到梦幻西游！', 'success');
+    showResult('欢迎来到御灵录！', 'success');
     onStartGame();
   };
 
@@ -105,7 +105,7 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
                 filter: `drop-shadow(0 0 ${30 * glowIntensity}px rgba(251, 191, 36, ${glowIntensity}))`
               }}
             >
-              梦幻西游
+              御灵录
             </h1>
 
             {/* 副标题 */}
@@ -208,7 +208,7 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
 
           {/* 版权信息 */}
           <div className="text-slate-600 text-xs">
-            <p>© 2025 梦幻西游模拟器 保留所有权利</p>
+            <p>© 2025 御灵录模拟器 保留所有权利</p>
             <p className="mt-1">本游戏仅供学习交流使用，请支持正版游戏</p>
           </div>
         </div>

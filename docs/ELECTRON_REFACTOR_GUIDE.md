@@ -157,7 +157,7 @@ console.log('Preload script loaded.');
   },
   "build": {
     "appId": "com.example.my-mhxy-app",
-    "productName": "梦幻西游单机版",
+    "productName": "御灵录单机版",
     "directories": {
       "output": "release",
       "buildResources": "assets" 

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 02:54:01
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-20 03:49:14
+ * @LastEditTime: 2025-06-08 02:39:59
  */
 import React from "react";
 import { useModalState } from "@/hooks/useModalState";
@@ -16,7 +16,7 @@ const MainMenu = ({ onOpenSummonSystem, onOpenIncubator, onOpenSettings }) => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-100">
             <i className="fa-solid fa-dragon text-amber-400 mr-3"></i>
-            梦幻西游模拟器
+            御灵录模拟器
           </h1>
           <button
             onClick={onOpenSettings}

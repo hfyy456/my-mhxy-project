@@ -9,7 +9,7 @@ import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import BattleUnitDetailPanel from './BattleUnitDetailPanel';
-import BattleStateMachineVisualizer from './BattleStateMachineVisualizer';
+// import BattleStateMachineVisualizer from './BattleStateMachineVisualizer';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
 import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
@@ -542,14 +542,14 @@ const BattleScreen = () => {
   return (
     <div className="relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
       {/* 状态机可视化组件 - 开发模式显示 */}
-      {process.env.NODE_ENV === 'development' && (
-        <BattleStateMachineVisualizer isVisible={true} />
-      )}
+        {/* {process.env.NODE_ENV === 'development' && (
+          <BattleStateMachineVisualizer isVisible={true} />
+        )} */}
       
       {/* 战斗动画层 - 绝对定位在最上层 */}
       <BattleAnimations />
       
-      {/* 战斗单位属性面板 - 右侧悬浮 */}
+      战斗单位属性面板 - 右侧悬浮
       <BattleUnitStats />
       
       {/* 选中单位详情面板 - 左侧悬浮 */}

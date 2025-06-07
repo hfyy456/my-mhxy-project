@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 19:27:30
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-26 04:29:10
+ * @LastEditTime: 2025-06-08 06:00:09
  */
 import { generateUniqueId } from '@/utils/idUtils';
 import { BATTLE_UNIT_TYPES, BATTLE_PHASES, UNIQUE_ID_PREFIXES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
@@ -61,35 +61,29 @@ import { summonConfig } from '@/config/summon/summonConfig'; // 用于获取召�
 
 /**
  * Creates a battle unit from player's summon data.
- * @param {Object} summonData - The summon object from OOP SummonManager (should have id, summonSourceId, nickname, level, derivedAttributes, skillSet, etc.)
+ * @param {Object} summonData - The summon object from OOP SummonManager.
  * @param {BattleUnitPosition} position - Position in the player's battle formation.
- * @param {Object} summonConfig - Global summon configuration object.
- * @returns {BattleUnit}
+ * @returns {Object} A plain JavaScript object representing the battle unit.
  */
-export const createPlayerBattleUnit = (summonData, position, summonConfig) => {
+export const createPlayerBattleUnit = (summonData, position) => {
   if (!summonData || !summonData.id) {
     console.error("Invalid summonData provided to createPlayerBattleUnit", summonData);
     return null;
   }
   const baseSummonInfo = summonConfig[summonData.summonSourceId] || {};
-
-  // 使用 enumConfig.js 中定义的核心属性名
   const { HP, MP, PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED, CRIT_RATE, CRIT_DAMAGE, DODGE_RATE } = EQUIPMENT_EFFECT_TYPES;
-  
+
   return {
     id: generateUniqueId(UNIQUE_ID_PREFIXES.BATTLE_UNIT),
-    sourceId: summonData.id, // Original summon ID
+    sourceId: summonData.id,
     isPlayerUnit: true,
     name: summonData.nickname || baseSummonInfo.name || '召唤兽',
     level: summonData.level,
     stats: {
-      // 生命和法力
       currentHp: summonData.derivedAttributes?.[HP] || 100,
       maxHp: summonData.derivedAttributes?.[HP] || 100,
       currentMp: summonData.derivedAttributes?.[MP] || 50,
       maxMp: summonData.derivedAttributes?.[MP] || 50,
-      
-      // 使用标准属性名称
       [PHYSICAL_ATTACK]: summonData.derivedAttributes?.[PHYSICAL_ATTACK] || 10,
       [MAGICAL_ATTACK]: summonData.derivedAttributes?.[MAGICAL_ATTACK] || 10,
       [PHYSICAL_DEFENSE]: summonData.derivedAttributes?.[PHYSICAL_DEFENSE] || 5,
@@ -98,51 +92,15 @@ export const createPlayerBattleUnit = (summonData, position, summonConfig) => {
       [CRIT_RATE]: summonData.derivedAttributes?.[CRIT_RATE] || 0.05,
       [CRIT_DAMAGE]: summonData.derivedAttributes?.[CRIT_DAMAGE] || 1.5,
       [DODGE_RATE]: summonData.derivedAttributes?.[DODGE_RATE] || 0.05,
-      
-      // 兼容旧属性名称（为了兼容现有代码）
-      physicalAttack: summonData.derivedAttributes?.[PHYSICAL_ATTACK] || 10,
-      magicalAttack: summonData.derivedAttributes?.[MAGICAL_ATTACK] || 10,
-      physicalDefense: summonData.derivedAttributes?.[PHYSICAL_DEFENSE] || 5,
-      magicalDefense: summonData.derivedAttributes?.[MAGICAL_DEFENSE] || 5,
-      speed: summonData.derivedAttributes?.[SPEED] || 10,
-      critRate: summonData.derivedAttributes?.[CRIT_RATE] || 0.05,
-      critDamage: summonData.derivedAttributes?.[CRIT_DAMAGE] || 1.5,
-      dodgeRate: summonData.derivedAttributes?.[DODGE_RATE] || 0.05,
-      
-      // 更旧的属性名称（为了兼容非常旧的代码）
-      attack: summonData.derivedAttributes?.[PHYSICAL_ATTACK] || 10,
-      defense: summonData.derivedAttributes?.[PHYSICAL_DEFENSE] || 5,
-      
-      // 其他属性
-      hitRate: 1.0, // 命中率，默认100%
-      
-      // 伤害减免属性
+      hitRate: 1.0,
       fixedDamageReduction: summonData.derivedAttributes?.fixedDamageReduction || 0,
       percentDamageReduction: summonData.derivedAttributes?.percentDamageReduction || 0,
     },
-    skillSet: [...(summonData.skillSet || [])], // Ensure it's an array
-    // 记录技能导入信息
-    _debug_skillImport: {
-      sourceType: 'summonData',
-      sourceId: summonData.id,
-      sourceName: summonData.name,
-      summonSourceId: summonData.summonSourceId,
-      sourceSkillSet: summonData.skillSet || [],
-      skillsLength: (summonData.skillSet || []).length,
-      hasSkillSetProperty: summonData.hasOwnProperty('skillSet'),
-      summonConfigInfo: summonConfig[summonData.summonSourceId] ? {
-        name: summonConfig[summonData.summonSourceId].name,
-        hasSkills: summonConfig[summonData.summonSourceId].hasOwnProperty('skillSet'),
-        skillsFromConfig: summonConfig[summonData.summonSourceId].skillSet || []
-      } : 'summonConfig not found',
-      importTime: new Date().toISOString(),
-      importDetails: `从召唤兽数据导入技能: ${JSON.stringify(summonData.skillSet || [])}`
-    },
+    skillSet: [...(summonData.skillSet || [])],
     statusEffects: [],
-    gridPosition: position, 
-    spriteAssetKey: summonData.summonSourceId, // Use summonSourceId for sprite lookup, or a more specific asset key if available
+    gridPosition: position,
+    spriteAssetKey: summonData.summonSourceId,
     isDefeated: false,
-    actionPoints: 0, // Initialize if using AP system
   };
 };
 
@@ -150,78 +108,43 @@ export const createPlayerBattleUnit = (summonData, position, summonConfig) => {
  * Creates a battle unit from an enemy template.
  * @param {Object} enemyTemplate - The enemy template object from enemyConfig.js.
  * @param {BattleUnitPosition} position - Position in the enemy's battle formation.
- * @returns {BattleUnit}
+ * @returns {Object} A plain JavaScript object representing the battle unit.
  */
 export const createEnemyBattleUnit = (enemyTemplate, position) => {
   if (!enemyTemplate || !enemyTemplate.id) {
     console.error("Invalid enemyTemplate provided to createEnemyBattleUnit", enemyTemplate);
     return null;
   }
-  
-  // 使用 enumConfig.js 中定义的核心属性名
   const { HP, MP, PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED, CRIT_RATE, CRIT_DAMAGE, DODGE_RATE } = EQUIPMENT_EFFECT_TYPES;
-  
+
   return {
     id: generateUniqueId(UNIQUE_ID_PREFIXES.BATTLE_UNIT),
-    sourceId: enemyTemplate.id, // Original enemy template ID
+    sourceId: enemyTemplate.id,
     isPlayerUnit: false,
     name: enemyTemplate.name || '敌人',
     level: enemyTemplate.level || 1,
     stats: {
-      // 生命和法力
-      currentHp: enemyTemplate.stats?.[HP] || 50,
-      maxHp: enemyTemplate.stats?.[HP] || 50,
-      currentMp: enemyTemplate.stats?.[MP] || 20,
-      maxMp: enemyTemplate.stats?.[MP] || 20,
-      
-      // 使用标准属性名称
-      [PHYSICAL_ATTACK]: enemyTemplate.stats?.[PHYSICAL_ATTACK] || 8,
-      [MAGICAL_ATTACK]: enemyTemplate.stats?.[MAGICAL_ATTACK] || 8,
-      [PHYSICAL_DEFENSE]: enemyTemplate.stats?.[PHYSICAL_DEFENSE] || 3,
-      [MAGICAL_DEFENSE]: enemyTemplate.stats?.[MAGICAL_DEFENSE] || 3,
-      [SPEED]: enemyTemplate.stats?.[SPEED] || 8,
-      [CRIT_RATE]: enemyTemplate.stats?.[CRIT_RATE] || 0.05,
-      [CRIT_DAMAGE]: enemyTemplate.stats?.[CRIT_DAMAGE] || 1.5,
-      [DODGE_RATE]: enemyTemplate.stats?.[DODGE_RATE] || 0.05,
-      
-      // 兼容旧属性名称（为了兼容现有代码）
-      physicalAttack: enemyTemplate.stats?.[PHYSICAL_ATTACK] || 8,
-      magicalAttack: enemyTemplate.stats?.[MAGICAL_ATTACK] || 8,
-      physicalDefense: enemyTemplate.stats?.[PHYSICAL_DEFENSE] || 3,
-      magicalDefense: enemyTemplate.stats?.[MAGICAL_DEFENSE] || 3,
-      speed: enemyTemplate.stats?.[SPEED] || 8,
-      critRate: enemyTemplate.stats?.[CRIT_RATE] || 0.05,
-      critDamage: enemyTemplate.stats?.[CRIT_DAMAGE] || 1.5,
-      dodgeRate: enemyTemplate.stats?.[DODGE_RATE] || 0.05,
-      
-      // 更旧的属性名称（为了兼容非常旧的代码）
-      attack: enemyTemplate.stats?.[PHYSICAL_ATTACK] || 8,
-      defense: enemyTemplate.stats?.[PHYSICAL_DEFENSE] || 3,
-      
-      // 其他属性
-      hitRate: 1.0, // 命中率，默认100%
-      
-      // 伤害减免属性
-      fixedDamageReduction: enemyTemplate.stats?.fixedDamageReduction || 0,
-      percentDamageReduction: enemyTemplate.stats?.percentDamageReduction || 0,
+        currentHp: enemyTemplate.stats?.[HP] || 50,
+        maxHp: enemyTemplate.stats?.[HP] || 50,
+        currentMp: enemyTemplate.stats?.[MP] || 20,
+        maxMp: enemyTemplate.stats?.[MP] || 20,
+        [PHYSICAL_ATTACK]: enemyTemplate.stats?.[PHYSICAL_ATTACK] || 8,
+        [MAGICAL_ATTACK]: enemyTemplate.stats?.[MAGICAL_ATTACK] || 8,
+        [PHYSICAL_DEFENSE]: enemyTemplate.stats?.[PHYSICAL_DEFENSE] || 3,
+        [MAGICAL_DEFENSE]: enemyTemplate.stats?.[MAGICAL_DEFENSE] || 3,
+        [SPEED]: enemyTemplate.stats?.[SPEED] || 8,
+        [CRIT_RATE]: enemyTemplate.stats?.[CRIT_RATE] || 0.05,
+        [CRIT_DAMAGE]: enemyTemplate.stats?.[CRIT_DAMAGE] || 1.5,
+        [DODGE_RATE]: enemyTemplate.stats?.[DODGE_RATE] || 0.05,
+        hitRate: 1.0,
+        fixedDamageReduction: enemyTemplate.stats?.fixedDamageReduction || 0,
+        percentDamageReduction: enemyTemplate.stats?.percentDamageReduction || 0,
     },
-    skillSet: [...(enemyTemplate.skillSet || [])], // skillSet the enemy can use
-    // 记录技能导入信息
-    _debug_skillImport: {
-      sourceType: 'enemyTemplate',
-      sourceId: enemyTemplate.id,
-      sourceName: enemyTemplate.name,
-      sourceSkills: enemyTemplate.skillSet || [],
-      skillsLength: (enemyTemplate.skillSet || []).length,
-      hasSkillsProperty: enemyTemplate.hasOwnProperty('skillSet'),
-      importTime: new Date().toISOString(),
-      importDetails: `从敌人模板导入技能: ${JSON.stringify(enemyTemplate.skillSet || [])}`
-    },
+    skillSet: [...(enemyTemplate.skillSet || [])],
     statusEffects: [],
     gridPosition: position,
-    spriteAssetKey: enemyTemplate.spriteAssetKey || enemyTemplate.id, // Key for visual asset
+    spriteAssetKey: enemyTemplate.spriteAssetKey || enemyTemplate.id,
     isDefeated: false,
-    actionPoints: 0,
   };
 };
 
@@ -268,7 +191,7 @@ export const prepareBattleSetupData = (
       if (summonId && playerSummonsData[summonId]) {
         const summon = playerSummonsData[summonId];
         const position = { team: 'player', row: rIndex, col: cIndex };
-        const battleUnit = createPlayerBattleUnit(summon, position, globalSummonConfig);
+        const battleUnit = createPlayerBattleUnit(summon, position);
         if (battleUnit) {
           battleUnitsMap[battleUnit.id] = battleUnit;
           playerBattleFormation[rIndex][cIndex] = battleUnit.id; // Store battleUnit.id in formation

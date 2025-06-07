@@ -1,5 +1,5 @@
 /**
- * 梦幻西游背包系统 - 优化版
+ * 御灵录背包系统 - 优化版
  * 基于面向对象设计的主要背包管理系统
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';

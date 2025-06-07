@@ -234,7 +234,7 @@ const CustomTitleBar = () => {
             <i className="fas fa-dragon text-white text-sm"></i>
           </div>
           <span className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            梦幻西游单机版
+            御灵录单机版
           </span>
         </div>
       </div>
@@ -268,7 +268,7 @@ const CustomTitleBar = () => {
             <i className="fas fa-dragon text-white text-sm"></i>
           </div>
           <span className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            梦幻西游单机版
+            御灵录单机版
         </span>
         </div>
         

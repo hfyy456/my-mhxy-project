@@ -46,7 +46,7 @@ const App = () => {
   const [toasts, setToasts] = useState([]);
   const { showResult } = useToast(toasts, setToasts);
   
-  // 游戏状态管理 - 只在游戏开始后初始化
+  // 游戏状态管理
   const [gameInitialized, setGameInitialized] = useState(false);
 
   // 组件挂载时的基础检查
@@ -149,46 +149,35 @@ const App = () => {
     setShowDungeonDemo(false);
   }
 
-  // 渲染页面
-  const renderCurrentPage = () => {
-    if (isLoading) {
-      return (
+  return (
+    <>
+      {isLoading && (
         <LoadingScreen 
           progress={loadingProgress}
           message={loadingMessage}
           mapGenerationState={mapGenerationState}
         />
-      );
-    }
+      )}
 
-    if (showDungeonDemo) {
-      return <DungeonDemo onExit={handleExitDungeonDemo}/>
-    }
+      {!isLoading && showDungeonDemo && <DungeonDemo onExit={handleExitDungeonDemo}/>}
 
-    if (showHomePage) {
-      return (
+      {!isLoading && !showDungeonDemo && showHomePage && (
         <StartMenuPage 
           onStartGame={handleStartGame}
           showToast={showResult}
         />
-      );
-    }
-
-    return (
-      <GamePage 
-        showToast={showResult}
-        toasts={toasts}
-        setToasts={setToasts}
-        gameInitialized={gameInitialized} // 传递游戏初始化状态
-        onStartDungeonDemo={handleStartDungeonDemo}
-        onExitDungeonDemo={handleExitDungeonDemo}
-      />
-    );
-  };
-
-  return (
-    <>
-      {renderCurrentPage()}
+      )}
+      
+      {!isLoading && !showDungeonDemo && !showHomePage && (
+        <GamePage 
+          showToast={showResult}
+          toasts={toasts}
+          setToasts={setToasts}
+          gameInitialized={gameInitialized} // 传递游戏初始化状态
+          onStartDungeonDemo={handleStartDungeonDemo}
+          onExitDungeonDemo={handleExitDungeonDemo}
+        />
+      )}
       
       {/* 全局Toast容器 */}
       <ToastContainer toasts={toasts} setToasts={setToasts} />

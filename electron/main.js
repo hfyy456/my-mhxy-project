@@ -26,7 +26,7 @@ function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        title: '梦幻西游单机版',
+        title: '御灵录单机版',
         frame: false, // 无边框模式
         transparent: false, // 不透明
         titleBarStyle: 'hidden', // 隐藏标题栏但保留窗口控件
