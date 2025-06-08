@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { finalizeBattleResolution } from '@/store/slices/battleSlice';
+import { useBattleStateMachineState } from '../hooks/useBattleStateMachine';
 import './BattleAnimations.css';
 
 // 战斗动画组件 - 处理攻击动画、特效和伤害数字
 const BattleAnimations = () => {
-  const dispatch = useDispatch();
   const [animation, setAnimation] = useState(null);
   const [damageNumbers, setDamageNumbers] = useState([]);
   const [effects, setEffects] = useState([]);
   
-  // 从Redux获取当前战斗状态
-  const currentTurnUnitId = useSelector(state => state.battle.currentTurnUnitId);
-  const battleUnits = useSelector(state => state.battle.battleUnits);
-  const unitActions = useSelector(state => state.battle.unitActions);
-  const currentPhase = useSelector(state => state.battle.currentPhase);
-  const battleLog = useSelector(state => state.battle.battleLog);
+  // 从状态机获取当前战斗状态
+  const {
+    currentTurnUnitId,
+    battleUnits,
+    unitActions,
+    currentPhase,
+    battleLog
+  } = useBattleStateMachineState();
+  
   const processedAttackLogTimestampRef = useRef(null);
   
   // 监听战斗日志变化，触发动画
@@ -54,27 +55,12 @@ const BattleAnimations = () => {
     }
   }, [battleLog, battleUnits, currentPhase]); // 依赖项保持简洁
 
-  // Listen for awaiting_final_animation phase to finalize battle
+  // 动画处理逻辑 - 在新架构中，动画完成不需要特殊处理
+  // 状态机会自动推进，动画只是视觉效果
   useEffect(() => {
-    if (currentPhase === 'awaiting_final_animation') {
-      // Delay to allow animations to complete (e.g., damage numbers last 2s)
-      const animationBufferTime = 2500; // ms
-      const startTime = performance.now();
-      
-      const finalizeAnimation = (timestamp) => {
-        const elapsed = timestamp - startTime;
-        if (elapsed >= animationBufferTime) {
-          dispatch(finalizeBattleResolution());
-          return;
-        }
-        const animFrameId = requestAnimationFrame(finalizeAnimation);
-        return () => cancelAnimationFrame(animFrameId);
-      };
-      
-      const animFrameId = requestAnimationFrame(finalizeAnimation);
-      return () => cancelAnimationFrame(animFrameId); // Cleanup animation frame on component unmount or phase change
-    }
-  }, [currentPhase, dispatch]);
+    // 在新架构中，动画纯粹是视觉效果，不影响战斗流程
+    // 状态机会自动管理战斗进度
+  }, [currentPhase]);
   
   // 触发特效
   const triggerEffect = (unitId, effectInfo) => {

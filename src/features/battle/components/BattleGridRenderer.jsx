@@ -1,29 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import BattleUnitSprite from './BattleUnitSprite';
 import './BattleGridRenderer.css';
-import {
-  selectPlayerFormation,
-  selectEnemyFormation,
-  selectBattleUnits,
-  selectUnitActions,
-  selectCurrentPhase,
-  selectCurrentRound,
-  selectAllUnitsHaveActions,
-  startExecutionPhase
-} from '@/store/slices/battleSlice';
 import { getValidTargetsForUnit } from '@/features/battle/logic/skillSystem';
 import { summonConfig } from '@/config/summon/summonConfig';
 
-const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selectedSkill, selectedTarget, skillAffectedArea }) => {
-  const dispatch = useDispatch();
-  const playerFormation = useSelector(selectPlayerFormation);
-  const enemyFormation = useSelector(selectEnemyFormation);
-  const battleUnits = useSelector(selectBattleUnits);
-  const unitActions = useSelector(selectUnitActions);
-  const currentPhase = useSelector(selectCurrentPhase);
-  const currentRound = useSelector(selectCurrentRound);
-  const allUnitsHaveActions = useSelector(selectAllUnitsHaveActions);
+const BattleGridRenderer = ({ 
+  onUnitClick, 
+  selectedUnitId, 
+  selectedAction, 
+  selectedSkill, 
+  selectedTarget, 
+  skillAffectedArea,
+  // 状态机数据通过props传入
+  playerFormation,
+  enemyFormation,
+  battleUnits,
+  unitActions,
+  currentPhase,
+  currentRound,
+  allUnitsHaveActions,
+  advanceBattle, // 替代Redux dispatch
+  battleLog // 战斗日志数据
+}) => {
   
   // 存储可攻击的格子位置
   const [attackableGridPositions, setAttackableGridPositions] = useState([]);
@@ -83,7 +81,7 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selec
   
   // 处理开始执行按钮点击
   const handleStartExecution = () => {
-    if (currentPhase === 'preparation' && allUnitsHaveActions) {
+    if (currentPhase === 'preparation' && allUnitsHaveActions && advanceBattle) {
       console.log('点击开始执行按钮，准备进入执行阶段');
       // 添加一个短暂停，确保界面更新
       const startTime = performance.now();
@@ -96,7 +94,7 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selec
           return;
         }
         
-        dispatch(startExecutionPhase());
+        advanceBattle();
         console.log('已进入执行阶段，单位将按速度依次执行行动');
       };
       
@@ -151,6 +149,9 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selec
                         unit={battleUnits[unitId]}
                         onClick={handleUnitSpriteClick}
                         hasAction={unitActions[unitId] ? true : false}
+                        currentPhase={currentPhase}
+                        allUnitActions={unitActions}
+                        battleLog={battleLog}
                       />
                     </div>
                   )}
@@ -193,6 +194,9 @@ const BattleGridRenderer = ({ onUnitClick, selectedUnitId, selectedAction, selec
                         unit={battleUnits[unitId]}
                         onClick={handleUnitSpriteClick}
                         hasAction={unitActions[unitId] ? true : false}
+                        currentPhase={currentPhase}
+                        allUnitActions={unitActions}
+                        battleLog={battleLog}
                       />
                     </div>
                   )}

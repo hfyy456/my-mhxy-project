@@ -9,6 +9,7 @@ import { BATTLE_UNIT_TYPES, BATTLE_PHASES, UNIQUE_ID_PREFIXES, EQUIPMENT_EFFECT_
 import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
 // import { skillConfig } from '@/config/config'; // 稍后用于技能效果处理
 import { summonConfig } from '@/config/summon/summonConfig'; // 用于获取召唤兽基础信息
+import { UNIT_FSM_STATES } from '../state/UnitStateMachine';
 
 /**
  * @typedef {Object} BattleUnitStat
@@ -57,6 +58,7 @@ import { summonConfig } from '@/config/summon/summonConfig'; // 用于获取召�
  * @property {string} spriteAssetKey - Key to find the visual asset (e.g., summonSourceId for summons)
  * @property {boolean} isDefeated - True if currentHp <= 0
  * @property {number} actionPoints - (可选) 如果使用行动点系统而非纯速度排序
+ * @property {string} fsmState - The current state of the unit's FSM.
  */
 
 /**
@@ -101,6 +103,7 @@ export const createPlayerBattleUnit = (summonData, position) => {
     gridPosition: position,
     spriteAssetKey: summonData.summonSourceId,
     isDefeated: false,
+    fsmState: UNIT_FSM_STATES.IDLE,
   };
 };
 
@@ -145,6 +148,7 @@ export const createEnemyBattleUnit = (enemyTemplate, position) => {
     gridPosition: position,
     spriteAssetKey: enemyTemplate.spriteAssetKey || enemyTemplate.id,
     isDefeated: false,
+    fsmState: UNIT_FSM_STATES.IDLE,
   };
 };
 

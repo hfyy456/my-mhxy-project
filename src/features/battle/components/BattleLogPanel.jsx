@@ -7,11 +7,10 @@
  * @Description: 战斗日志面板组件
  */
 import React, { useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { selectBattleLog } from '@/store/slices/battleSlice';
+import { useBattleStateMachineState } from '../hooks/useBattleStateMachine';
 
 const BattleLogPanel = () => {
-  const battleLog = useSelector(selectBattleLog);
+  const { battleLog } = useBattleStateMachineState();
   const logContainerRef = useRef(null);
   
   // 当日志更新时，自动滚动到底部

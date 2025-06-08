@@ -317,6 +317,9 @@ export const BATTLE_PHASES = {
   PREPARATION: "preparation",           // 准备阶段 - 玩家选择行动
   PLAYER_TARGET_SELECTION: "player_target_selection", // 玩家选择目标阶段
   EXECUTION: "execution",              // 执行阶段 - 按速度顺序执行行动
+  TURN_START: "turn_start",            // 新增：单位回合开始
+  TURN_ACTION: "turn_action",          // 新增：单位行动执行
+  TURN_END: "turn_end",                // 新增：单位回合结束
   AWAITING_FINAL_ANIMATION: "awaiting_final_animation", // 等待最终动画完成
   BATTLE_OVER: "battle_over",          // 战斗结束
   BATTLE_END: "battle_end"             // 战斗完全结束，准备退出

@@ -10,7 +10,7 @@ import {
 import { selectTotalSummonsInFormation } from '@/store/slices/formationSlice'; // Import selector for total summons
 import { selectPlayerPosition } from '@/store/slices/mapSlice'; // For player's current map position
 import { selectPlayerLevel } from '@/store/slices/playerSlice'; // Assuming this selector exists for player's level
-import { initiateMapBattleAction } from '@/store/slices/battleSlice'; // 导入新的 battle action
+import { initiateMapBattleAction } from '@/store/slices/battleSliceSimplified'; // 导入新的 battle action
 // import { startInteraction } from '@/store/slices/npcSlice'; // 不再需要
 import { CELL_TYPES, TILE_CONTENT_TYPES, monsters as monsterConfig } from '@/config/map/mapConfig'; // 导入怪物配置
 import { npcs as npcConfig } from '@/config/character/npcConfig'; 

@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { setEnemyUnitsActions } from '@/features/battle/logic/battleAI';
 import { 
   removeBuff, 
@@ -31,6 +31,12 @@ import { generateUniqueId } from '@/utils/idUtils'; // 导入标准ID生成函�
 import { calculateRewards } from '@/features/battle/logic/battleRewards'; // 导入奖励计算函数
 import rewardManager from '@/store/RewardManager'; // 导入奖励管理器
 import { selectFormationGrid } from '@/store/slices/formationSlice'; // 导入阵型选择器
+import { 
+  prepareBattleSetupData,
+  determineInitialTurnOrder,
+} from '@/features/battle/logic/battleLogic';
+import { BATTLE_PHASES } from '@/config/enumConfig';
+import { executeSkillEffect } from '@/features/battle/logic/skillSystem';
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;
@@ -1921,7 +1927,17 @@ const battleSlice = createSlice({
         unitId: targetUnitId,
         success: result.success
       });
-    }
+    },
+
+    setUnitFsmState: (state, action) => {
+      const { unitId, fsmState } = action.payload;
+      if (state.battleUnits[unitId]) {
+        state.battleUnits[unitId].fsmState = fsmState;
+      }
+    },
+  },
+  extraReducers: (builder) => {
+    // ... existing code ...
   },
 });
 
@@ -2237,7 +2253,8 @@ export const {
   // BUFF相关的action
   applyBuffToUnit,
   removeBuffFromUnit,
-  clearAllBuffsFromUnit
+  clearAllBuffsFromUnit,
+  setUnitFsmState
 } = battleSlice.actions;
 
 // Selectors

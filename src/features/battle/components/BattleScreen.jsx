@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import BattleGridRenderer from './BattleGridRenderer';
 import ActionTypeSelector from './ActionTypeSelector';
 import ActionContentSelector from './ActionContentSelector';
@@ -9,39 +9,72 @@ import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import BattleUnitDetailPanel from './BattleUnitDetailPanel';
+import BattleStateMachineDebugPanel from './BattleStateMachineDebugPanel';
 // import BattleStateMachineVisualizer from './BattleStateMachineVisualizer';
 import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
+import { decideEnemyAction } from '@/features/battle/logic/battleAI';
 import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 import { useBattleStateMachine, useBattleStateMachineState } from '../hooks/useBattleStateMachine';
+import { useBattleAdapter } from '../context/BattleAdapterContext.jsx';
 
-import {
-  selectIsBattleActive,
-  selectCurrentPhase,
-  selectCurrentRound,
-  selectCurrentTurnUnitId,
-  selectBattleUnits,
-  selectPlayerFormation,
-  selectEnemyFormation,
-  selectUnitActions,
-  selectAllUnitsHaveActions,
-  selectTurnOrder,
-  selectBattleResult,
-  playerSelectTargets,
-  endBattle,
-  startPreparationPhase,
-  startExecutionPhase,
-  setUnitAction,
-  executeAction,
-  nextTurn,
-  setEnemyAIActions
-} from '@/store/slices/battleSlice';
+// Redux选择器已移除，现在完全使用状态机状态
+
+// 导入单位状态，以便在UI中响应
+import { UNIT_FSM_STATES } from '../state/UnitStateMachine';
 
 // 使用Tailwind CSS，不需要导入样式文件
 
-const BattleScreen = () => {
-  const dispatch = useDispatch();
+/**
+ * 使用现有的battleAI逻辑生成AI行动
+ * @param {Object} unit - 敌方单位
+ * @param {Object} allBattleUnits - 所有战斗单位
+ * @returns {Object} AI行动
+ */
+const generateAIAction = (unit, allBattleUnits) => {
+  // 分离玩家单位和敌方单位
+  const playerUnits = [];
+  const enemyUnits = [];
   
+  Object.values(allBattleUnits).forEach(battleUnit => {
+    if (battleUnit.isPlayerUnit) {
+      playerUnits.push(battleUnit);
+    } else {
+      enemyUnits.push(battleUnit);
+    }
+  });
+  
+  // 使用现有的AI决策逻辑
+  const action = decideEnemyAction(
+    unit, 
+    allBattleUnits, 
+    playerUnits, 
+    enemyUnits, 
+    summonConfig,  // 全局宠物配置
+    activeSkillConfig  // 技能配置
+  );
+  
+  if (!action) {
+    // 如果AI没有返回行动，默认防御
+    return {
+      actionType: 'defend',
+      skillId: null,
+      targetIds: []
+    };
+  }
+  
+  console.log(`AI单位 ${unit.name} 选择行动:`, action);
+  
+  return action;
+};
+
+const BattleScreen = () => {
+  
+  // 模拟的UI消息和伤害数字，后续会从state中获取
+  const uiMessages = [];
+  const damageNumbers = [];
+  const isDev = process.env.NODE_ENV === 'development';
+
   // 集成状态机
   const {
     startBattle,
@@ -49,8 +82,15 @@ const BattleScreen = () => {
     resetBattle,
     completePreparation,
     getCurrentState,
-    state: stateMachineState
+    state: machineState,
+    triggerEvent,
+    submitAction,
+    advanceBattle,
+    transferResultsToRedux
   } = useBattleStateMachine();
+  
+  // 获取适配器状态用于调试
+  const adapter = useBattleAdapter();
   
   const {
     isActive: isBattleActive,
@@ -62,14 +102,20 @@ const BattleScreen = () => {
     isInPreparation,
     isInExecution,
     isInResolution,
-    isBattleOver
+    isBattleOver,
+    playerFormation,
+    enemyFormation,
+    currentTurnUnitId,
+    turnOrder,
+    battleLog
   } = useBattleStateMachineState();
   
-  // 原有的选择器保持不变，以便向后兼容
-  const playerFormation = useSelector(selectPlayerFormation);
-  const enemyFormation = useSelector(selectEnemyFormation);
-  const currentTurnUnitId = useSelector(selectCurrentTurnUnitId);
-  const allUnitsHaveActions = useSelector(selectAllUnitsHaveActions);
+  // 计算所有单位是否都有行动
+  const allUnitsHaveActions = (() => {
+    if (!battleUnits || !unitActions) return false;
+    const activeUnits = Object.values(battleUnits).filter(unit => !unit.isDefeated);
+    return activeUnits.length > 0 && activeUnits.every(unit => unitActions[unit.id]);
+  })();
   
   // 添加选中召唤兽的状态
   const [selectedUnitId, setSelectedUnitId] = useState(null);
@@ -77,7 +123,11 @@ const BattleScreen = () => {
   const [selectedAction, setSelectedAction] = useState('attack');
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [selectedSkill, setSelectedSkill] = useState(null);
+  // 追踪AI行动是否已设置
+  const [aiActionsSet, setAiActionsSet] = useState(false);
   
+  // 在新架构中，单位状态由引擎内部管理，不需要Redux FSM状态
+
   // 获取玩家单位列表
   const playerUnits = playerFormation.flat()
     .filter(id => id && battleUnits[id])
@@ -96,11 +146,11 @@ const BattleScreen = () => {
   }, [playerUnits, selectedUnitId]);
   
   // 重置选择状态
+  // 当行动类型改变时，重置技能和目标
   useEffect(() => {
-    setSelectedAction('attack');
-    setSelectedTarget(null);
     setSelectedSkill(null);
-  }, [selectedUnitId]);
+    setSelectedTarget(null);
+  }, [selectedAction]);
   
   // 获取可选目标
   const getTargets = () => {
@@ -312,44 +362,27 @@ const BattleScreen = () => {
   
   // 确认行动
   const confirmAction = () => {
-    if (!selectedUnit) return;
-    
-    let action = {
-      actionType: selectedAction,
-      targetIds: [],
-      skillId: null
-    };
-    
-    // 根据行动类型设置目标和技能
-    if (selectedAction === 'attack' && selectedTarget) {
-      action.targetIds = [selectedTarget];
-    } else if (selectedAction === 'skill' && selectedSkill && selectedTarget) {
-      action.targetIds = [selectedTarget];
-      action.skillId = selectedSkill;
-    } else if (selectedAction === 'defend') {
-      // 防御不需要目标
-    } else if (selectedAction === 'escape') {
-      // 逃跑不需要目标
-      dispatch(endBattle());
-      return;
-    } else if (selectedAction === 'backpack') {
-      // 背包功能暂时不实现
-      return;
-    } else {
-      // 如果没有选择有效行动，不执行
+    if (!selectedUnitId) {
+      console.warn('Cannot confirm action: No unit selected.');
       return;
     }
+
+    // 构建符合 setUnitAction reducer 期望的 action 对象
+    const actionData = {
+      actionType: selectedAction, // 确保键名为 actionType
+      skillId: selectedAction === 'skill' ? selectedSkill : null,
+      targetIds: selectedTarget ? [selectedTarget] : [],
+    };
+
+    console.log('[BattleScreen] Confirming Action, dispatching setUnitAction with payload:', { unitId: selectedUnitId, action: actionData });
     
-    // 派发行动
-    dispatch(setUnitAction({
-      unitId: selectedUnitId,
-      action
-    }));
-    
-    // 重置选择
-    setSelectedAction('attack');
-    setSelectedTarget(null);
-    setSelectedSkill(null);
+    // 派发带有正确结构的 payload
+    // 设置行动 - 使用适配器系统
+    const result = submitAction(selectedUnitId, actionData);
+    console.log('提交行动结果:', result);
+
+    // 后续的 completePreparation() 将由状态机在所有单位都选择完动作后触发
+    // 不再需要在UI层面手动管理
   };
   
   // 获取行动描述
@@ -374,26 +407,85 @@ const BattleScreen = () => {
   // 状态机状态监控（开发模式）
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[BattleScreen] 状态机状态:', stateMachineState);
-      console.log('[BattleScreen] Redux战斗状态:', { currentPhase, currentRound, isBattleActive });
+      console.log('[BattleScreen] 状态机完整状态:', {
+        isActive: isBattleActive,
+        currentPhase,
+        currentRound,
+        battleUnitsCount: Object.keys(battleUnits).length,
+        unitActionsCount: Object.keys(unitActions).length,
+        playerFormationLength: playerFormation?.length,
+        enemyFormationLength: enemyFormation?.length,
+        currentTurnUnitId
+      });
+      console.log('[BattleScreen] 适配器状态:', adapter);
     }
-  }, [stateMachineState, currentPhase, currentRound, isBattleActive]);
+  }, [isBattleActive, currentPhase, currentRound, battleUnits, unitActions, playerFormation, enemyFormation, currentTurnUnitId, adapter]);
   
   // 状态机与Redux状态同步监控
   useEffect(() => {
     if (isInPreparation && allUnitsHaveActions) {
-      console.log('[BattleScreen] 所有单位已准备就绪，可以进入执行阶段');
+      console.log('[BattleScreen] All units have actions, completing preparation phase.');
+      completePreparation();
     }
-  }, [isInPreparation, allUnitsHaveActions]);
+  }, [allUnitsHaveActions, isInPreparation, completePreparation]);
   
   // 在准备阶段开始时设置敌方AI行动
   useEffect(() => {
-    if (currentPhase === 'preparation' && Object.keys(unitActions).length === 0) {
-      // 当进入准备阶段且没有单位行动时，设置敌方AI行动
-      console.log('设置敌方AI行动');
-      dispatch(setEnemyAIActions());
+    // 当战斗激活且进入准备阶段，并且AI行动尚未设置时
+    if (isBattleActive && currentPhase === 'preparation' && !aiActionsSet) {
+      console.log('准备阶段开始，为敌方单位设置AI行动。');
+      
+      // 防止重复执行的保护
+      let hasSubmittedAnyAction = false;
+      
+      // 为每个敌方单位生成AI行动
+      Object.values(battleUnits).forEach(unit => {
+        if (!unit.isPlayerUnit && !unit.isDefeated) {
+          // 检查该单位是否已经有行动
+          if (unitActions[unit.id]) {
+            console.log(`敌方单位 ${unit.name} 已有行动，跳过AI生成`);
+            return;
+          }
+          
+          const aiAction = generateAIAction(unit, battleUnits);
+          console.log(`为敌方单位 ${unit.name} 生成AI行动:`, aiAction);
+          
+          // 通过适配器提交AI行动
+          const result = submitAction(unit.id, aiAction);
+          console.log(`AI行动提交结果:`, result);
+          
+          if (result.success !== false) {
+            hasSubmittedAnyAction = true;
+          }
+        }
+      });
+      
+      // 只有在成功提交任何行动后才设置标志位
+      if (hasSubmittedAnyAction) {
+        setAiActionsSet(true);
+      }
     }
-  }, [currentPhase, unitActions, dispatch]);
+
+    // 当战斗结束时，重置标志位以便下一场战斗
+    if (!isBattleActive && aiActionsSet) {
+      setAiActionsSet(false);
+    }
+  }, [isBattleActive, currentPhase, aiActionsSet, submitAction]); // 移除battleUnits依赖
+  
+  // 监控battleUnits变化，但只在特定条件下重置AI行动标志位
+  useEffect(() => {
+    // 如果battleUnits发生了显著变化（比如战斗重新开始），重置AI行动标志位
+    if (isBattleActive && currentPhase === 'preparation' && aiActionsSet) {
+      const enemyUnits = Object.values(battleUnits).filter(unit => !unit.isPlayerUnit && !unit.isDefeated);
+      const enemyUnitsWithActions = enemyUnits.filter(unit => unitActions[unit.id]);
+      
+      // 如果有敌方单位但没有行动，说明需要重新生成AI行动
+      if (enemyUnits.length > 0 && enemyUnitsWithActions.length === 0) {
+        console.log('检测到敌方单位无行动，重置AI行动标志位');
+        setAiActionsSet(false);
+      }
+    }
+  }, [battleUnits, unitActions, isBattleActive, currentPhase, aiActionsSet]);
   
   // 监控准备阶段的行动状态（仅用于调试）
   useEffect(() => {
@@ -417,96 +509,31 @@ const BattleScreen = () => {
   // 注意：React Hooks必须在函数组件的顶层调用
   const isProcessingRef = React.useRef(false);
   
-  // 处理执行阶段的自动行动
+  // 处理执行阶段的自动推进（新的回合制系统）
   useEffect(() => {
-    if (currentPhase === 'execution' && currentTurnUnitId && !isProcessingRef.current) {
-      const currentUnit = battleUnits[currentTurnUnitId];
-      
+    if (currentPhase === 'execution' && !isProcessingRef.current) {
       // 标记正在处理中
       isProcessingRef.current = true;
       
-      // 如果是敌方单位，自动执行行动
-      if (currentUnit && !currentUnit.isPlayerUnit) {
-        console.log(`开始处理敌方单位 ${currentUnit.name} 的行动`);
-        // 给一个短暂停，让玩家可以看到当前行动单位
-        const actionStartTime = performance.now();
-        const actionDuration = 800;
-        
-        const executeActionFrame = (timestamp) => {
-          const elapsed = timestamp - actionStartTime;
-          if (elapsed < actionDuration) {
-            requestAnimationFrame(executeActionFrame);
-            return;
-          }
-          
-          dispatch(executeAction());
-          
-          // 执行完行动后，等待一会再进入下一个单位的回合
-          const nextTurnStartTime = performance.now();
-          const nextTurnDuration = 1000;
-          
-          const nextTurnFrame = (innerTimestamp) => {
-            const nextElapsed = innerTimestamp - nextTurnStartTime;
-            if (nextElapsed < nextTurnDuration) {
-              requestAnimationFrame(nextTurnFrame);
-              return;
-            }
-            
-            dispatch(nextTurn());
-            // 重置处理标记
-            isProcessingRef.current = false;
-          };
-          
-          requestAnimationFrame(nextTurnFrame);
-        };
-        
-        requestAnimationFrame(executeActionFrame);
-      } 
-      // 如果是玩家单位，并且已经设置了行动，则自动执行
-      else if (currentUnit && currentUnit.isPlayerUnit && unitActions[currentTurnUnitId]) {
-        console.log(`开始处理玩家单位 ${currentUnit.name} 的行动`);
-        // 选中当前行动单位
-        setSelectedUnitId(currentTurnUnitId);
-        
-        // 给一个短暂停，让玩家可以看到当前行动单位
-        const actionStartTime = performance.now();
-        const actionDuration = 1200; // 玩家单位给更长的时间观察
-        
-        const executeActionFrame = (timestamp) => {
-          const elapsed = timestamp - actionStartTime;
-          if (elapsed < actionDuration) {
-            requestAnimationFrame(executeActionFrame);
-            return;
-          }
-          
-          dispatch(executeAction());
-          
-          // 执行完行动后，等待一会再进入下一个单位的回合
-          const nextTurnStartTime = performance.now();
-          const nextTurnDuration = 1000;
-          
-          const nextTurnFrame = (innerTimestamp) => {
-            const nextElapsed = innerTimestamp - nextTurnStartTime;
-            if (nextElapsed < nextTurnDuration) {
-              requestAnimationFrame(nextTurnFrame);
-              return;
-            }
-            
-            dispatch(nextTurn());
-            // 重置处理标记
-            isProcessingRef.current = false;
-          };
-          
-          requestAnimationFrame(nextTurnFrame);
-        };
-        
-        requestAnimationFrame(executeActionFrame);
-      } else {
-        // 如果没有有效的行动，重置处理标记
+      console.log('执行阶段开始，等待引擎自动处理所有行动...');
+      
+      // 监听执行完成或新回合开始
+      const handlePhaseChange = () => {
+        if (currentPhase !== 'execution') {
+          console.log('执行阶段结束，进入下一阶段:', currentPhase);
+          isProcessingRef.current = false;
+        }
+      };
+      
+      // 监听阶段变化
+      const timeoutId = setTimeout(handlePhaseChange, 5000); // 5秒超时
+      
+      return () => {
+        clearTimeout(timeoutId);
         isProcessingRef.current = false;
-      }
+      };
     }
-  }, [currentPhase, currentTurnUnitId, battleUnits, unitActions, dispatch, setSelectedUnitId]);
+  }, [currentPhase]);
 
   // 处理单位点击事件
   const handleUnitClick = useCallback((unitId) => {
@@ -524,15 +551,18 @@ const BattleScreen = () => {
     
     // 根据当前战斗阶段分发相应的动作
     if (currentPhase === 'player_target_selection') {
-      dispatch(playerSelectTargets({ targetIds: [unitId] }));
-      console.log(`Dispatching playerSelectTargets with target: ${unitId}`);
+      // 在新架构中，目标选择由UI状态管理，不需要Redux action
+      setSelectedTarget(unitId);
+      console.log(`选择目标: ${unitId}`);
     }
     // 添加更多条件以处理其他阶段
-  }, [dispatch, currentPhase, playerUnits, setSelectedUnitId]);
+  }, [currentPhase, playerUnits, setSelectedUnitId]);
 
   // 处理退出战斗
   const handleExitBattle = () => {
-    dispatch(endBattle());
+    // 使用适配器系统结束战斗并将结果返回Redux
+    transferResultsToRedux();
+    console.log('战斗结束，结果已返回Redux');
   };
 
   if (!isBattleActive) {
@@ -541,6 +571,15 @@ const BattleScreen = () => {
 
   return (
     <div className="relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
+      {/* 状态机调试面板 - 开发模式显示 */}
+      {isDev && (
+        <BattleStateMachineDebugPanel
+          machineState={machineState}
+          triggerEvent={triggerEvent}
+          reduxPhase={currentPhase}
+        />
+      )}
+
       {/* 状态机可视化组件 - 开发模式显示 */}
         {/* {process.env.NODE_ENV === 'development' && (
           <BattleStateMachineVisualizer isVisible={true} />
@@ -562,7 +601,7 @@ const BattleScreen = () => {
       {/* 战斗结算界面 - 绝对定位在最上层 */}
       {currentPhase === 'battle_end' && battleResult && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-          <BattleResultsScreen result={battleResult} />
+          <BattleResultsScreen result={battleResult} onExit={handleExitBattle} />
         </div>
       )}
       
@@ -578,40 +617,24 @@ const BattleScreen = () => {
             selectedSkill={selectedSkill}
             selectedTarget={selectedTarget}
             skillAffectedArea={selectedSkill && selectedAction === 'skill' && selectedTarget ? getSkillAffectedArea(selectedSkill, selectedTarget) : []}
+            // 传递状态机数据
+            playerFormation={playerFormation}
+            enemyFormation={enemyFormation}
+            battleUnits={battleUnits}
+            unitActions={unitActions}
+            currentPhase={currentPhase}
+            currentRound={currentRound}
+            allUnitsHaveActions={allUnitsHaveActions}
+            advanceBattle={advanceBattle}
+            battleLog={battleLog}
           />
         </div>
+      
+
+   
       </div>
       
-      {/* 状态机调试面板 - 开发模式显示 */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute top-4 right-4 z-30 bg-black bg-opacity-80 text-white p-4 rounded-lg text-sm">
-          <h4 className="font-bold mb-2">状态机调试</h4>
-          <div>主状态: {stateMachineState.currentState}</div>
-          <div>子状态: {stateMachineState.currentSubState || '无'}</div>
-          <div>Redux阶段: {currentPhase}</div>
-          <div className="mt-2 space-y-1">
-            <button 
-              onClick={completePreparation}
-              disabled={!isInPreparation}
-              className="block w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-xs"
-            >
-              完成准备阶段
-            </button>
-            <button 
-              onClick={() => stateMachineEndBattle()}
-              className="block w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
-            >
-              结束战斗
-            </button>
-            <button 
-              onClick={resetBattle}
-              className="block w-full px-2 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs"
-            >
-              重置战斗
-            </button>
-          </div>
-        </div>
-      )}
+
       
       {/* 回合和阶段信息已移至VS上方显示 */}
       
@@ -649,8 +672,6 @@ const BattleScreen = () => {
               confirmAction={confirmAction}
               hasAction={unitActions[selectedUnitId]}
               getActionDescription={getActionDescription}
-              dispatch={dispatch}
-              setUnitAction={setUnitAction}
               selectedUnitId={selectedUnitId}
             />
           </div>

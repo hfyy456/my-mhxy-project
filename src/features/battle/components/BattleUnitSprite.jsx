@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { useSelector } from 'react-redux';
-import { selectCurrentPhase, selectUnitActions } from '@/store/slices/battleSlice';
 import { getBuffById } from '@/config/skill/buffConfig';
 import './BattleUnitSprite.css';
 
 // 动态导入所有精灵图
 const images = import.meta.glob('@/assets/summons/*.png', { eager: true });
 
-const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
+const BattleUnitSprite = ({ 
+  unit, 
+  onClick, 
+  hasAction = false,
+  // 状态机数据通过props传入
+  currentPhase,
+  allUnitActions,
+  battleLog
+}) => {
   // 状态用于控制攻击动画
   const [isAttacking, setIsAttacking] = useState(false);
   const [isReceivingDamage, setIsReceivingDamage] = useState(false);
@@ -17,27 +23,11 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
   const [damageValue, setDamageValue] = useState(0);
   const [isCritical, setIsCritical] = useState(false);
   
-  // 获取当前战斗阶段和单位行动
-  const currentPhase = useSelector(selectCurrentPhase);
-  const allUnitActions = useSelector(selectUnitActions);
-  const battleLog = useSelector(state => state.battle.battleLog);
-  
   // 直接从所有行动中获取当前单位的行动
   const unitAction = unit ? allUnitActions[unit.id] : null;
   
   // 使用useRef跟踪已处理的日志ID，避免重复触发动画
   const lastProcessedLogRef = useRef(null);
-  
-  // 仅在开发环境下保留调试信息
-  // useEffect(() => {
-  //   if (unit && !unit.isPlayerUnit) {
-  //     console.log(`敌方单位 ${unit.name} (ID: ${unit.id}) 的行动:`, unitAction);
-  //     console.log(`所有单位行动:`, allUnitActions);
-  //     console.log(`当前阶段:`, currentPhase);
-  //     console.log(`是否已准备:`, hasAction);
-  //     console.log(`是否显示意图图标:`, !unit.isDefeated && unitAction && !unit.isPlayerUnit);
-  //   }
-  // }, [unit, unitAction, allUnitActions, currentPhase, hasAction]);
   
   // 使用全局变量跟踪动画状态
   const attackAnimInProgressRef = useRef(false); // 单独跟踪攻击动画状态
@@ -114,7 +104,7 @@ const BattleUnitSprite = ({ unit, onClick, hasAction = false }) => {
         continue;
       }
       
-      // 动画只由包含“攻击”的日志触发
+      // 动画只由包含"攻击"的日志触发
       if (!currentLog.message.includes('攻击')) {
         if (unit) console.log(`[BattleUnitSprite ${unit.name}(${unit.id})] ANIM_EFFECT_SEARCH_SKIP_NO_ATTACK_KEYWORD - Index: ${i}, Log:`, JSON.parse(JSON.stringify(currentLog)));
         continue;

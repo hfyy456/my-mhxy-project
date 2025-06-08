@@ -2,11 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-08 06:05:29
+ * @LastEditTime: 2025-06-09 03:41:57
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import store from "../store/index.js";
+import { BattleSystemProvider } from "@/features/battle/providers/BattleSystemProvider";
 
 import GameMap from "@/features/game-map/components/GameMap";
 import BeautifulHomesteadView from "@/features/homestead/components/BeautifulHomesteadView";
@@ -44,11 +45,11 @@ import { selectIsBattleActive } from "@/store/slices/battleSlice";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
 import { useBattleStateMachine } from '@/features/battle/hooks/useBattleStateMachine';
 
-const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeonDemo }) => {
+const GamePageContent = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeonDemo }) => {
   const dispatch = useDispatch();
   const player = useSelector((state) => state.player);
   const { isFighting } = useSelector((state) => state.battle);
-  const { startBattle } = useBattleStateMachine();
+  const { startBattle, transferControlToEngine } = useBattleStateMachine();
   
   // 只在游戏初始化后才启用这些Hook
   const inventoryState = gameInitialized ? useInventoryManager() : { 
@@ -169,7 +170,7 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
   // 装备关系管理
   useEquipmentRelationship();
 
-  // 游戏操作栏组件
+  // 游戏操作栏组件 - 恢复被误删的组件
   const GameActionBar = () => {
     return (
       <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '5px' }}>
@@ -179,65 +180,47 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
         <button onClick={() => { openHomesteadModal(); }} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#069545', border: 'none', borderRadius: '3px' }}>家园</button>
         <button onClick={openInventoryOOPModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#8B4513', border: 'none', borderRadius: '3px' }}>背包OOP</button>
         <button onClick={openConfigManager} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#10b981', border: 'none', borderRadius: '3px' }}>配置管理</button>
+        {/* 我们需要一个按钮来打开召唤兽界面，这里暂时添加到旧的操作栏中 */}
+        <button onClick={openSummonModal} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#A020F0', border: 'none', borderRadius: '3px' }}>召唤兽</button>
       </div>
     );
   };
 
   const handleStartBattle = (payload) => {
-    startBattle(payload);
+    console.log('开始启动战斗:', payload);
+    
+    // 初始化战斗
+    const initResult = startBattle(payload);
+    console.log('战斗初始化结果:', initResult);
+    
+    // 如果初始化成功，转移控制权给引擎
+    if (initResult && initResult.success) {
+      console.log('战斗初始化成功，转移控制权给引擎');
+      transferControlToEngine();
+    } else {
+      console.error('战斗初始化失败:', initResult);
+    }
   };
 
   // 如果游戏未初始化，显示加载提示
   if (!gameInitialized) {
     return (
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "100vh",
-          overflow: "hidden",
-          backgroundColor: "#0f172a",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-      >
+      <div className="relative w-full h-screen overflow-hidden bg-gray-900 flex flex-col items-center justify-center">
         <CustomTitleBar />
-        <div style={{ color: 'white', fontSize: '18px' }}>
-          游戏正在初始化，请稍候...
-        </div>
+        <div className="text-white text-lg">游戏正在初始化，请稍候...</div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100vh",
-        overflow: "hidden",
-        backgroundColor: "#0f172a",
-        display: "flex",
-        flexDirection: "column"
-      }}
-    >
-      {/* 自定义标题栏 */}
+    <div className="relative w-full h-screen overflow-hidden bg-gray-900 flex flex-col">
       <CustomTitleBar />
-      
-      {/* 游戏内容区 */}
-      <div 
-        style={{
-          flex: 1,
-          position: "relative",
-          overflow: "hidden"
-        }}
-      >
+      <div className="flex-1 relative overflow-hidden">
         {!isBattleActive && (
           <>
             <BeautifulHomesteadView showToast={showToast} />
             <DialoguePanel />
+            <GameActionBar /> {/* 渲染恢复的操作栏 */}
             
             {/* Action Bar */}
             {!isWorldMapOpen && (
@@ -248,15 +231,18 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
                 onOpenSettings={openSettingsModal}
                 onOpenWorldMap={() => dispatch({ type: 'map/setWorldMapOpenAction', payload: true })}
                 onOpenQuestLog={openQuestLogModal}
+                onOpenMinimap={openMinimapModal}
+                onOpenNpcPanel={openNpcPanelModal}
                 onStartDungeonDemo={onStartDungeonDemo}
+
+                player={player}
               />
             )}
-            
+
             {/* 测试战斗按钮 */}
             {!isWorldMapOpen && !isBattleActive && (
               <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
-                        <button onClick={openNpcOOPDemo} style={{ padding: '8px 12px', color: 'white', backgroundColor: '#dc2626', border: 'none', borderRadius: '3px' }}>NPC系统</button>
-
+                <button onClick={openNpcOOPDemo} className="px-3 py-2 text-white bg-red-700 rounded">NPC系统</button>
                 <button
                   onClick={() => {
                     // 导入并准备战斗数据
@@ -312,9 +298,9 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
                       });
                     });
                   }}
-                  className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-md shadow-lg transition-all duration-150 text-sm flex items-center gap-2"
+                  className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-md shadow-lg"
                 >
-                  <i className="fas fa-swords"></i> 测试战斗
+                  测试战斗
                 </button>
                 
                 <div onClick={openTowerModal}>
@@ -322,11 +308,35 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
                 </div>
               </div>
             )}
+
+            {/* Minimap */}
+            {isMinimapModalOpen && (
+              <MinimapPanel 
+                onClose={closeMinimapModal} 
+                onStartBattle={handleStartBattle}
+              />
+            )}
+            
+            {/* Npc Panel */}
+            {isNpcPanelOpen && <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanelModal} />}
           </>
         )}
-
-        {/* 所有的模态框组件 */}
-        <>
+        
+        {/*
+          这里是条件渲染战斗界面的正确位置。
+          当 isBattleActive 为 true 时，它会渲染一个覆盖整个屏幕的 div，
+          并在其中放置 BattleScreen。
+        */}
+        {isBattleActive && (
+          <div className="absolute inset-0 z-50">
+            <BattleScreen onEndBattle={() => {}} />
+          </div>
+        )}
+        
+        {/* 全局模态框和面板 */}
+        
+         {/* 所有的模态框组件 */}
+         <>
           <CommonModal 
             isOpen={isSummonModalOpen} 
             onClose={closeSummonModal}
@@ -497,23 +507,43 @@ const GamePage = ({ showToast, toasts, setToasts, gameInitialized, onStartDungeo
             showToast={showToast}
           />
         </>
+        <ElectronStoreNotification
+          isOpen={showElectronStoreNotification}
+          onClose={() => setShowElectronStoreNotification(false)}
+          message="数据已同步到本地"
+          type="success"
+        />
 
-        {/* 装备关系管理演示Modal */}
-        {isEquipmentRelationDemoOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '95%', height: '95%', backgroundColor: 'white', borderRadius: '10px', overflow: 'auto' }}>
-              <div style={{ position: 'sticky', top: 0, right: 0, textAlign: 'right', padding: '10px', backgroundColor: 'white', borderBottom: '1px solid #ccc' }}>
-                <button onClick={() => setIsEquipmentRelationDemoOpen(false)} style={{ padding: '5px 10px', backgroundColor: '#ff4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>关闭</button>
-              </div>
-              <EquipmentRelationshipDemo />
-            </div>
-          </div>
+        {isConfigManagerOpen && (
+          <CommonModal
+            isOpen={isConfigManagerOpen}
+            onClose={closeConfigManager}
+            title="配置管理器"
+          >
+            <ConfigManager />
+          </CommonModal>
         )}
 
-        <ElectronStoreNotification onClose={() => setShowElectronStoreNotification(false)} />
+        {isNpcOOPDemoOpen && (
+          <CommonModal
+            isOpen={isNpcOOPDemoOpen}
+            onClose={closeNpcOOPDemo}
+            title={uiText.summonManagement}
+          >
+            <NpcOOPDemo />
+          </CommonModal>
+        )}
       </div>
     </div>
   );
 };
 
-export default GamePage; 
+const GamePage = (props) => {
+  return (
+    <BattleSystemProvider>
+      <GamePageContent {...props} />
+    </BattleSystemProvider>
+  );
+};
+
+export default GamePage;

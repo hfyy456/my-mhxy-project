@@ -1,6 +1,5 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
-import { selectBattleUnits } from '@/store/slices/battleSlice';
+import { useBattleStateMachineState } from '../hooks/useBattleStateMachine';
 import { getUnitStatsDetails } from '@/features/battle/logic/battleLogic';
 
 /**
@@ -9,7 +8,7 @@ import { getUnitStatsDetails } from '@/features/battle/logic/battleLogic';
  */
 const BattleUnitStats = () => {
   // 获取所有战斗单位
-  const battleUnits = useSelector(selectBattleUnits);
+  const { battleUnits } = useBattleStateMachineState();
   
   if (!battleUnits || Object.keys(battleUnits).length === 0) {
     return null;

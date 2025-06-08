@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-01-27
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-07 04:37:08
+ * @LastEditTime: 2025-06-09 06:21:15
  * @Description: 战斗系统状态机 - 使用分层状态机管理复杂战斗流程
  */
 
@@ -27,6 +27,8 @@ import {
 import { triggerPassiveSkillEffects } from '../logic/passiveSkillSystem';
 import { BattleUnit } from '../models/BattleUnit';
 import { determineActionOrder } from '../logic/turnOrder';
+import { playAction } from '../logic/actionPlayer';
+import { setUnitFsmState } from '@/store/slices/battleSlice';
 
 // 战斗状态枚举
 export const BATTLE_STATES = {
@@ -107,6 +109,32 @@ export class BattleStateMachine {
       roundNumber: 0
     };
     this.loggingEnabled = options.enableLogging;
+    this.listeners = new Set();
+  }
+
+  /**
+   * 订阅状态变化
+   */
+  subscribe(listener) {
+    this.listeners.add(listener);
+    // 返回一个取消订阅的函数
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  /**
+   * 通知所有监听者状态已更新
+   */
+  _notifyListeners() {
+    const currentState = this.getCurrentState();
+    for (const listener of this.listeners) {
+      try {
+        listener(currentState);
+      } catch (error) {
+        console.error('[BattleStateMachine] 调用监听者时出错:', error);
+      }
+    }
   }
 
   /**
@@ -198,6 +226,9 @@ export class BattleStateMachine {
     
     // 触发状态进入处理
     this._onStateEnter(newState, newSubState);
+    
+    // 通知监听者状态已改变
+    this._notifyListeners();
   }
 
   /**
@@ -240,8 +271,8 @@ export class BattleStateMachine {
         payload
     });
 
-    // Now that the state is prepared, transition the state machine.
-    this._transitionTo(BATTLE_STATES.INITIALIZATION);
+    // Directly transition to the ACTIVE state, starting with the ROUND_START sub-state.
+    this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.ROUND_START);
   }
 
   _handleInitializationComplete(payload) {
@@ -312,8 +343,9 @@ export class BattleStateMachine {
   }
 
   _handleActionExecuted(payload) {
-    if (this.currentSubState === BATTLE_STATES.EXECUTION) {
-      this._checkForMoreActions();
+    if (this.currentSubState === BATTLE_STATES.EXEC_EXECUTE_NEXT_ACTION) {
+      // 在异步模型中，这个事件由 _executeNextAction 内部处理
+      // this._checkForMoreActions();
     }
   }
 
@@ -428,8 +460,9 @@ export class BattleStateMachine {
    * 进入执行阶段
    */
   _enterExecutionPhase() {
-    this._log('Sub-Phase: EXECUTION - All actions are selected, preparing to execute.');
+    this._log('ENTERING EXECUTION PHASE. Determining action order.');
     this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_DETERMINE_ACTION_ORDER);
+    this._determineActionOrder();
   }
 
   /**
@@ -441,278 +474,75 @@ export class BattleStateMachine {
     const turnOrder = determineActionOrder(allUnits, actions);
     this.context.actionQueue = turnOrder;
     this.context.currentActionIndex = 0;
-    this._log(`EXECUTION - Turn order determined: ${turnOrder.map(a => a.unit.name).join(', ')}`);
-    this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_EXECUTE_NEXT_ACTION);
+    this._log(`Action order determined: ${this.context.actionQueue.map(a => a.unitId).join(', ')}`);
+    this.trigger(BATTLE_EVENTS.ACTION_ORDER_DETERMINED);
   }
 
-  /**
-   * 执行队列中的下一个行动
-   */
-  _executeNextAction() {
-    const action = this.context.actionQueue[this.context.currentActionIndex];
-    this.context.currentProcessingAction = action;
-    
-    this._log(`EXECUTION - Executing action for ${action.unit.name} (Action: ${action.type})`);
-
-    // Create a BattleUnit instance on-the-fly from plain data
-    const unitInstance = new BattleUnit(action.unit, action.unit.isPlayerUnit, action.unit.gridPosition, {});
-
-    if (!unitInstance.canAct()) {
-      this._log(`  - !! ${unitInstance.name} cannot act (e.g., stunned). Skipping turn.`);
-      this._actionComplete();
+  // 将 _executeNextAction 修改为 async 函数
+  async _executeNextAction() {
+    if (this.context.currentActionIndex >= this.context.actionQueue.length) {
+      this._log('No more actions in queue.');
+      this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
       return;
     }
 
-    this._processAction(unitInstance, action);
+    const action = this.context.actionQueue[this.context.currentActionIndex];
+    const { unitId, skillId, targetIds } = action; // 假设 action 结构如此
+
+    this._log(`Executing action #${this.context.currentActionIndex + 1} for unit ${unitId}`);
+    this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_EXECUTE_NEXT_ACTION);
+
+    // ******* 开始异步改造 *******
+
+    // 1. 更新单位FSM状态为EXECUTING
+    this.dispatch(setUnitFsmState({ unitId, fsmState: 'EXECUTING' }));
+
+    // 2. 调用 playAction 并等待其完成
+    // 注意：playAction 需要一个更完整的 action 对象
+    // 我们在这里模拟构建它
+    const battleState = this.getState().battle;
+    const skill = getSkillById(skillId, battleState); // 假设有这个函数
+    const damage = 10; // 伤害计算需要在这里或 playAction 内部完成，暂时硬编码
+
+    // 假设是单体技能
+    const targetId = targetIds[0];
+
+    const fullActionPayload = {
+      casterId: unitId,
+      targetId: targetId,
+      skill: skill,
+      damage: damage,
+    };
+
+    await playAction(fullActionPayload, this.dispatch);
+
+    // 3. 动作完成后，将单位状态恢复为IDLE
+    this.dispatch(setUnitFsmState({ unitId, fsmState: 'IDLE' }));
+
+    // ******* 结束异步改造 *******
+
+    // 4. 继续下一个动作
+    this.context.currentActionIndex++;
+    this._checkForMoreActions();
   }
 
   _processAction(unitInstance, action) {
-    switch (action.type) {
-        case 'attack':
-            this._processAttackAction(unitInstance, action);
-            break;
-        case 'skill':
-            this._processSkillAction(unitInstance, action);
-            break;
-        case 'defend':
-            this._processDefendAction(unitInstance, action);
-            break;
-        case 'item':
-            this._processItemAction(unitInstance, action);
-            break;
-        default:
-            console.warn(`[BattleStateMachine] 未知行动类型: ${action.type}`);
-            this._actionComplete();
-    }
-  }
-
-  _processAttackAction(unitInstance, action) {
-    const battleState = this.getState().battle;
-    const targetData = battleState.battleUnits[action.targetId];
-    this._log(`  - Action Details: ${unitInstance.name} performs PHYSICAL ATTACK on ${targetData.name}.`);
-
-    // Create target instance
-    const targetInstance = new BattleUnit(targetData, targetData.isPlayerUnit, targetData.gridPosition, {});
-    
-    const damageResult = calculateBattleDamage(unitInstance, targetInstance, 'physical');
-    
-    // Use the takeDamage method on the BattleUnit instance
-    targetInstance.takeDamage(damageResult.finalDamage, unitInstance);
-    
-    this._log(`  - Action Result: ${targetInstance.name} takes ${damageResult.finalDamage} damage. HP: ${targetInstance.stats.currentHp}/${targetInstance.stats.maxHp}`);
-    if (targetInstance.isDefeated) {
-      this._log(`  - >> ${targetInstance.name} has been defeated!`);
-    }
-
-    // Dispatch the updated PLAIN data to Redux
-    this.dispatch({
-        type: 'battle/updateUnit',
-        payload: {
-            unitId: targetInstance.id,
-            changes: {
-                stats: targetInstance.stats,
-                isDefeated: targetInstance.isDefeated,
-            }
-        }
-    });
-
-    // 触发被动技能等
-    this._triggerPassiveSkills(unitInstance, 'AFTER_ATTACK', { target: targetInstance, damage: damageResult });
-
-    this._actionComplete();
-  }
-
-  _processSkillAction(unitInstance, action) {
-    const battleState = this.getState().battle;
-    const skill = getSkillById(action.skillId);
-    if (!skill) {
-      this._logError(`Skill ${action.skillId} not found.`);
-      this._actionComplete();
-      return;
-    }
-    
-    const targets = action.targetIds.map(id => battleState.battleUnits[id]);
-    this._log(`  - Action Details: ${unitInstance.name} uses SKILL ${skill.name} on ${targets.map(t => t.name).join(', ')}.`);
-
-    const skillResult = executeSkillEffect(unitInstance, targets, skill, battleState);
-    
-    // 假设 executeSkillEffect 内部已经调用了 unit 的方法
-    // 这里只记录高级日志
-    skillResult.effects.forEach(res => {
-        if (res.type === 'damage') {
-            this._log(`  - Action Result (Damage): ${res.target.name} takes ${res.finalDamage} damage. HP: ${res.target.stats.currentHp}/${res.target.stats.maxHp}`);
-            if (res.target.isDefeated) {
-                this._log(`  - >> ${res.target.name} has been defeated!`);
-            }
-        }
-        if (res.type === 'buff' && res.buff) {
-            this._log(`  - Action Result (Buff): ${res.target} gets ${res.buff}.`);
-        }
-    });
-
-    this._actionComplete();
-  }
-
-  /**
-   * 处理防御行动
-   */
-  _processDefendAction(unitInstance, action) {
-    // 设置防御状态
-    this.dispatch({
-      type: 'battle/updateBattleUnit',
-      payload: {
-        unitId: unitInstance.id,
-        changes: {
-          isDefending: true
-        }
-      }
-    });
-
-    this._logAction(`${unitInstance.name} 进入防御姿态`);
-    this._actionComplete();
-  }
-
-  /**
-   * 处理道具使用
-   */
-  _processItemAction(unitInstance, action) {
-    // TODO: 实现道具使用逻辑
-    this._logAction(`${unitInstance.name} 使用了道具`);
-    this._actionComplete();
-  }
-
-  /**
-   * 处理技能效果
-   */
-  _processSkillEffect(effect, caster, target) {
-    switch (effect.type) {
-      case 'damage':
-        this._applySkillDamage(effect, caster, target);
-        break;
-      case 'healing':
-        this._applySkillHealing(effect, caster, target);
-        break;
-      case 'buffs':
-        this._applySkillBuffs(effect, caster, target);
-        break;
-      // 处理其他效果类型...
-    }
-  }
-
-  /**
-   * 应用技能伤害
-   */
-  _applySkillDamage(effect, caster, target) {
-    const damageResult = calculateBattleDamage(caster, target, effect.damageType, effect.bonus);
-    // Call the instance method
-    const appliedResult = target.takeDamage(damageResult.finalDamage, caster);
-    return { ...appliedResult, type: 'damage' };
-  }
-
-  /**
-   * 应用技能治疗
-   */
-  _applySkillHealing(effect, caster, target) {
-    const healingAmount = calculateHealing(caster.stats.magicalAttack, effect.bonus);
-    // Call the instance method
-    const appliedResult = target.applyHealing(healingAmount.finalHeal);
-    return { ...appliedResult, type: 'healing' };
-  }
-
-  /**
-   * 应用技能BUFF
-   */
-  _applySkillBuffs(effect, caster, target) {
-    // Call the instance method
-    const buffResult = target.applyBuff(effect.buffId, caster.id);
-    if (buffResult.success) {
-        return {
-            type: 'buff',
-            buff: buffResult.appliedBuff.name,
-            target: target.name
-        };
-    }
-    return null;
-  }
-
-  /**
-   * 触发被动技能
-   */
-  _triggerPassiveSkills(unit, triggerType, context) {
-    const passiveResults = triggerPassiveSkillEffects(unit, triggerType, context);
-    
-    passiveResults.forEach(result => {
-      this._logAction(`${unit.name} 的 ${result.skillName} 被动技能触发`);
-      
-      result.effects.forEach(effect => {
-        // 处理被动技能效果
-        this._processPassiveEffect(effect, unit, context);
-      });
-    });
-  }
-
-  /**
-   * 处理被动技能效果
-   */
-  _processPassiveEffect(effect, unit, context) {
-    switch (effect.type) {
-      case 'damage':
-        if (effect.targetId && effect.damage) {
-          const battleState = this.getState().battle;
-          const target = battleState.battleUnits[effect.targetId];
-          if (target) {
-            this.dispatch({
-              type: 'battle/updateBattleUnit',
-              payload: {
-                unitId: target.id,
-                changes: {
-                  stats: {
-                    ...target.stats,
-                    currentHp: Math.max(0, target.stats.currentHp - effect.damage)
-                  }
-                }
-              }
-            });
-          }
-        }
-        break;
-      case 'revive':
-        if (effect.hp && unit.isDefeated) {
-          this.dispatch({
-            type: 'battle/updateBattleUnit',
-            payload: {
-              unitId: unit.id,
-              changes: {
-                isDefeated: false,
-                stats: {
-                  ...unit.stats,
-                  currentHp: effect.hp
-                }
-              }
-            }
-          });
-        }
-        break;
-      // 处理其他被动效果...
-    }
-  }
-
-  /**
-   * 行动完成
-   */
-  _actionComplete() {
-    this.context.currentActionIndex++;
-    this.trigger(BATTLE_EVENTS.ACTION_EXECUTED);
+    // 这个函数的功能现在被 playAction 和相关的系统（如damageCalculation）所取代。
+    // 在完全重构后，这个函数可能会被移除或简化为只做数据准备。
+    // 为了平滑过渡，我们暂时保留它，但执行流程不再调用它。
+    this._log(`[DEPRECATED] _processAction called for unit ${unitInstance.id}. This logic should be moved to actionPlayer.`);
+    // ... 原有的伤害计算、buff施加等逻辑
   }
 
   /**
    * 检查是否还有更多行动
    */
   _checkForMoreActions() {
-    if (this.context.currentActionIndex >= this.context.actionQueue.length) {
-      this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
+    if (this.context.currentActionIndex < this.context.actionQueue.length) {
+      this._log('There are more actions. Executing next one.');
+      this._executeNextAction(); // 直接调用
     } else {
-      this._executeNextAction();
+      this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
     }
   }
 

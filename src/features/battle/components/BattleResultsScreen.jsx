@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { endBattle, selectBattleUnits, selectRewards } from '@/store/slices/battleSlice';
+import { setBattleActive, selectBattleUnits, selectRewards } from '@/store/slices/battleSliceSimplified';
 
 const BattleResultsScreen = ({ result }) => {
   const dispatch = useDispatch();
@@ -16,7 +16,7 @@ const BattleResultsScreen = ({ result }) => {
   
   // 处理退出战斗
   const handleExitBattle = () => {
-    dispatch(endBattle());
+    dispatch(setBattleActive(false));
   };
 
   // 安全获取HP/MP值的辅助函数

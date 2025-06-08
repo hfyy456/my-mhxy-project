@@ -1,210 +1,361 @@
 /*
- * @Author: Sirius 540363975@qq.com
+ * @Author: Claude
  * @Date: 2025-01-27
- * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-08 06:06:46
- * @Description: 战斗状态机 React Hook - 集成状态机到Redux战斗系统
+ * @LastEditors: Claude
+ * @LastEditTime: 2025-01-27
+ * @Description: 战斗状态机 React Hook - 重构为使用独立适配器系统
  */
-
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createBattleStateMachine, BATTLE_EVENTS, BATTLE_STATES } from '../state/BattleStateMachine';
+import { useBattleAdapter } from '../context/BattleAdapterContext.jsx';
 
 /**
  * 战斗状态机 Hook
- * 提供状态机控制接口，管理战斗流程
+ * 通过适配器提供统一的战斗控制接口
  */
 export const useBattleStateMachine = () => {
-  const dispatch = useDispatch();
-  const battleState = useSelector(state => state.battle);
+  const adapter = useBattleAdapter();
   
-  const stateMachineRef = useRef(null);
-  
-  const battleStateRef = useRef(battleState);
-  useEffect(() => {
-    battleStateRef.current = battleState;
-  });
+  // 如果适配器不可用，返回空操作函数
+  if (!adapter) {
+    console.warn('BattleAdapter not available, returning fallback functions');
+    return {
+      // 战斗控制方法 - 空操作
+      initializeBattle: () => console.warn('BattleAdapter not available'),
+      startBattle: () => console.warn('BattleAdapter not available'), // 向后兼容性别名
+      submitAction: () => console.warn('BattleAdapter not available'),
+      advanceBattle: () => console.warn('BattleAdapter not available'),
+      transferControlToEngine: () => console.warn('BattleAdapter not available'),
+      transferResultsToRedux: () => console.warn('BattleAdapter not available'),
+      
+      // 状态查询方法 - 返回默认值
+      getBattleState: () => null,
+      getBattleResult: () => null,
+      getControlStatus: () => ({ isReduxControlled: true, isEngineControlled: false }),
+      getCurrentState: () => null,
+      
+      // 订阅方法 - 返回空函数
+      subscribeToStateChanges: () => () => {},
+      subscribeToEvents: () => () => {},
+      
+      // 选择器代理 - 返回空对象
+      selectors: {},
+      
+      // 状态机状态 - 为调试面板提供
+      state: null,
+      
+      // 调试方法 - 空操作
+      getDebugInfo: () => null,
+      reset: () => console.warn('BattleAdapter not available'),
+      
+      // 事件触发方法
+      triggerEvent: () => console.warn('BattleAdapter not available'),
+      endBattle: () => console.warn('BattleAdapter not available'),
+      resetBattle: () => console.warn('BattleAdapter not available'),
+      completePreparation: () => console.warn('BattleAdapter not available')
+    };
+  }
 
-  useEffect(() => {
-    if (!stateMachineRef.current) {
-      const getStateForMachine = () => ({ battle: battleStateRef.current });
-
-      stateMachineRef.current = createBattleStateMachine(
-        dispatch,
-        getStateForMachine
-      );
+  // 获取引擎状态并转换为状态机格式
+  const getStateMachineState = () => {
+    const engineState = adapter.getEngineState();
+    if (!engineState) return null;
+    
+    // 将引擎状态转换为传统状态机格式
+    let currentState = 'idle';
+    let currentSubState = null;
+    
+    if (engineState.isActive) {
+      currentState = 'active';
+      switch (engineState.currentPhase) {
+        case 'preparation':
+          currentSubState = 'preparation';
+          break;
+        case 'execution':
+          currentSubState = 'execution';
+          break;
+        case 'resolution':
+          currentSubState = 'resolution';
+          break;
+        case 'battle_over':
+        case 'victory':
+        case 'defeat':
+          currentState = 'end';
+          currentSubState = engineState.currentPhase;
+          break;
+      }
     }
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (!stateMachineRef.current) return;
-
-    const stateMachine = stateMachineRef.current;
-    const currentPhase = battleState.currentPhase;
-
-    switch (currentPhase) {
-      case 'preparation':
-        const activeUnits = Object.values(battleState.battleUnits).filter(unit => !unit.isDefeated);
-        const unitsWithActions = Object.keys(battleState.unitActions).length;
-        
-        if (unitsWithActions >= activeUnits.length && activeUnits.length > 0) {
-          if (stateMachine.currentSubState === BATTLE_STATES.PREPARATION) {
-            stateMachine.trigger(BATTLE_EVENTS.PREPARATION_COMPLETE);
-          }
-        }
-        break;
-
-      case 'execution':
-        break;
-
-      case 'battle_over':
-      case 'victory':
-      case 'defeat':
-        if (stateMachine.currentState !== BATTLE_STATES.END) {
-          stateMachine.trigger(BATTLE_EVENTS.BATTLE_END);
-        }
-        break;
-    }
-  }, [battleState.currentPhase, battleState.unitActions, battleState.battleUnits]);
-
-  const stateMachineAPI = {
-    startBattle: useCallback((battleConfig) => {
-      if (!stateMachineRef.current) {
-        console.error("[useBattleStateMachine] 状态机尚未初始化，无法开始战斗。");
-        return;
-      }
-      stateMachineRef.current.trigger(BATTLE_EVENTS.START_BATTLE, battleConfig);
-    }, []),
-
-    endBattle: useCallback(() => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(BATTLE_EVENTS.BATTLE_END);
-      }
-    }, []),
-
-    resetBattle: useCallback(() => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(BATTLE_EVENTS.RESET_BATTLE);
-      }
-    }, []),
-
-    forceNextRound: useCallback(() => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(BATTLE_EVENTS.RESOLUTION_COMPLETE);
-      }
-    }, []),
-
-    completePreparation: useCallback(() => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(BATTLE_EVENTS.PREPARATION_COMPLETE);
-      }
-    }, []),
-
-    completeExecution: useCallback(() => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(BATTLE_EVENTS.EXECUTION_COMPLETE);
-      }
-    }, []),
-
-    getCurrentState: useCallback(() => {
-      if (stateMachineRef.current) {
-        return stateMachineRef.current.getCurrentState();
-      }
-      return null;
-    }, []),
-
-    getStateHistory: useCallback(() => {
-      if (stateMachineRef.current) {
-        return stateMachineRef.current.stateHistory;
-      }
-      return [];
-    }, []),
-
-    triggerEvent: useCallback((event, payload) => {
-      if (stateMachineRef.current) {
-        stateMachineRef.current.trigger(event, payload);
-      }
-    }, [])
-  };
-
-  const stateMachineState = stateMachineRef.current ? {
-    currentState: stateMachineRef.current.currentState,
-    currentSubState: stateMachineRef.current.currentSubState,
-    isActive: stateMachineRef.current.currentState !== BATTLE_STATES.IDLE,
-    isInBattle: stateMachineRef.current.currentState === BATTLE_STATES.ACTIVE,
-    context: stateMachineRef.current.context
-  } : {
-    currentState: BATTLE_STATES.IDLE,
-    currentSubState: null,
-    isActive: false,
-    isInBattle: false,
-    context: {}
+    
+    return {
+      currentState,
+      currentSubState,
+      context: {
+        roundNumber: engineState.currentRound || 0,
+        actionQueue: Object.keys(engineState.unitActions || {}),
+        currentProcessingAction: null,
+        battleLog: engineState.battleLog || []
+      },
+      stateHistory: [] // 引擎不维护历史记录
+    };
   };
 
   return {
-    ...stateMachineAPI,
-    stateMachine: stateMachineRef.current,
-    state: stateMachineState,
-    getState: () => ({ battle: battleState })
+    // 战斗控制方法
+    initializeBattle: adapter.initializeBattleFromRedux,
+    startBattle: adapter.initializeBattleFromRedux, // 向后兼容性别名
+    submitAction: adapter.submitPlayerAction,
+    advanceBattle: adapter.advanceBattle,
+    transferControlToEngine: adapter.transferControlToEngine,
+    transferResultsToRedux: adapter.transferResultsToRedux,
+    
+    // 状态查询方法
+    getBattleState: adapter.getEngineState,
+    getBattleResult: adapter.getBattleResult,
+    getControlStatus: adapter.getControlStatus,
+    getCurrentState: getStateMachineState,
+    
+    // 订阅方法
+    subscribeToStateChanges: adapter.subscribeToEngineChanges,
+    subscribeToEvents: adapter.subscribeToEvents,
+    
+    // 选择器代理
+    selectors: adapter.getSelectorsProxy(),
+    
+    // 状态机状态 - 为调试面板提供
+    state: getStateMachineState(),
+    
+    // 调试方法
+    getDebugInfo: adapter.getDebugInfo,
+    reset: adapter.forceReset,
+    
+    // 事件触发方法
+    triggerEvent: (event) => {
+      // 将事件转换为适配器操作
+      switch (event) {
+        case 'START_BATTLE':
+          adapter.transferControlToEngine();
+          break;
+        case 'COMPLETE_PREPARATION':
+        case 'START_EXECUTION':
+        case 'START_RESOLUTION':
+          adapter.advanceBattle();
+          break;
+        case 'END_BATTLE':
+          adapter.transferResultsToRedux();
+          break;
+        case 'RESET_BATTLE':
+          adapter.forceReset();
+          break;
+        default:
+          console.warn('未识别的事件类型:', event);
+      }
+    },
+    endBattle: adapter.transferResultsToRedux,
+    resetBattle: adapter.forceReset,
+    completePreparation: adapter.advanceBattle
   };
 };
 
+/**
+ * 战斗状态 Hook
+ * 提供响应式的战斗状态数据
+ */
 export const useBattleStateMachineState = () => {
-  const getState = useSelector(state => state.battle);
-  
+  const adapter = useBattleAdapter();
+  const [battleState, setBattleState] = useState(null);
+
+  useEffect(() => {
+    if (!adapter) return;
+
+    // 订阅状态变化
+    const unsubscribe = adapter.subscribeToEngineChanges((newState) => {
+      console.log('[useBattleStateMachineState] 收到引擎状态更新:', newState);
+      setBattleState(newState);
+    });
+
+    return unsubscribe;
+  }, [adapter]);
+
+  // 如果没有状态，返回默认值
+  if (!battleState) {
+    return {
+      isActive: false,
+      currentPhase: 'idle',
+      currentRound: 0,
+      battleResult: null,
+      
+      isInPreparation: false,
+      isInExecution: false,
+      isInResolution: false,
+      isBattleOver: false,
+      
+      battleUnits: {},
+      unitActions: {},
+      turnOrder: [],
+      currentTurnUnitId: null,
+      playerFormation: [],
+      enemyFormation: [],
+      
+      battleLog: [],
+      rewards: null
+    };
+  }
+
   return {
-    isActive: getState.isActive,
-    currentPhase: getState.currentPhase,
-    currentRound: getState.currentRound,
-    battleResult: getState.battleResult,
+    isActive: battleState.isActive,
+    currentPhase: battleState.currentPhase,
+    currentRound: battleState.currentRound,
+    battleResult: battleState.result,
     
-    isInPreparation: getState.currentPhase === 'preparation',
-    isInExecution: getState.currentPhase === 'execution', 
-    isInResolution: getState.currentPhase === 'resolution',
-    isBattleOver: ['battle_over', 'victory', 'defeat'].includes(getState.currentPhase),
+    isInPreparation: battleState.currentPhase === 'preparation',
+    isInExecution: battleState.currentPhase === 'execution',
+    isInResolution: battleState.currentPhase === 'resolution',
+    isBattleOver: ['battle_over', 'victory', 'defeat'].includes(battleState.currentPhase),
     
-    battleUnits: getState.battleUnits,
-    unitActions: getState.unitActions,
-    turnOrder: getState.turnOrder,
-    currentTurnUnitId: getState.currentTurnUnitId,
+    battleUnits: battleState.battleUnits || {},
+    unitActions: battleState.unitActions || {},
+    turnOrder: battleState.turnOrder || [],
+    currentTurnUnitId: battleState.currentTurnUnitId,
+    playerFormation: battleState.playerFormation || [],
+    enemyFormation: battleState.enemyFormation || [],
     
-    battleLog: getState.battleLog,
-    rewards: getState.rewards
+    battleLog: battleState.battleLog || [],
+    rewards: battleState.rewards
   };
 };
 
+/**
+ * 自动战斗 Hook
+ * 提供自动推进战斗的功能
+ */
 export const useAutoBattleStateMachine = (enabled = false) => {
-  const { startBattle, completePreparation, completeExecution, state } = useBattleStateMachine();
-  const battleState = useSelector(state => state.battle);
+  const { advanceBattle, getControlStatus } = useBattleStateMachine();
+  const battleState = useBattleStateMachineState();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !battleState.isActive) return;
 
-    const { currentState, currentSubState } = state;
+    const controlStatus = getControlStatus();
+    if (!controlStatus || !controlStatus.isEngineControlled) return;
 
-    if (currentSubState === BATTLE_STATES.PREPARATION) {
+    let timeoutId;
+
+    if (battleState.isInPreparation) {
+      // 检查是否所有单位都已提交行动
       const activeUnits = Object.values(battleState.battleUnits).filter(unit => !unit.isDefeated);
       const unitsWithActions = Object.keys(battleState.unitActions).length;
       
       if (unitsWithActions >= activeUnits.length && activeUnits.length > 0) {
-        setTimeout(() => {
-          completePreparation();
+        setIsProcessing(true);
+        timeoutId = setTimeout(() => {
+          advanceBattle();
+          setIsProcessing(false);
         }, 1000);
       }
+    } else if (battleState.isInExecution) {
+      setIsProcessing(true);
+      timeoutId = setTimeout(() => {
+        advanceBattle();
+        setIsProcessing(false);
+      }, 2000);
+    } else if (battleState.isInResolution) {
+      setIsProcessing(true);
+      timeoutId = setTimeout(() => {
+        advanceBattle();
+        setIsProcessing(false);
+      }, 1500);
     }
 
-    if (currentSubState === BATTLE_STATES.EXECUTION) {
-      setTimeout(() => {
-        if (process.env.NODE_ENV === 'development') {
-          completeExecution();
-        }
-      }, 3000);
-    }
-  }, [enabled, state.currentSubState, battleState.unitActions, battleState.battleUnits, completePreparation, completeExecution]);
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        setIsProcessing(false);
+      }
+    };
+  }, [enabled, battleState, advanceBattle, getControlStatus]);
 
   return {
     enabled,
-    isAutoProcessing: enabled && state.isInBattle
+    isProcessing,
+    isAutoProcessing: enabled && battleState.isActive && isProcessing
+  };
+};
+
+/**
+ * 兼容性 Hook - 提供Redux选择器风格的接口
+ * 为现有组件提供向后兼容性
+ */
+export const useBattleSelectors = () => {
+  const { selectors } = useBattleStateMachine();
+  
+  // 如果没有selectors，返回默认的空实现
+  if (!selectors || Object.keys(selectors).length === 0) {
+    return {
+      useSelector: () => null,
+      selectIsBattleActive: () => false,
+      selectCurrentPhase: () => 'idle',
+      selectCurrentRound: () => 0,
+      selectBattleResult: () => null,
+      selectBattleUnits: () => ({}),
+      selectPlayerFormation: () => [],
+      selectEnemyFormation: () => [],
+      selectTurnOrder: () => [],
+      selectCurrentTurnUnitId: () => null,
+      selectUnitActions: () => ({}),
+      selectBattleLog: () => [],
+      selectRewards: () => null,
+      selectBattleUnitById: () => null,
+      selectUnitActionById: () => null,
+      selectAllUnitsHaveActions: () => false
+    };
+  }
+  
+  return {
+    useSelector: (selector) => {
+      const [value, setValue] = useState(() => {
+        try {
+          return selector(selectors);
+        } catch (error) {
+          console.warn('Selector error:', error);
+          return null;
+        }
+      });
+      
+      useEffect(() => {
+        // 由于selectors是代理对象，每次调用都会返回最新值
+        // 这里设置一个定时器来模拟状态变化
+        const interval = setInterval(() => {
+          try {
+            const newValue = selector(selectors);
+            setValue(newValue);
+          } catch (error) {
+            console.warn('Selector update error:', error);
+          }
+        }, 100);
+        
+        return () => clearInterval(interval);
+      }, [selector, selectors]);
+      
+      return value;
+    },
+    
+    // 直接暴露常用选择器
+    selectIsBattleActive: () => selectors.selectIsBattleActive(),
+    selectCurrentPhase: () => selectors.selectCurrentPhase(),
+    selectCurrentRound: () => selectors.selectCurrentRound(),
+    selectBattleResult: () => selectors.selectBattleResult(),
+    selectBattleUnits: () => selectors.selectBattleUnits(),
+    selectPlayerFormation: () => selectors.selectPlayerFormation(),
+    selectEnemyFormation: () => selectors.selectEnemyFormation(),
+    selectTurnOrder: () => selectors.selectTurnOrder(),
+    selectCurrentTurnUnitId: () => selectors.selectCurrentTurnUnitId(),
+    selectUnitActions: () => selectors.selectUnitActions(),
+    selectBattleLog: () => selectors.selectBattleLog(),
+    selectRewards: () => selectors.selectRewards(),
+    selectBattleUnitById: (unitId) => selectors.selectBattleUnitById(unitId),
+    selectUnitActionById: (unitId) => selectors.selectUnitActionById(unitId),
+    selectAllUnitsHaveActions: () => selectors.selectAllUnitsHaveActions()
   };
 };
 

@@ -12,7 +12,7 @@ import mapReducer from '@/store/slices/mapSlice';
 import npcReducer from '@/store/slices/npcSlice';
 import dialogueReducer from '@/store/slices/dialogueSlice';
 import formationReducer from '@/store/slices/formationSlice';
-import battleReducer from '@/store/slices/battleSlice';
+import battleReducer from '@/store/slices/battleSliceSimplified';
 import towerReducer from '@/store/slices/towerSlice';
 import playerReducer from '@/store/slices/playerSlice'; // 导入 playerReducer
 import homesteadReducer from '@/store/slices/homesteadSlice'; // 导入 homesteadReducer

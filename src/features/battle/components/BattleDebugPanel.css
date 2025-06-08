@@ -1,0 +1,197 @@
+/* Battle Debug Panel Custom Styles */
+
+.debug-panel {
+  font-family: 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+.debug-panel .text-xxs {
+  font-size: 0.625rem;
+  line-height: 0.875rem;
+}
+
+.debug-panel .text-xxxs {
+  font-size: 0.5rem;
+  line-height: 0.75rem;
+}
+
+/* 滚动条样式 */
+.debug-panel .scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #4B5563 #1F2937;
+}
+
+.debug-panel .scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.debug-panel .scrollbar-thin::-webkit-scrollbar-track {
+  background: #1F2937;
+  border-radius: 2px;
+}
+
+.debug-panel .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4B5563;
+  border-radius: 2px;
+}
+
+.debug-panel .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #6B7280;
+}
+
+/* 动画效果 */
+.debug-panel .animate-pulse-fast {
+  animation: pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.debug-panel .animate-blink {
+  animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* 状态指示器 */
+.debug-panel .status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.debug-panel .status-active {
+  background-color: #10B981;
+  box-shadow: 0 0 4px #10B981;
+}
+
+.debug-panel .status-inactive {
+  background-color: #6B7280;
+}
+
+.debug-panel .status-error {
+  background-color: #EF4444;
+  box-shadow: 0 0 4px #EF4444;
+}
+
+.debug-panel .status-warning {
+  background-color: #F59E0B;
+  box-shadow: 0 0 4px #F59E0B;
+}
+
+/* 代码块样式 */
+.debug-panel .code-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* 标签页激活效果 */
+.debug-panel .tab-active {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+/* 按钮悬停效果 */
+.debug-panel .btn-hover {
+  transition: all 0.2s ease-in-out;
+  transform: scale(1);
+}
+
+.debug-panel .btn-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 数据网格 */
+.debug-panel .data-grid {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.debug-panel .data-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.debug-panel .data-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* 高亮效果 */
+.debug-panel .highlight-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.debug-panel .highlight-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.debug-panel .highlight-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.debug-panel .highlight-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .debug-panel {
+    width: 95vw !important;
+    max-width: none !important;
+  }
+  
+  .debug-panel .data-grid-2,
+  .debug-panel .data-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 面板展开/收起动画 */
+.debug-panel-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 内容区域滚动 */
+.debug-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.debug-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.debug-content::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+  border-radius: 3px;
+}
+
+.debug-content::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.8);
+  border-radius: 3px;
+}
+
+.debug-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.9);
+} 
