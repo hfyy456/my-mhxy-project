@@ -22,6 +22,15 @@ export class ReduxBattleAdapter {
     this.isEngineControlled = false;
     this.lastBattleId = null;
     
+    // UI状态管理
+    this.uiState = {
+      selectedUnitId: null,
+      selectedAction: 'attack',
+      selectedSkill: null,
+      selectedTarget: null
+    };
+    this.uiStateListeners = new Set();
+    
     // 绑定方法
     this.initializeBattleFromRedux = this.initializeBattleFromRedux.bind(this);
     this.transferControlToEngine = this.transferControlToEngine.bind(this);
@@ -267,14 +276,57 @@ export class ReduxBattleAdapter {
   }
 
   /**
+   * 获取战斗引擎实例（用于UI层直接访问）
+   * @returns {Object|null} 战斗引擎实例
+   */
+  get battleEngine() {
+    if (!this.isEngineControlled || !this.engineAdapter) {
+      return null;
+    }
+    return this.engineAdapter.engine;
+  }
+
+  /**
+   * 获取事件总线（用于组件订阅事件）
+   * @returns {BattleEventBus|null}
+   */
+  get eventBus() {
+    if (!this.engineAdapter) {
+      return null;
+    }
+    return this.engineAdapter.eventBus;
+  }
+
+  /**
    * 强制重置适配器状态
    */
   forceReset() {
-    this.isEngineControlled = false;
-    this.lastBattleId = null;
-    this.engineAdapter.reset();
-    
-    this._log('适配器已强制重置');
+    try {
+      // 重置控制权状态
+      this.isEngineControlled = false;
+      this.lastBattleId = null;
+      
+      // 重置UI状态
+      this.uiState = {
+        selectedUnitId: null,
+        selectedAction: 'attack',
+        selectedSkill: null,
+        selectedTarget: null
+      };
+      
+      // 清空UI监听器
+      this.uiStateListeners.clear();
+      
+      // 重置引擎适配器
+      this.engineAdapter.reset();
+
+      this._log('适配器已强制重置');
+      
+      return { success: true };
+    } catch (error) {
+      this._log('强制重置失败', { error: error.message });
+      return { success: false, error: error.message };
+    }
   }
 
   // ==================== 私有方法 ====================
@@ -561,6 +613,310 @@ export class ReduxBattleAdapter {
    */
   _log(message, data = {}) {
     console.log(`[ReduxBattleAdapter] ${message}`, data);
+  }
+
+  /**
+   * UI交互方法 - 选择单位
+   * @param {string} unitId - 单位ID
+   */
+  selectUnit(unitId) {
+    this.uiState.selectedUnitId = unitId;
+    this.uiState.selectedTarget = null; // 重置目标选择
+    this._notifyUIStateChange();
+    this._log('选择单位', { unitId });
+  }
+
+  /**
+   * UI交互方法 - 选择行动类型
+   * @param {string} actionType - 行动类型
+   */
+  selectAction(actionType) {
+    this.uiState.selectedAction = actionType;
+    this.uiState.selectedSkill = null;
+    this.uiState.selectedTarget = null;
+    this._notifyUIStateChange();
+    this._log('选择行动类型', { actionType });
+  }
+
+  /**
+   * UI交互方法 - 选择技能
+   * @param {string} skillId - 技能ID
+   */
+  selectSkill(skillId) {
+    this.uiState.selectedSkill = skillId;
+    this.uiState.selectedTarget = null;
+    this._notifyUIStateChange();
+    this._log('选择技能', { skillId });
+  }
+
+  /**
+   * UI交互方法 - 选择目标
+   * @param {string} targetId - 目标单位ID
+   */
+  selectTarget(targetId) {
+    this.uiState.selectedTarget = targetId;
+    this._notifyUIStateChange();
+    this._log('选择目标', { targetId });
+  }
+
+  /**
+   * UI交互方法 - 确认行动
+   * @returns {Object} 确认结果
+   */
+  confirmAction() {
+    const { selectedUnitId, selectedAction, selectedSkill, selectedTarget } = this.uiState;
+    
+    if (!selectedUnitId) {
+      return { success: false, error: '未选择单位' };
+    }
+    
+    const actionData = {
+      actionType: selectedAction,
+      skillId: selectedAction === 'skill' ? selectedSkill : null,
+      targetIds: selectedTarget ? [selectedTarget] : []
+    };
+    
+    // 验证行动数据
+    const validationResult = this._validateActionData(actionData);
+    if (!validationResult.valid) {
+      return { success: false, error: validationResult.error };
+    }
+    
+    // 提交行动
+    const result = this.submitPlayerAction(selectedUnitId, actionData);
+    
+    if (result.success) {
+      // 重置UI状态
+      this._resetActionSelection();
+      this._log('行动确认成功', { unitId: selectedUnitId, action: actionData });
+    }
+    
+    return result;
+  }
+
+  /**
+   * 获取UI状态
+   * @returns {Object} UI状态
+   */
+  getUIState() {
+    return { ...this.uiState };
+  }
+
+  /**
+   * 获取单位交互数据
+   * @param {string} unitId - 单位ID
+   * @returns {Object} 交互数据
+   */
+  getUnitInteractionData(unitId) {
+    if (!unitId) return null;
+    
+    if (this.isEngineControlled && this.engineAdapter) {
+      const engine = this.engineAdapter.engine;
+      if (!engine) return null;
+      
+      return {
+        unit: engine.getUnit(unitId),
+        activeSkills: engine.getUnitActiveSkills(unitId),
+        validTargets: engine.getValidTargets(
+          unitId, 
+          this.uiState.selectedAction, 
+          this.uiState.selectedSkill
+        ),
+        actionDescription: engine.getActionDescription(unitId),
+        skillAffectedArea: this.uiState.selectedSkill && this.uiState.selectedTarget
+          ? engine.getSkillAffectedArea(this.uiState.selectedSkill, this.uiState.selectedTarget)
+          : [],
+        availableActionTypes: engine.getAvailableActionTypes(unitId)
+      };
+    }
+    
+    // 回退到Redux数据
+    return this._getReduxUnitInteractionData(unitId);
+  }
+
+  /**
+   * 订阅UI状态变化
+   * @param {Function} callback - 状态变化回调
+   * @returns {Function} 取消订阅函数
+   */
+  subscribeToUIStateChanges(callback) {
+    this.uiStateListeners.add(callback);
+    
+    // 立即调用一次回调
+    callback(this.uiState);
+    
+    return () => {
+      this.uiStateListeners.delete(callback);
+    };
+  }
+
+  /**
+   * 获取数据查询接口
+   * @returns {Object} 查询接口
+   */
+  getDataQueryInterface() {
+    return {
+      getActiveSkills: (unitId) => {
+        if (this.isEngineControlled && this.engineAdapter) {
+          return this.engineAdapter.engine.getUnitActiveSkills(unitId);
+        }
+        return this._getReduxActiveSkills(unitId);
+      },
+      
+      getValidTargets: (unitId, actionType, skillId) => {
+        if (this.isEngineControlled && this.engineAdapter) {
+          return this.engineAdapter.engine.getValidTargets(unitId, actionType, skillId);
+        }
+        return this._getReduxValidTargets(unitId, actionType, skillId);
+      },
+      
+      getSkillAffectedArea: (skillId, targetId) => {
+        if (this.isEngineControlled && this.engineAdapter) {
+          return this.engineAdapter.engine.getSkillAffectedArea(skillId, targetId);
+        }
+        return this._getReduxSkillAffectedArea(skillId, targetId);
+      },
+      
+      getActionDescription: (unitId) => {
+        if (this.isEngineControlled && this.engineAdapter) {
+          return this.engineAdapter.engine.getActionDescription(unitId);
+        }
+        return this._getReduxActionDescription(unitId);
+      },
+      
+      isAllUnitsReady: () => {
+        if (this.isEngineControlled && this.engineAdapter) {
+          return this.engineAdapter.engine.isAllUnitsReady();
+        }
+        return this._getReduxAllUnitsReady();
+      }
+    };
+  }
+
+  /**
+   * 通知UI状态变化
+   * @private
+   */
+  _notifyUIStateChange() {
+    this.uiStateListeners.forEach(listener => {
+      try {
+        listener(this.uiState);
+      } catch (error) {
+        this._log('UI状态监听器错误', { error: error.message });
+      }
+    });
+  }
+
+  /**
+   * 验证行动数据
+   * @private
+   */
+  _validateActionData(actionData) {
+    if (!actionData.actionType) {
+      return { valid: false, error: '未指定行动类型' };
+    }
+    
+    if (actionData.actionType === 'skill' && !actionData.skillId) {
+      return { valid: false, error: '技能行动必须指定技能ID' };
+    }
+    
+    if (['attack', 'skill'].includes(actionData.actionType) && 
+        (!actionData.targetIds || actionData.targetIds.length === 0)) {
+      return { valid: false, error: '攻击和技能行动必须指定目标' };
+    }
+    
+    return { valid: true };
+  }
+
+  /**
+   * 重置行动选择状态
+   * @private
+   */
+  _resetActionSelection() {
+    this.uiState.selectedAction = 'attack';
+    this.uiState.selectedSkill = null;
+    this.uiState.selectedTarget = null;
+    this._notifyUIStateChange();
+  }
+
+  /**
+   * 获取Redux单位交互数据（回退方案）
+   * @private
+   */
+  _getReduxUnitInteractionData(unitId) {
+    const reduxState = this.getState().battle;
+    const unit = reduxState.battleUnits[unitId];
+    
+    if (!unit) return null;
+    
+    return {
+      unit,
+      activeSkills: this._getReduxActiveSkills(unitId),
+      validTargets: this._getReduxValidTargets(unitId, this.uiState.selectedAction, this.uiState.selectedSkill),
+      actionDescription: this._getReduxActionDescription(unitId),
+      skillAffectedArea: [],
+      availableActionTypes: ['attack', 'defend', 'skill']
+    };
+  }
+
+  /**
+   * 获取Redux主动技能（回退方案）
+   * @private
+   */
+  _getReduxActiveSkills(unitId) {
+    const reduxState = this.getState().battle;
+    const unit = reduxState.battleUnits[unitId];
+    
+    if (!unit || !unit.skillSet) return [];
+    
+    // 这里需要实现Redux版本的技能获取逻辑
+    // 暂时返回空数组
+    return [];
+  }
+
+  /**
+   * 获取Redux有效目标（回退方案）
+   * @private
+   */
+  _getReduxValidTargets(unitId, actionType, skillId) {
+    // 这里需要实现Redux版本的目标选择逻辑
+    // 暂时返回空数组
+    return [];
+  }
+
+  /**
+   * 获取Redux技能影响区域（回退方案）
+   * @private
+   */
+  _getReduxSkillAffectedArea(skillId, targetId) {
+    // 这里需要实现Redux版本的影响区域计算
+    // 暂时返回空数组
+    return [];
+  }
+
+  /**
+   * 获取Redux行动描述（回退方案）
+   * @private
+   */
+  _getReduxActionDescription(unitId) {
+    const reduxState = this.getState().battle;
+    const action = reduxState.unitActions[unitId];
+    
+    if (!action) return '无';
+    
+    return action.actionType || '未知行动';
+  }
+
+  /**
+   * 获取Redux所有单位准备状态（回退方案）
+   * @private
+   */
+  _getReduxAllUnitsReady() {
+    const reduxState = this.getState().battle;
+    const activeUnits = Object.values(reduxState.battleUnits).filter(unit => !unit.isDefeated);
+    const unitsWithActions = Object.keys(reduxState.unitActions).length;
+    
+    return activeUnits.length > 0 && unitsWithActions >= activeUnits.length;
   }
 }
 

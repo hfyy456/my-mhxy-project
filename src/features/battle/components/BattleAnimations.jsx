@@ -14,49 +14,48 @@ const BattleAnimations = () => {
     battleUnits,
     unitActions,
     currentPhase,
-    battleLog
+    battleLog,
+    // 需要从hook中获取事件总线或适配器实例
+    adapter
   } = useBattleStateMachineState();
   
-  const processedAttackLogTimestampRef = useRef(null);
+  const processedDamageTimestampRef = useRef(null);
   
-  // 监听战斗日志变化，触发动画
+  // 监听DAMAGE_DEALT事件来触发动画
   useEffect(() => {
-    if (battleLog.length === 0) return;
-
-    const latestLog = battleLog[battleLog.length - 1];
-
-    // 检查最新的日志是否为攻击类型，并且其时间戳与已处理的攻击日志时间戳不同
-    if (
-      latestLog.unitId &&
-      latestLog.targetId &&
-      latestLog.message && latestLog.message.includes('攻击') &&
-      latestLog.timestamp && // 确保日志有时间戳
-      latestLog.timestamp !== processedAttackLogTimestampRef.current
-    ) {
-      // 允许在 'execution' 或 'awaiting_final_animation' 阶段触发
-      // 因为阶段可能因为此攻击的结果而刚刚改变
-      if (currentPhase === 'execution' || currentPhase === 'awaiting_final_animation') {
-        const attacker = battleUnits[latestLog.unitId];
-        const target = battleUnits[latestLog.targetId];
+    if (!adapter?.eventBus) return;
+    
+    const handleDamageDealt = (event) => {
+      const { data } = event;
+      console.log('🎯 收到DAMAGE_DEALT事件:', data);
+      
+      // 检查是否是新的伤害事件（避免重复处理）
+      if (data.timestamp === processedDamageTimestampRef.current) {
+        return;
+      }
+      
+      // 只在执行阶段处理动画
+      if (currentPhase === 'execution') {
+        const attacker = battleUnits[data.sourceId];
+        const target = battleUnits[data.targetId];
 
         if (attacker && target) {
-          const damageMatch = latestLog.message.match(/造成 (\d+) 点伤害/);
-          const damage = damageMatch ? parseInt(damageMatch[1]) : 0;
-
-          triggerAttackAnimation(latestLog.unitId, latestLog.targetId, damage);
-          processedAttackLogTimestampRef.current = latestLog.timestamp; // 标记此日志已处理动画
+          triggerAttackAnimation(data.sourceId, data.targetId, data.damage, data.isCrit);
+          processedDamageTimestampRef.current = data.timestamp;
         }
       }
-    }
+    };
     
-    // 检查是否有特效信息
-    if (latestLog.effect && latestLog.unitId) {
-      triggerEffect(latestLog.unitId, latestLog.effect);
-    }
-  }, [battleLog, battleUnits, currentPhase]); // 依赖项保持简洁
+    // 订阅DAMAGE_DEALT事件
+    const unsubscribe = adapter.eventBus.subscribe('damage_dealt', handleDamageDealt);
+    
+    // 清理函数
+    return () => {
+      unsubscribe();
+    };
+  }, [adapter, battleUnits, currentPhase]);
 
   // 动画处理逻辑 - 在新架构中，动画完成不需要特殊处理
-  // 状态机会自动推进，动画只是视觉效果
   useEffect(() => {
     // 在新架构中，动画纯粹是视觉效果，不影响战斗流程
     // 状态机会自动管理战斗进度
@@ -98,7 +97,9 @@ const BattleAnimations = () => {
   };
   
   // 触发攻击动画
-  const triggerAttackAnimation = (attackerId, targetId, damage) => {
+  const triggerAttackAnimation = (attackerId, targetId, damage, isCrit = false) => {
+    console.log('🎬 触发攻击动画:', { attackerId, targetId, damage, isCrit });
+    
     setAnimation({
       attackerId,
       targetId,
@@ -113,6 +114,7 @@ const BattleAnimations = () => {
         id: `damage-${Date.now()}`,
         targetId,
         damage,
+        isCrit,
         startTime: Date.now()
       }
     ]);
@@ -137,7 +139,7 @@ const BattleAnimations = () => {
     const clearDamageNumbers = (timestamp) => {
       const elapsed = timestamp - damageStartTime;
       if (elapsed >= 2000) {
-        setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId));
+        setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId || d.startTime !== Date.now()));
         return;
       }
       requestAnimationFrame(clearDamageNumbers);
@@ -182,7 +184,7 @@ const BattleAnimations = () => {
   // 渲染伤害数字
   const renderDamageNumbers = () => {
     return damageNumbers.map(damageInfo => {
-      const { id, targetId, damage, startTime } = damageInfo;
+      const { id, targetId, damage, isCrit, startTime } = damageInfo;
       
       // 获取目标的DOM元素位置
       const targetElement = document.querySelector(`[data-unit-id="${targetId}"]`);
@@ -196,12 +198,15 @@ const BattleAnimations = () => {
         position: 'fixed',
         top: `${targetRect.top - 30}px`,
         left: `${targetRect.left + targetRect.width / 2}px`,
-        zIndex: 1001
+        transform: 'translateX(-50%)',
+        zIndex: 1001,
+        pointerEvents: 'none'
       };
       
       return (
-        <div key={id} className="damage-number" style={numberStyle}>
-          {damage}
+        <div key={id} className={`damage-number ${isCrit ? 'critical' : ''}`} style={numberStyle}>
+          {isCrit && <span className="crit-text">暴击！</span>}
+          <span className="damage-value">{damage}</span>
         </div>
       );
     });
@@ -209,10 +214,10 @@ const BattleAnimations = () => {
   
   // 渲染特效
   const renderEffects = () => {
-    return effects.map(effectInfo => {
-      const { id, unitId, type, icon, color, size, startTime } = effectInfo;
+    return effects.map(effect => {
+      const { id, unitId, type, icon, color, size } = effect;
       
-      // 获取目标的DOM元素位置
+      // 获取单位的DOM元素位置
       const unitElement = document.querySelector(`[data-unit-id="${unitId}"]`);
       if (!unitElement) return null;
       
@@ -222,32 +227,29 @@ const BattleAnimations = () => {
       // 计算特效位置
       const effectStyle = {
         position: 'fixed',
-        top: `${unitRect.top}px`,
-        left: `${unitRect.left}px`,
-        width: `${unitRect.width}px`,
-        height: `${unitRect.height}px`,
-        zIndex: 1002,
+        top: `${unitRect.top + unitRect.height / 2}px`,
+        left: `${unitRect.left + unitRect.width / 2}px`,
+        transform: 'translate(-50%, -50%)',
+        fontSize: size || '24px',
         color: color || '#ffffff',
-        fontSize: size === 'large' ? '48px' : '24px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
+        zIndex: 1002,
+        pointerEvents: 'none'
       };
       
       return (
-        <div key={id} className={`battle-effect ${type}-effect`} style={effectStyle}>
-          <i className={`fas ${icon}`}></i>
+        <div key={id} className={`battle-effect ${type}`} style={effectStyle}>
+          {icon}
         </div>
       );
     });
   };
   
   return (
-    <>
+    <div className="battle-animations-container">
       {renderAttackAnimation()}
       {renderDamageNumbers()}
       {renderEffects()}
-    </>
+    </div>
   );
 };
 

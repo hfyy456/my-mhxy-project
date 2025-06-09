@@ -17,38 +17,56 @@
   transform: scale(0);
 }
 
-@keyframes attack-pulse {
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-  30% {
-    transform: scale(1.2);
-    opacity: 0.9;
-  }
-  70% {
-    transform: scale(1.8);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
-
 /* 伤害数字 */
 .damage-number {
   position: absolute;
   transform: translateX(-50%);
-  color: #ff3838;
-  font-size: 24px;
+  color: #ff4444;
+  font-size: 26px;
   font-weight: bold;
   text-shadow: 
     -1px -1px 0 #000,
     1px -1px 0 #000,
     -1px 1px 0 #000,
     1px 1px 0 #000;
-  animation: float-damage 1.5s ease-out forwards;
+  animation: float-damage-enhanced 1.8s ease-out forwards;
+}
+
+.damage-number.critical {
+  color: #ffdd00;
+  font-size: 32px;
+  font-weight: bold;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    0 0 6px #ffdd00;
+  animation: float-damage-critical 1.8s ease-out forwards;
+}
+
+.critical-text {
+  font-size: 14px;
+  color: #ffdd00;
+  font-weight: bold;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  animation: critical-flash 0.4s ease-out;
+  margin-bottom: -2px;
+}
+
+.damage-value {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-shadow: inherit;
+  background: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  -webkit-text-fill-color: inherit;
 }
 
 /* 战斗特效 */
@@ -106,25 +124,6 @@
   }
 }
 
-@keyframes float-damage {
-  0% {
-    transform: translateX(-50%) translateY(0) scale(0.5);
-    opacity: 0;
-  }
-  20% {
-    transform: translateX(-50%) translateY(-10px) scale(1.2);
-    opacity: 1;
-  }
-  80% {
-    transform: translateX(-50%) translateY(-30px) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(-50%) translateY(-50px) scale(0.8);
-    opacity: 0;
-  }
-}
-
 /* 攻击者移动动画 */
 .attacker-move {
   animation: move-to-target 0.5s ease-in-out;
@@ -140,4 +139,52 @@
   100% {
     transform: translateX(0) translateY(0);
   }
+}
+
+@keyframes float-damage-enhanced {
+  0% { 
+    transform: translateX(-50%) translateY(0) scale(0.8); 
+    opacity: 0; 
+  }
+  20% { 
+    transform: translateX(-50%) translateY(-12px) scale(1.1); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateX(-50%) translateY(-30px) scale(1); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateX(-50%) translateY(-45px) scale(0.9); 
+    opacity: 0; 
+  }
+}
+
+@keyframes float-damage-critical {
+  0% { 
+    transform: translateX(-50%) translateY(0) scale(0.6); 
+    opacity: 0; 
+  }
+  15% { 
+    transform: translateX(-50%) translateY(-8px) scale(1.2); 
+    opacity: 1; 
+  }
+  30% { 
+    transform: translateX(-50%) translateY(-18px) scale(1.1); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateX(-50%) translateY(-40px) scale(1); 
+    opacity: 0.8; 
+  }
+  100% { 
+    transform: translateX(-50%) translateY(-55px) scale(0.9); 
+    opacity: 0; 
+  }
+}
+
+@keyframes critical-flash {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
 }

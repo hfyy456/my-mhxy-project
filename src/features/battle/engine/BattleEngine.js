@@ -9,6 +9,10 @@ import { UNIQUE_ID_PREFIXES, BATTLE_PHASES } from '@/config/enumConfig';
 import { processBuffsOnTurnStart, processBuffsOnTurnEnd } from '../logic/buffManager';
 import { calculateBattleDamage, applyDamageToTarget } from '../logic/damageCalculation';
 import { executeSkillEffect } from '../logic/skillSystem';
+import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/battle/logic/skillSystem';
+import { decideEnemyAction } from '@/features/battle/logic/battleAI';
+import { summonConfig } from '@/config/summon/summonConfig';
+import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 
 // 战斗引擎状态枚举
 export const BATTLE_ENGINE_STATES = {
@@ -207,25 +211,6 @@ export class BattleEngine {
       // 检查是否所有单位都已提交行动
       if (this._allActionsSubmitted()) {
         this._emit(BATTLE_ENGINE_EVENTS.PREPARATION_COMPLETE);
-        if (this.options.autoAdvance) {
-          // 准备阶段完成，进入执行阶段
-          this._setState(BATTLE_ENGINE_STATES.EXECUTION);
-          this._emit(BATTLE_ENGINE_EVENTS.EXECUTION_STARTED);
-          
-          // 立即执行所有行动
-          setTimeout(() => {
-            const result = this.advance();
-            this._log('自动执行行动结果', result);
-            
-            // 执行完成后立即发射状态更新事件
-            this._emit('state_changed', {
-              oldState: BATTLE_ENGINE_STATES.EXECUTION,
-              newState: this.state,
-              battleLog: this.battleLog,
-              timestamp: Date.now()
-            });
-          }, 100); // 给UI一点时间更新显示
-        }
       }
       
       return {
@@ -250,7 +235,10 @@ export class BattleEngine {
     try {
       switch (this.state) {
         case BATTLE_ENGINE_STATES.PREPARATION:
-          return this._startRound();
+          // 从准备阶段推进到执行阶段
+          this._setState(BATTLE_ENGINE_STATES.EXECUTION);
+          this._emit(BATTLE_ENGINE_EVENTS.EXECUTION_STARTED);
+          return this._executeAllActions();
           
         case BATTLE_ENGINE_STATES.ROUND_START:
           return this._advanceToPreparation();
@@ -511,6 +499,15 @@ export class BattleEngine {
     this._emit(BATTLE_ENGINE_EVENTS.ROUND_STARTED, { round: this.currentRound });
     
     this._log('回合开始', { round: this.currentRound });
+    
+    // 在autoAdvance模式下自动推进到准备阶段
+    if (this.options.autoAdvance) {
+      setTimeout(() => {
+        const result = this.advance();
+        this._log('自动推进到准备阶段结果', result);
+      }, 500); // 给UI一点时间显示回合开始
+    }
+    
     return { success: true, state: this.state };
   }
 
@@ -539,6 +536,10 @@ export class BattleEngine {
       activeUnits: this.activeUnits.length, 
       turnOrder: this.turnOrder 
     });
+    
+    // 立即处理AI行动（不需要等待）
+    const aiResult = this.processAIActions();
+    this._log('AI行动处理结果', aiResult);
     
     return { success: true, state: this.state };
   }
@@ -571,6 +572,12 @@ export class BattleEngine {
         result
       });
       
+      console.log('🚀 引擎发射ACTION_EXECUTED事件:', {
+        unitId,
+        action: actionData,
+        result
+      });
+      
       this._emit(BATTLE_ENGINE_EVENTS.ACTION_EXECUTED, {
         unitId,
         action: actionData,
@@ -594,6 +601,14 @@ export class BattleEngine {
       round: this.currentRound,
       timestamp: Date.now()
     });
+    
+    // 在autoAdvance模式下自动推进到回合结束处理
+    if (this.options.autoAdvance) {
+      setTimeout(() => {
+        const result = this.advance();
+        this._log('自动推进回合结束结果', result);
+      }, 1000); // 给UI一点时间显示执行结果
+    }
     
     return { success: true, state: this.state, executionResults };
   }
@@ -787,7 +802,8 @@ export class BattleEngine {
       const attackMessage = `${sourceUnit.name} 攻击 ${damageApplyResult.updatedTarget?.name || targetUnit.name} 造成了 ${finalDamage} 点伤害${critText ? `，${critText}` : ''}`;
       
       this._log(attackMessage, {
-        sourceId: sourceUnit.id,
+        unitId: sourceUnit.id,      // 修复：使用unitId而不是sourceId
+        sourceId: sourceUnit.id,    // 保留sourceId用于向后兼容
         targetId,
         damage: finalDamage,
         isCrit: damageResult.isCrit,
@@ -919,6 +935,531 @@ export class BattleEngine {
     };
     
     return stateMapping[engineState] || BATTLE_PHASES.BATTLE_END;
+  }
+
+  /**
+   * 使用现有AI逻辑处理敌方单位行动
+   * @returns {Object} 处理结果
+   */
+  processAIActions() {
+    if (this.state !== BATTLE_ENGINE_STATES.PREPARATION) {
+      return {
+        success: false,
+        error: `当前不允许处理AI行动，引擎状态: ${this.state}`
+      };
+    }
+
+    try {
+      this._log('开始AI行动处理', { 
+        engineState: this.state,
+        battleDataExists: !!this.battleData,
+        enemyUnitsCount: this.battleData ? Object.keys(this.battleData.enemyUnits).length : 0
+      });
+
+      const enemyUnits = Object.values(this.battleData.enemyUnits)
+        .filter(unit => !unit.isDefeated);
+      
+      this._log('过滤后的敌方单位', { 
+        totalCount: enemyUnits.length,
+        units: enemyUnits.map(u => ({ id: u.id, name: u.name, isDefeated: u.isDefeated }))
+      });
+      
+      let actionsProcessed = 0;
+      const errors = [];
+
+      enemyUnits.forEach(unit => {
+        this._log(`处理AI单位: ${unit.name}`, { unitId: unit.id, hasExistingAction: this.unitActions.has(unit.id) });
+        
+        // 检查该单位是否已经有行动
+        if (!this.unitActions.has(unit.id)) {
+          try {
+            this._log(`为AI单位 ${unit.name} 生成行动`, { unitId: unit.id });
+            const aiAction = this._generateAIAction(unit);
+            this._log(`AI行动生成结果`, { unitId: unit.id, action: aiAction });
+            
+            // 转换行动格式：actionType -> type
+            const convertedAction = {
+              ...aiAction,
+              type: aiAction.actionType
+            };
+            delete convertedAction.actionType;
+            this._log(`转换后的行动格式`, { unitId: unit.id, convertedAction });
+            
+            const submitResult = this.submitAction(unit.id, convertedAction);
+            this._log(`行动提交结果`, { unitId: unit.id, submitResult });
+            
+            if (submitResult.success) {
+              actionsProcessed++;
+              this._log(`AI单位 ${unit.name} 行动已设置`, convertedAction);
+            } else {
+              this._log(`AI单位 ${unit.name} 行动提交失败`, submitResult);
+              errors.push({
+                unitId: unit.id,
+                unitName: unit.name,
+                error: submitResult.error
+              });
+            }
+          } catch (error) {
+            this._log(`AI单位 ${unit.name} 行动生成异常`, { error: error.message, stack: error.stack });
+            errors.push({
+              unitId: unit.id,
+              unitName: unit.name,
+              error: error.message
+            });
+          }
+        } else {
+          this._log(`AI单位 ${unit.name} 已有行动，跳过`, this.unitActions.get(unit.id));
+        }
+      });
+
+      this._log('AI行动处理完成', {
+        totalEnemyUnits: enemyUnits.length,
+        actionsProcessed,
+        errors: errors.length
+      });
+
+      // 发射状态更新事件，通知UI刷新
+      this._emit('BATTLE_DATA_UPDATED', {
+        battleUnits: this.getState().battleUnits,
+        unitActions: this.getState().unitActions,
+        currentPhase: this.getState().currentPhase,
+        timestamp: Date.now()
+      });
+
+      return {
+        success: true,
+        actionsProcessed,
+        errors,
+        allProcessed: actionsProcessed === enemyUnits.filter(unit => !this.unitActions.has(unit.id)).length
+      };
+
+    } catch (error) {
+      this._log('AI行动处理失败', { error: error.message });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 内部AI决策逻辑 - 为单个AI单位生成行动
+   * @param {Object} unit - 敌方单位
+   * @returns {Object} AI行动
+   */
+  _generateAIAction(unit) {
+    // 合并所有单位数据
+    const allBattleUnits = {
+      ...this.battleData.playerUnits,
+      ...this.battleData.enemyUnits
+    };
+
+    // 分离玩家单位和敌方单位
+    const playerUnits = [];
+    const enemyUnits = [];
+    
+    Object.values(allBattleUnits).forEach(battleUnit => {
+      if (battleUnit.isPlayerUnit) {
+        playerUnits.push(battleUnit);
+      } else {
+        enemyUnits.push(battleUnit);
+      }
+    });
+    
+    // 使用现有的AI决策逻辑
+    const action = decideEnemyAction(
+      unit, 
+      allBattleUnits, 
+      playerUnits, 
+      enemyUnits, 
+      summonConfig,  // 全局宠物配置
+      activeSkillConfig  // 技能配置
+    );
+    
+    if (!action) {
+      // 如果AI没有返回行动，默认防御
+      return {
+        type: 'defend',
+        skillId: null,
+        targetIds: []
+      };
+    }
+    
+    this._log(`AI单位 ${unit.name} 生成行动`, action);
+    
+    return action;
+  }
+
+  /**
+   * 获取单位可用的主动技能
+   * @param {string} unitId - 单位ID
+   * @returns {Array} 主动技能列表
+   */
+  getUnitActiveSkills(unitId) {
+    const unit = this.getUnit(unitId);
+    if (!unit || !unit.skillSet) {
+      return [];
+    }
+    
+    // 从 activeSkillConfig 中获取技能详细信息
+    const activeSkills = unit.skillSet
+      .filter(skillId => skillId) // 过滤掉空值
+      .map(skillId => {
+        const skillInfo = activeSkillConfig.find(skill => skill.id === skillId);
+        return skillInfo || null;
+      })
+      .filter(skill => skill !== null) // 过滤掉未找到的技能
+      .filter(skill => skill.type !== 'passive'); // 只保留非被动技能
+    
+    // 移除日志记录，避免频繁调用时的性能问题和无限循环
+    return activeSkills;
+  }
+
+  /**
+   * 获取有效目标列表
+   * @param {string} unitId - 单位ID
+   * @param {string} actionType - 行动类型
+   * @param {string} skillId - 技能ID（可选）
+   * @returns {Array} 有效目标列表
+   */
+  getValidTargets(unitId, actionType, skillId = null) {
+    const unit = this.getUnit(unitId);
+    if (!unit) return [];
+    
+    const allUnits = Object.values({
+      ...this.battleData.playerUnits,
+      ...this.battleData.enemyUnits
+    });
+    
+    if (actionType === 'attack') {
+      return getValidTargetsForUnit(unit, allUnits, summonConfig, 'normal');
+    } else if (actionType === 'skill' && skillId) {
+      return getValidTargetsForSkill(unit, allUnits, skillId, activeSkillConfig);
+    }
+    
+    return [];
+  }
+
+  /**
+   * 获取技能影响区域
+   * @param {string} skillId - 技能ID
+   * @param {string} targetId - 目标单位ID
+   * @returns {Array} 影响范围内的格子位置数组
+   */
+  getSkillAffectedArea(skillId, targetId) {
+    if (!skillId || !targetId) return [];
+    
+    const skill = activeSkillConfig.find(s => s.id === skillId);
+    if (!skill) return [];
+    
+    // 获取目标单位
+    const targetUnit = this.getUnit(targetId);
+    if (!targetUnit) return [];
+    
+    // 目标位置
+    const targetPos = targetUnit.gridPosition;
+    const targetTeam = targetPos.team;
+    
+    // 存储受影响的格子位置
+    const affectedPositions = [];
+    
+    // 根据技能的 targetType 和 areaType 属性确定影响范围
+    const targetType = skill.targetType;
+    const areaType = skill.areaType;
+    
+    // 单体技能
+    if (targetType === 'single' || !targetType) {
+      // 添加目标格子
+      affectedPositions.push({
+        team: targetTeam,
+        row: targetPos.row,
+        col: targetPos.col
+      });
+    }
+    // 群体技能
+    else if (targetType === 'group') {
+      // 添加目标格子
+      affectedPositions.push({
+        team: targetTeam,
+        row: targetPos.row,
+        col: targetPos.col
+      });
+      
+      // 根据不同的范围类型计算影响的格子
+      if (areaType === 'cross') { // 十字范围
+        // 定义上下左右四个相邻格子
+        const crossPositions = [
+          { row: targetPos.row - 1, col: targetPos.col }, // 上
+          { row: targetPos.row + 1, col: targetPos.col }, // 下
+          { row: targetPos.row, col: targetPos.col - 1 }, // 左
+          { row: targetPos.row, col: targetPos.col + 1 }  // 右
+        ];
+        
+        // 过滤掉超出范围的格子
+        crossPositions.forEach(pos => {
+          if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: pos.row,
+              col: pos.col
+            });
+          }
+        });
+      }
+      else if (areaType === 'row') { // 整行范围
+        // 添加同一行的所有格子
+        for (let col = 0; col < 3; col++) {
+          affectedPositions.push({
+            team: targetTeam,
+            row: targetPos.row,
+            col: col
+          });
+        }
+      }
+      else if (areaType === 'column') { // 整列范围
+        // 添加同一列的所有格子
+        for (let row = 0; row < 3; row++) {
+          affectedPositions.push({
+            team: targetTeam,
+            row: row,
+            col: targetPos.col
+          });
+        }
+      }
+      else if (areaType === 'square') { // 方形范围
+        // 添加 3x3 方形范围内的所有格子
+        for (let row = Math.max(0, targetPos.row - 1); row <= Math.min(2, targetPos.row + 1); row++) {
+          for (let col = Math.max(0, targetPos.col - 1); col <= Math.min(2, targetPos.col + 1); col++) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: row,
+              col: col
+            });
+          }
+        }
+      }
+      else { // 默认情况，目标及其相邻格子
+        // 上下左右四个相邻格子
+        const adjacentPositions = [
+          { row: targetPos.row - 1, col: targetPos.col }, // 上
+          { row: targetPos.row + 1, col: targetPos.col }, // 下
+          { row: targetPos.row, col: targetPos.col - 1 }, // 左
+          { row: targetPos.row, col: targetPos.col + 1 }  // 右
+        ];
+        
+        // 过滤掉超出范围的格子
+        adjacentPositions.forEach(pos => {
+          if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
+            affectedPositions.push({
+              team: targetTeam,
+              row: pos.row,
+              col: pos.col
+            });
+          }
+        });
+      }
+    }
+    // 无目标技能（如自身增益）
+    else if (targetType === 'none') {
+      // 添加施法者格子
+      const caster = this.getUnit(this.currentTurnUnitId);
+      if (caster) {
+        const casterPos = caster.gridPosition;
+        affectedPositions.push({
+          team: casterPos.team,
+          row: casterPos.row,
+          col: casterPos.col
+        });
+      }
+    }
+    
+    // 去除重复格子
+    const uniquePositions = [];
+    const positionMap = new Map();
+    
+    affectedPositions.forEach(pos => {
+      const key = `${pos.team}-${pos.row}-${pos.col}`;
+      if (!positionMap.has(key)) {
+        positionMap.set(key, true);
+        uniquePositions.push(pos);
+      }
+    });
+    
+    // 移除日志记录，避免频繁调用时的性能问题
+    return uniquePositions;
+  }
+
+  /**
+   * 检查所有单位是否都有行动
+   * @returns {boolean} 是否所有单位都已准备
+   */
+  isAllUnitsReady() {
+    const activeUnits = Object.values({
+      ...this.battleData.playerUnits,
+      ...this.battleData.enemyUnits
+    }).filter(unit => !unit.isDefeated);
+    
+    return activeUnits.length > 0 && 
+           activeUnits.every(unit => this.unitActions.has(unit.id));
+  }
+
+  /**
+   * 获取行动描述
+   * @param {string} unitId - 单位ID
+   * @returns {string} 行动描述
+   */
+  getActionDescription(unitId) {
+    const actionData = this.unitActions.get(unitId);
+    const unit = this.getUnit(unitId);
+    
+    if (!actionData || !unit) return '无';
+    
+    const action = actionData.action;
+    
+    switch (action.type) {
+      case 'attack':
+        const target = action.targetIds[0] ? this.getUnit(action.targetIds[0]).name : '未知目标';
+        return `攻击 ${target}`;
+      case 'defend':
+        return '防御';
+      case 'skill':
+        const skillTarget = action.targetIds[0] ? this.getUnit(action.targetIds[0]).name : '未知目标';
+        const skill = activeSkillConfig.find(s => s.id === action.skillId);
+        return `使用技能 ${skill ? skill.name : action.skillId} 对 ${skillTarget}`;
+      default:
+        return action.type;
+    }
+  }
+
+  /**
+   * 获取单位可用的行动类型
+   * @param {string} unitId - 单位ID
+   * @returns {Array} 可用行动类型列表
+   */
+  getAvailableActionTypes(unitId) {
+    const unit = this.getUnit(unitId);
+    if (!unit) return [];
+    
+    const actionTypes = ['attack', 'defend'];
+    
+    // 检查是否有可用技能
+    if (this.getUnitActiveSkills(unitId).length > 0) {
+      actionTypes.push('skill');
+    }
+    
+    // 检查特殊行动（如逃跑等）
+    if (this.canUnitFlee && this.canUnitFlee(unitId)) {
+      actionTypes.push('flee');
+    }
+    
+    return actionTypes;
+  }
+
+  /**
+   * 获取单位对象
+   * @param {string} unitId - 单位ID
+   * @returns {Object|null} 单位对象
+   */
+  getUnit(unitId) {
+    if (!this.battleData) return null;
+    
+    return this.battleData.playerUnits[unitId] || 
+           this.battleData.enemyUnits[unitId] || 
+           null;
+  }
+
+  /**
+   * 获取单位可攻击的网格位置
+   * @param {string} unitId - 单位ID
+   * @returns {Array} 可攻击的网格位置数组
+   */
+  getAttackableGridPositions(unitId) {
+    try {
+      if (!unitId || this.state !== BATTLE_ENGINE_STATES.PREPARATION) {
+        return [];
+      }
+      
+      const unit = this.getUnit(unitId);
+      if (!unit || !unit.isPlayerUnit) {
+        return [];
+      }
+      
+      // 获取可攻击的目标单位
+      const validTargets = this.getValidTargets(unitId, 'attack');
+      
+      // 提取目标单位的网格位置
+      const attackablePositions = validTargets.map(target => {
+        const targetUnit = this.getUnit(target.id);
+        if (targetUnit && targetUnit.gridPosition) {
+          return {
+            team: targetUnit.gridPosition.team,
+            row: targetUnit.gridPosition.row,
+            col: targetUnit.gridPosition.col
+          };
+        }
+        return null;
+      }).filter(pos => pos !== null);
+      
+      return attackablePositions;
+    } catch (error) {
+      this._log('获取攻击范围失败', { unitId, error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * 重置指定单位的行动
+   * @param {string} unitId - 单位ID
+   * @returns {Object} 重置结果
+   */
+  resetUnitAction(unitId) {
+    if (this.state !== BATTLE_ENGINE_STATES.PREPARATION) {
+      return {
+        success: false,
+        error: `当前状态不允许重置行动: ${this.state}`
+      };
+    }
+
+    if (!unitId) {
+      return {
+        success: false,
+        error: '单位ID不能为空'
+      };
+    }
+
+    const unit = this.getUnit(unitId);
+    if (!unit) {
+      return {
+        success: false,
+        error: '单位不存在'
+      };
+    }
+
+    if (!unit.isPlayerUnit) {
+      return {
+        success: false,
+        error: '只能重置玩家单位的行动'
+      };
+    }
+
+    // 删除单位行动
+    const hadAction = this.unitActions.has(unitId);
+    this.unitActions.delete(unitId);
+    
+    this._log('单位行动已重置', { unitId, unitName: unit.name, hadAction });
+    
+    // 发出事件通知
+    this._emit('UNIT_ACTION_RESET', {
+      unitId,
+      unitName: unit.name,
+      timestamp: Date.now()
+    });
+
+    return {
+      success: true,
+      unitId,
+      hadAction
+    };
   }
 }
 

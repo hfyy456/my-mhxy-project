@@ -13,11 +13,14 @@ export class BattleEventBus {
     this.listeners = new Map(); // eventType -> Set<listener>
     this.eventHistory = [];
     this.isEnabled = true;
+    this.recentEvents = new Map(); // 用于去重的近期事件记录
     
     this.options = {
       enableHistory: true,
       maxHistorySize: 1000,
       enableLogging: false,
+      enableDeduplication: true, // 启用事件去重
+      deduplicationWindow: 100, // 去重时间窗口（毫秒）
       ...options
     };
   }
@@ -88,6 +91,12 @@ export class BattleEventBus {
       timestamp: Date.now(),
       id: this._generateEventId()
     };
+
+    // 事件去重检查
+    if (this.options.enableDeduplication && this._isDuplicateEvent(eventType, eventData)) {
+      this._log(`跳过重复事件: ${eventType}`, { eventData });
+      return { success: true, skipped: true, reason: 'Duplicate event' };
+    }
 
     // 记录事件历史
     if (this.options.enableHistory) {
@@ -300,6 +309,64 @@ export class BattleEventBus {
   _log(message, data = {}) {
     if (this.options.enableLogging) {
       console.log(`[BattleEventBus] ${message}`, data);
+    }
+  }
+
+  /**
+   * 检查是否为重复事件
+   * @param {string} eventType - 事件类型
+   * @param {Object} eventData - 事件数据
+   * @returns {boolean} 是否为重复事件
+   * @private
+   */
+  _isDuplicateEvent(eventType, eventData) {
+    const now = Date.now();
+    const eventKey = this._generateEventKey(eventType, eventData);
+    
+    // 清理过期的事件记录
+    this._cleanupExpiredEvents(now);
+    
+    // 检查是否存在相同的事件
+    if (this.recentEvents.has(eventKey)) {
+      const lastEventTime = this.recentEvents.get(eventKey);
+      if (now - lastEventTime < this.options.deduplicationWindow) {
+        return true; // 是重复事件
+      }
+    }
+    
+    // 记录新事件
+    this.recentEvents.set(eventKey, now);
+    return false;
+  }
+
+  /**
+   * 生成事件键用于去重
+   * @param {string} eventType - 事件类型
+   * @param {Object} eventData - 事件数据
+   * @returns {string} 事件键
+   * @private
+   */
+  _generateEventKey(eventType, eventData) {
+    // 对于ACTION_EXECUTED事件，使用unitId和目标来生成唯一键
+    if (eventType === 'action_executed' && eventData.unitId) {
+      const targets = eventData.action?.action?.targets || eventData.action?.targets || [];
+      return `${eventType}_${eventData.unitId}_${targets.join('_')}`;
+    }
+    
+    // 对于其他事件，使用简单的字符串化
+    return `${eventType}_${JSON.stringify(eventData)}`;
+  }
+
+  /**
+   * 清理过期的事件记录
+   * @param {number} now - 当前时间戳
+   * @private
+   */
+  _cleanupExpiredEvents(now) {
+    for (const [eventKey, timestamp] of this.recentEvents.entries()) {
+      if (now - timestamp > this.options.deduplicationWindow * 2) {
+        this.recentEvents.delete(eventKey);
+      }
     }
   }
 }

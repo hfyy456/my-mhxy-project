@@ -344,7 +344,9 @@ export class BattleEngineAdapter {
     });
 
     this.engine.subscribe('action_executed', (event) => {
+      console.log('🔄 适配器接收到action_executed事件:', event.data);
       this.eventBus.emit(BATTLE_EVENTS.ACTION_EXECUTED, event.data);
+      console.log('📤 适配器转发ACTION_EXECUTED事件到事件总线');
       this._updateCachedState();
       this._notifyStateSubscribers();
     });
@@ -423,11 +425,8 @@ export class BattleEngineAdapter {
       Object.assign(battleUnits, engineState.battleData.enemyUnits);
     }
 
-    // 转换行动队列为行动映射
-    const unitActions = {};
-    engineState.actionQueue.forEach(actionItem => {
-      unitActions[actionItem.unitId] = actionItem.action;
-    });
+    // 使用引擎直接提供的unitActions数据
+    const unitActions = engineState.unitActions || {};
 
     return {
       isActive: engineState.isActive,
@@ -463,6 +462,51 @@ export class BattleEngineAdapter {
    */
   _log(message, data = {}) {
     console.log(`[BattleEngineAdapter] ${message}`, data);
+  }
+
+  /**
+   * 检查是否需要处理AI行动
+   * @private
+   */
+  _processAIActionsIfNeeded() {
+    try {
+      // 检查引擎状态是否为准备阶段
+      if (this.engine.state !== 'preparation') {
+        return;
+      }
+      
+      // 获取所有玩家单位，看是否都已有行动
+      const allPlayerUnits = Object.values(this.engine.battleData.playerUnits || {});
+      const playerUnitsWithActions = allPlayerUnits.filter(unit => 
+        !unit.isDefeated && this.engine.unitActions.has(unit.id)
+      );
+      
+      const activePlayerUnits = allPlayerUnits.filter(unit => !unit.isDefeated);
+      
+      // 如果所有玩家单位都有行动了，处理AI行动
+      if (activePlayerUnits.length > 0 && playerUnitsWithActions.length === activePlayerUnits.length) {
+        this._log('所有玩家单位已有行动，开始处理AI行动');
+        
+        const result = this.engine.processAIActions();
+        
+        if (result.success) {
+          this._log(`AI行动处理完成: ${result.actionsProcessed} 个行动已设置`);
+          
+          // 更新状态并通知订阅者
+          this._updateCachedState();
+          this._notifyStateSubscribers();
+        } else {
+          this._log('AI行动处理失败', { error: result.error });
+        }
+      } else {
+        this._log('等待更多玩家行动', { 
+          activePlayerUnits: activePlayerUnits.length,
+          playerUnitsWithActions: playerUnitsWithActions.length 
+        });
+      }
+    } catch (error) {
+      this._log('AI行动处理检查失败', { error: error.message });
+    }
   }
 }
 

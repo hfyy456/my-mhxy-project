@@ -197,7 +197,8 @@ export const useBattleStateMachineState = () => {
       enemyFormation: [],
       
       battleLog: [],
-      rewards: null
+      rewards: null,
+      adapter
     };
   }
 
@@ -220,7 +221,8 @@ export const useBattleStateMachineState = () => {
     enemyFormation: battleState.enemyFormation || [],
     
     battleLog: battleState.battleLog || [],
-    rewards: battleState.rewards
+    rewards: battleState.rewards,
+    adapter
   };
 };
 

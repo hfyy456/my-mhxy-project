@@ -110,6 +110,10 @@ export class BattleStateMachine {
     };
     this.loggingEnabled = options.enableLogging;
     this.listeners = new Set();
+    
+    // 引擎集成支持
+    this.battleEngine = options.battleEngine || null;
+    this.engineIntegrationEnabled = options.engineIntegrationEnabled || false;
   }
 
   /**
@@ -407,6 +411,15 @@ export class BattleStateMachine {
   _enterPreparationPhase() {
     this._log('Sub-Phase: PREPARATION - Processing round-start buffs and waiting for action selections.');
     this._processRoundStartBuffs();
+    
+    // 如果启用了引擎集成，自动处理AI行动
+    if (this.engineIntegrationEnabled && this.battleEngine) {
+      this._log('状态机自动调用引擎AI处理');
+      setTimeout(() => {
+        this._processAIActionsWithEngine();
+      }, 500); // 延迟500ms确保BUFF处理完成
+    }
+    
     // 接下来等待UI触发 `completePreparation` 或AI完成选择
   }
 
@@ -441,7 +454,71 @@ export class BattleStateMachine {
   }
 
   /**
-   * 推进准备阶段
+   * 使用引擎自动处理AI行动
+   * @private
+   */
+  _processAIActionsWithEngine() {
+    if (!this.battleEngine) {
+      this._log('警告：引擎未设置，跳过AI处理');
+      return;
+    }
+
+    try {
+      this._log('开始自动AI行动处理');
+      const result = this.battleEngine.processAIActions();
+      
+      if (result.success) {
+        this._log(`AI行动处理成功: ${result.actionsProcessed} 个行动已设置`);
+        
+        if (result.errors && result.errors.length > 0) {
+          this._log(`AI处理中有错误:`, result.errors);
+        }
+        
+        // 检查是否所有单位都已准备完成
+        setTimeout(() => {
+          this._checkAllUnitsReady();
+        }, 100);
+      } else {
+        this._logError(`AI行动处理失败: ${result.error}`);
+      }
+    } catch (error) {
+      this._logError(`AI行动处理异常: ${error.message}`);
+    }
+  }
+
+  /**
+   * 检查所有单位是否都已准备完成（引擎集成版本）
+   * @private
+   */
+  _checkAllUnitsReady() {
+    if (!this.battleEngine) {
+      // 回退到原有逻辑
+      this._advancePreparationPhase();
+      return;
+    }
+
+    try {
+      const allReady = this.battleEngine.isAllUnitsReady();
+      
+      if (allReady) {
+        this._log('所有单位行动已准备完成，触发准备完成事件');
+        this.trigger(BATTLE_EVENTS.ACTIONS_SELECTED);
+      } else {
+        this._log('仍有单位未完成行动选择，等待中...');
+        // 可以设置一个定时器再次检查
+        setTimeout(() => {
+          this._checkAllUnitsReady();
+        }, 1000);
+      }
+    } catch (error) {
+      this._logError(`检查单位准备状态失败: ${error.message}`);
+      // 回退到原有逻辑
+      this._advancePreparationPhase();
+    }
+  }
+
+  /**
+   * 推进准备阶段（保留原有逻辑作为后备）
    */
   _advancePreparationPhase() {
     // 检查所有单位是否都已选择行动
@@ -457,12 +534,49 @@ export class BattleStateMachine {
   }
 
   /**
-   * 进入执行阶段
+   * 进入执行阶段（集成引擎支持）
    */
   _enterExecutionPhase() {
     this._log('ENTERING EXECUTION PHASE. Determining action order.');
     this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_DETERMINE_ACTION_ORDER);
-    this._determineActionOrder();
+    
+    // 如果启用引擎集成，使用引擎处理执行阶段
+    if (this.engineIntegrationEnabled && this.battleEngine) {
+      this._executeWithEngine();
+    } else {
+      // 使用原有逻辑
+      this._determineActionOrder();
+    }
+  }
+
+  /**
+   * 使用引擎执行战斗行动
+   * @private
+   */
+  _executeWithEngine() {
+    this._log('使用引擎执行战斗阶段');
+    
+    try {
+      // 引擎会自动处理行动执行
+      const result = this.battleEngine.advance();
+      
+      if (result.success) {
+        this._log('引擎执行阶段完成');
+        
+        // 设置自动推进到解析阶段
+        setTimeout(() => {
+          this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
+        }, 2000);
+      } else {
+        this._logError(`引擎执行失败: ${result.error}`);
+        // 回退到原有逻辑
+        this._determineActionOrder();
+      }
+    } catch (error) {
+      this._logError(`引擎执行异常: ${error.message}`);
+      // 回退到原有逻辑
+      this._determineActionOrder();
+    }
   }
 
   /**
@@ -664,6 +778,16 @@ export class BattleStateMachine {
       battleLog: []
     };
     this.stateHistory = [];
+  }
+
+  /**
+   * 设置战斗引擎实例
+   * @param {Object} engine - 战斗引擎实例
+   */
+  setBattleEngine(engine) {
+    this.battleEngine = engine;
+    this.engineIntegrationEnabled = true;
+    this._log('战斗引擎已集成到状态机');
   }
 }
 

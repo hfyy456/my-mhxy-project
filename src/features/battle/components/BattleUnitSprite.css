@@ -23,38 +23,84 @@
   animation: breathing 4s ease-in-out infinite;
 }
 
-/* 攻击动画 - 使用CSS变量实现移动到目标位置 */
+/* 攻击动画 - 冲向目标版本 */
 .attacker-move {
-  animation: move-to-target 0.5s ease-in-out; /* 减少动画时间从1.2s到0.8s */
-  transform-origin: center center;
+  animation: charge-to-target 1s ease-in-out !important;
+  transform-origin: center center !important;
   z-index: 1000 !important;
-  position: relative;
-  will-change: transform; /* 优化动画性能 */
+  position: relative !important;
+  will-change: transform !important;
 }
 
-@keyframes move-to-target {
-  0% { transform: translateX(0) translateY(0); }
-  20% { transform: translateX(calc(var(--move-x) * 0.85 * var(--move-direction))) translateY(calc(var(--move-y) * 0.85)); } /* 更快到达目标 */
-  60% { transform: translateX(calc(var(--move-x) * 0.85 * var(--move-direction))) translateY(calc(var(--move-y) * 0.85)); } /* 缩短停留时间 */
-  100% { transform: translateX(0) translateY(0); }
+@keyframes charge-to-target {
+  0% { 
+    transform: translateX(0) translateY(0) scale(1); 
+    filter: brightness(1);
+  }
+  10% { 
+    transform: translateX(calc(var(--move-x, 0px) * -0.1)) translateY(calc(var(--move-y, 0px) * -0.1)) scale(1.1); 
+    filter: brightness(1.05);
+  }
+  40% { 
+    transform: translateX(var(--move-x, 0px)) translateY(var(--move-y, 0px)) scale(1.2); 
+    filter: brightness(1.05);
+  }
+  50% { 
+    transform: translateX(var(--move-x, 0px)) translateY(var(--move-y, 0px)) scale(1.1); 
+    filter: brightness(1.05);
+  }
+  100% { 
+    transform: translateX(0) translateY(0) scale(1); 
+    filter: brightness(1);
+  }
 }
 
-/* 受伤动画 - 添加后退效果 */
+/* 受伤动画 - 强化后退效果 */
 .receiving-damage {
-  animation: damage-knockback 0.6s ease-in-out;
-  transform-origin: center center; /* 确保变换原点在中心 */
-  will-change: transform; /* 优化动画性能 */
+  animation: damage-knockback 0.6s ease-in-out !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+  z-index: 999 !important;
 }
+
+
 
 @keyframes damage-knockback {
-  0% { transform: translateX(0) translateY(0); }
-  15% { transform: translateX(calc(var(--sprite-direction, -1) * 15px)) translateY(-5px); } /* 快速后退并微微上升 */
-  30% { transform: translateX(calc(var(--sprite-direction, -1) * 10px)) translateY(0); } /* 稍微恢复 */
-  45% { transform: translateX(calc(var(--sprite-direction, -1) * 12px)) translateY(-3px); } /* 小幅度反弹 */
-  60% { transform: translateX(calc(var(--sprite-direction, -1) * 8px)) translateY(0); } /* 继续恢复 */
-  75% { transform: translateX(calc(var(--sprite-direction, -1) * 4px)) translateY(-1px); } /* 最后的微弱反弹 */
-  100% { transform: translateX(0) translateY(0); } /* 完全恢复原位 */
+  0% { 
+    transform: translateX(0) translateY(0) scale(1); 
+    filter: brightness(1);
+  }
+  15% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 30px)) translateY(calc(var(--knockback-y, 0) * 50px - 15px)) scale(0.85); 
+    filter: brightness(1.2) hue-rotate(0deg);
+  }
+  30% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 25px)) translateY(calc(var(--knockback-y, 0) * 45px - 8px)) scale(0.9); 
+    filter: brightness(1.1) hue-rotate(15deg);
+  }
+  45% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 20px)) translateY(calc(var(--knockback-y, 0) * 40px - 12px)) scale(1); 
+    filter: brightness(1.2) hue-rotate(10deg);
+  }
+  60% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 20px)) translateY(calc(var(--knockback-y, 0) * 30px - 6px)) scale(1); 
+    filter: brightness(1.2) hue-rotate(8deg);
+  }
+  75% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 10px)) translateY(calc(var(--knockback-y, 0) * 20px - 4px)) scale(1); 
+    filter: brightness(1.1) hue-rotate(5deg);
+  }
+  85% { 
+    transform: translateX(calc(var(--knockback-x, -1) * 5px)) translateY(calc(var(--knockback-y, 0) * 10px - 2px)) scale(1); 
+    filter: brightness(1.1) hue-rotate(2deg);
+  }
+  100% { 
+    transform: translateX(0) translateY(0) scale(1); 
+    filter: brightness(1) hue-rotate(0deg);
+  }
 }
+
+
 
 /* 伤害数字 */
 .damage-number-container {
@@ -67,15 +113,58 @@
 }
 
 .damage-number {
-  color: #ff3838;
+  color: #ff4444;
+  font-size: 26px;
+  font-weight: bold;
+
+  animation: float-damage-enhanced 1.8s ease-out forwards;
+}
+
+.damage-number.critical {
+  color: #ffdd00;
+  font-size: 32px;
+  font-weight: bold;
+  animation: float-damage-critical 1.8s ease-out forwards;
+}
+
+.damage-number.heal {
+  color: #44ff44;
   font-size: 24px;
   font-weight: bold;
-  text-shadow: 
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
-  animation: float-damage 1.5s ease-out forwards;
+  animation: float-heal 1.8s ease-out forwards;
+}
+
+.damage-number.miss {
+  color: #9e9e9e;
+  font-size: 20px;
+  font-style: italic;
+  animation: float-miss 1.5s ease-out forwards;
+}
+
+.critical-text {
+  font-size: 14px;
+  color: #ffdd00;
+  font-weight: bold;
+
+  animation: critical-flash 0.4s ease-out;
+  margin-bottom: -2px;
+}
+
+.damage-value {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-shadow: inherit;
+  background: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  -webkit-text-fill-color: inherit;
+}
+
+@keyframes critical-flash {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* 防御状态样式 */
@@ -147,6 +236,90 @@
   100% { transform: scale(0.9); opacity: 0.7; }
 }
 
+@keyframes float-damage-enhanced {
+  0% { 
+    transform: translateY(0) scale(0.8); 
+    opacity: 0; 
+  }
+  20% { 
+    transform: translateY(-12px) scale(1.1); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateY(-30px) scale(1); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(-45px) scale(0.9); 
+    opacity: 0; 
+  }
+}
+
+@keyframes float-damage-critical {
+  0% { 
+    transform: translateY(0) scale(0.6); 
+    opacity: 0; 
+  }
+  15% { 
+    transform: translateY(-8px) scale(1.2); 
+    opacity: 1; 
+  }
+  30% { 
+    transform: translateY(-18px) scale(1.1); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateY(-40px) scale(1); 
+    opacity: 0.8; 
+  }
+  100% { 
+    transform: translateY(-55px) scale(0.9); 
+    opacity: 0; 
+  }
+}
+
+@keyframes float-heal {
+  0% { 
+    transform: translateY(0) scale(0.6) rotate(5deg); 
+    opacity: 0; 
+  }
+  20% { 
+    transform: translateY(-12px) scale(1.2) rotate(-2deg); 
+    opacity: 1; 
+  }
+  40% { 
+    transform: translateY(-22px) scale(1.1) rotate(1deg); 
+    opacity: 1; 
+  }
+  75% { 
+    transform: translateY(-35px) scale(1) rotate(0deg); 
+    opacity: 0.8; 
+  }
+  100% { 
+    transform: translateY(-50px) scale(0.9) rotate(-1deg); 
+    opacity: 0; 
+  }
+}
+
+@keyframes float-miss {
+  0% { 
+    transform: translateY(0) scale(0.8) rotate(-3deg); 
+    opacity: 0; 
+  }
+  25% { 
+    transform: translateY(-8px) scale(1.1) rotate(2deg); 
+    opacity: 0.7; 
+  }
+  60% { 
+    transform: translateY(-15px) scale(1) rotate(-1deg); 
+    opacity: 0.5; 
+  }
+  100% { 
+    transform: translateY(-25px) scale(0.9) rotate(0deg); 
+    opacity: 0; 
+  }
+}
+
 @keyframes float-damage {
   0% { transform: translateY(0) scale(0.8); opacity: 0; }
   20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
@@ -180,8 +353,6 @@
   will-change: opacity, transform;
   pointer-events: none;
 }
-
-
 
 @keyframes attack-pulse {
   0% { opacity: 0.9; transform: scale(0.8); }
