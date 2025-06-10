@@ -76,12 +76,22 @@ const BattleScreen = () => {
     }
   };
 
-  if (!isBattleActive) {
-    return null; // 如果战斗未激活，不渲染任何内容
+  // 🚨 增强战斗页面稳定性：避免在动画执行时隐藏页面
+  // 如果战斗曾经活跃过，即使临时状态异常也保持页面显示
+  const [hasEverBeenActive, setHasEverBeenActive] = React.useState(false);
+  
+  React.useEffect(() => {
+    if (isBattleActive) {
+      setHasEverBeenActive(true);
+    }
+  }, [isBattleActive]);
+
+  if (!isBattleActive && !hasEverBeenActive) {
+    return null; // 只有从未激活过的战斗才隐藏页面
   }
 
   return (
-    <div className="relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
+    <div className="battle-screen relative w-full h-full bg-gray-900 text-white font-sans overflow-hidden">
       {/* 状态机调试面板 - 开发模式显示 */}
       {isDev && (
         <BattleStateMachineDebugPanel

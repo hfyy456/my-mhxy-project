@@ -107,17 +107,25 @@ const BattleAnimations = () => {
       startTime: Date.now()
     });
     
-    // 添加伤害数字
-    setDamageNumbers(prev => [
-      ...prev,
-      {
-        id: `damage-${Date.now()}`,
-        targetId,
-        damage,
-        isCrit,
-        startTime: Date.now()
-      }
-    ]);
+    // 🚨 禁用BattleAnimations的伤害数字显示，避免与BattleUnitSprite双重显示
+    // 现在统一由BattleUnitSprite的handleKnockback事件处理伤害数字
+    console.log(`🚫 [BattleAnimations] 跳过伤害数字显示，交由BattleUnitSprite统一管理:`, {
+      targetId,
+      damage,
+      isCrit,
+      source: 'BattleAnimations_disabled'
+    });
+    
+    // setDamageNumbers(prev => [
+    //   ...prev,
+    //   {
+    //     id: `damage-${Date.now()}`,
+    //     targetId,
+    //     damage,
+    //     isCrit,
+    //     startTime: Date.now()
+    //   }
+    // ]);
     
     // 动画结束后清除
     const animStartTime = performance.now();
@@ -133,19 +141,19 @@ const BattleAnimations = () => {
     
     requestAnimationFrame(clearAnimation);
     
-    // 伤害数字动画结束后清除
-    const damageStartTime = performance.now();
-    
-    const clearDamageNumbers = (timestamp) => {
-      const elapsed = timestamp - damageStartTime;
-      if (elapsed >= 2000) {
-        setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId || d.startTime !== Date.now()));
-        return;
-      }
-      requestAnimationFrame(clearDamageNumbers);
-    };
-    
-    requestAnimationFrame(clearDamageNumbers);
+    // 🚨 伤害数字清理逻辑已禁用，因为伤害数字显示已禁用
+    // const damageStartTime = performance.now();
+    // 
+    // const clearDamageNumbers = (timestamp) => {
+    //   const elapsed = timestamp - damageStartTime;
+    //   if (elapsed >= 2000) {
+    //     setDamageNumbers(prev => prev.filter(d => d.targetId !== targetId || d.startTime !== Date.now()));
+    //     return;
+    //   }
+    //   requestAnimationFrame(clearDamageNumbers);
+    // };
+    // 
+    // requestAnimationFrame(clearDamageNumbers);
   };
   
   // 渲染攻击动画

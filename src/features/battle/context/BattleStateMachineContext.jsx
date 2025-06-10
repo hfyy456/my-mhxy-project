@@ -37,7 +37,7 @@ export const BattleStateMachineProvider = ({ children }) => {
   // 初始化状态机实例和订阅
   useEffect(() => {
     // 优先使用适配器，如果没有适配器则使用传统状态机
-    if (battleAdapter) {
+    if (battleAdapter && false) { // 暂时禁用适配器模式，强制使用传统状态机模式
       // 使用适配器模式
       const unsubscribe = battleAdapter.subscribeToEngineChanges((engineState) => {
         if (engineState) {
@@ -81,7 +81,11 @@ export const BattleStateMachineProvider = ({ children }) => {
     } else {
       // 传统状态机模式（向后兼容）
       const getStateForMachine = () => ({ battle: battleStateRef.current });
-      const machine = createBattleStateMachine(dispatch, getStateForMachine);
+      console.log(`🎬 [BattleStateMachineContext] 创建状态机，eventBus:`, battleAdapter?.eventBus);
+      const machine = createBattleStateMachine(dispatch, getStateForMachine, {
+        enableLogging: true,
+        eventBus: battleAdapter?.eventBus || null
+      });
       stateMachineRef.current = machine;
 
       const unsubscribe = machine.subscribe(newState => {

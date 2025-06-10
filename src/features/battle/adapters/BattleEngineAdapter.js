@@ -26,6 +26,9 @@ export class BattleEngineAdapter {
       enableHistory: options.enableHistory !== false
     });
 
+    // 将事件总线传递给引擎，用于双队列系统
+    this.engine.setExternalEventBus(this.eventBus);
+
     // UI订阅者管理
     this.uiSubscribers = new Set();
     this.stateSubscribers = new Set();

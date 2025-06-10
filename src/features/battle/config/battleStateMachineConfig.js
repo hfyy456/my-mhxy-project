@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-01-27
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-08 04:29:30
+ * @LastEditTime: 2025-06-10 07:58:05
  * @Description: 战斗状态机配置 - 定义状态转换规则和时间设置
  */
 

@@ -13,6 +13,7 @@ import { getValidTargetsForUnit, getValidTargetsForSkill } from '@/features/batt
 import { decideEnemyAction } from '@/features/battle/logic/battleAI';
 import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
+import { BattleQueueManager } from '../utils/BattleQueue';
 
 // 战斗引擎状态枚举
 export const BATTLE_ENGINE_STATES = {
@@ -60,6 +61,10 @@ export class BattleEngine {
     
     // 事件监听器
     this.eventListeners = new Map();
+    
+    // 双队列管理器 - 延迟初始化，等待事件总线设置
+    this.queueManager = null;
+    this.externalEventBus = null;
     
     // 配置选项
     this.options = {
@@ -118,8 +123,11 @@ export class BattleEngine {
       
       // 自动推进到准备阶段
       if (this.options.autoAdvance) {
-        const advanceResult = this.advance();
-        this._log('初始化后自动推进', advanceResult);
+        this.advance().then(advanceResult => {
+          this._log('初始化后自动推进', advanceResult);
+        }).catch(error => {
+          this._log('自动推进失败', { error: error.message });
+        });
       }
       
       return {
@@ -231,20 +239,20 @@ export class BattleEngine {
    * 推进战斗流程
    * @returns {Object} 推进结果
    */
-  advance() {
+  async advance() {
     try {
       switch (this.state) {
         case BATTLE_ENGINE_STATES.PREPARATION:
           // 从准备阶段推进到执行阶段
           this._setState(BATTLE_ENGINE_STATES.EXECUTION);
           this._emit(BATTLE_ENGINE_EVENTS.EXECUTION_STARTED);
-          return this._executeAllActions();
+          return await this._executeAllActions();
           
         case BATTLE_ENGINE_STATES.ROUND_START:
           return this._advanceToPreparation();
           
         case BATTLE_ENGINE_STATES.EXECUTION:
-          return this._executeAllActions();
+          return await this._executeAllActions();
           
         case BATTLE_ENGINE_STATES.ROUND_END:
           return this._processRoundEnd();
@@ -466,8 +474,21 @@ export class BattleEngine {
    * @private
    */
   _validateAction(unitId, action) {
-    if (!this.battleData.playerUnits[unitId] && !this.battleData.enemyUnits[unitId]) {
+    // 检查单位是否存在
+    const unit = this.battleData.playerUnits[unitId] || this.battleData.enemyUnits[unitId];
+    if (!unit) {
       throw new Error(`单位不存在: ${unitId}`);
+    }
+    
+    // 🚨 新增：检查单位是否已死亡
+    if (unit.isDefeated) {
+      console.warn(`⚰️ [BattleEngine] 死亡单位试图提交行动:`, {
+        unitId,
+        unitName: unit.name,
+        isDefeated: unit.isDefeated,
+        currentHp: unit.stats?.currentHp
+      });
+      throw new Error(`单位已死亡，无法提交行动: ${unit.name} (${unitId})`);
     }
     
     if (!action || !action.type) {
@@ -502,9 +523,13 @@ export class BattleEngine {
     
     // 在autoAdvance模式下自动推进到准备阶段
     if (this.options.autoAdvance) {
-      setTimeout(() => {
-        const result = this.advance();
-        this._log('自动推进到准备阶段结果', result);
+      setTimeout(async () => {
+        try {
+          const result = await this.advance();
+          this._log('自动推进到准备阶段结果', result);
+        } catch (error) {
+          this._log('自动推进到准备阶段失败', { error: error.message });
+        }
       }, 500); // 给UI一点时间显示回合开始
     }
     
@@ -548,50 +573,87 @@ export class BattleEngine {
    * 执行所有行动
    * @private
    */
-  _executeAllActions() {
-    this._log('开始执行所有行动', { actionCount: this.unitActions.size });
+  async _executeAllActions() {
+    this._log('开始使用双队列系统执行所有行动', { actionCount: this.unitActions.size });
     
-    // 按速度顺序执行所有行动
+    // 初始化队列管理器（如果还没有初始化）
+    if (!this.queueManager) {
+      // 优先使用外部事件总线，回退到内部事件系统
+      const eventBus = this.externalEventBus || {
+        emit: (event, data) => this._emit(event, data),
+        subscribe: (event, callback) => this.subscribe(event, callback),
+        unsubscribe: (event, callback) => this.unsubscribe(event, callback)
+      };
+      
+      console.log(`🔧 [BattleEngine] 初始化队列管理器，使用事件总线:`, {
+        hasExternalEventBus: !!this.externalEventBus,
+        eventBusType: this.externalEventBus ? 'external' : 'internal'
+      });
+      
+      this.queueManager = new BattleQueueManager(eventBus);
+    }
+    
+    // 初始化队列系统
+    this.queueManager.initialize(this.turnOrder, this.unitActions);
+    
     const executionResults = [];
     
-    for (const unitId of this.turnOrder) {
-      const actionData = this.unitActions.get(unitId);
-      if (!actionData) continue;
-      
-      const unit = this.battleData.playerUnits[unitId] || this.battleData.enemyUnits[unitId];
-      if (!unit || unit.isDefeated) continue;
-      
-      this._log('执行单位行动', { unitId, action: actionData.action });
-      
-      // 执行行动
-      const result = this._processAction(actionData);
-      
-      executionResults.push({
-        unitId,
-        actionData,
-        result
+    // 使用队列管理器依次执行每个单位的行动
+    while (true) {
+      const hasNext = await this.queueManager.executeNext((action) => {
+        console.log(`🎯 [BattleEngine] 处理单位${action.unitId}的行动逻辑`);
+        
+        // 检查单位是否还活着
+        const sourceUnit = this.battleData.playerUnits[action.unitId] || this.battleData.enemyUnits[action.unitId];
+        console.log(`🔍 [BattleEngine] 检查单位${action.unitId}状态:`, {
+          unitExists: !!sourceUnit,
+          isDefeated: sourceUnit?.isDefeated,
+          currentHp: sourceUnit?.stats?.currentHp,
+          unitName: sourceUnit?.name
+        });
+        
+        if (!sourceUnit || sourceUnit.isDefeated) {
+          console.log(`⚰️ [BattleEngine] 单位${action.unitId}已死亡，跳过行动`);
+          return { success: false, skipped: true, reason: 'unit_defeated' };
+        }
+        
+        // 修正数据结构：提取嵌套的action数据以匹配_processAction期望的格式
+        const processActionData = {
+          unitId: action.unitId,
+          action: action.action.action // 双层action结构中提取内层action
+        };
+        
+        console.log(`🔧 [BattleEngine] 修正后的行动数据:`, {
+          unitId: processActionData.unitId,
+          actionType: processActionData.action.type,
+          targets: processActionData.action.targets
+        });
+        
+        // 执行行动逻辑（伤害计算等）
+        const result = this._processAction(processActionData);
+        
+        executionResults.push({
+          unitId: action.unitId,
+          actionData: action.action,
+          result
+        });
+        
+        // 检查战斗是否在此行动后结束
+        const battleEndCheck = this._checkBattleEnd();
+        if (battleEndCheck.isEnded) {
+          this._endBattle(battleEndCheck.result);
+          return { ...result, battleEnded: true };
+        }
+        
+        return result;
       });
       
-      console.log('🚀 引擎发射ACTION_EXECUTED事件:', {
-        unitId,
-        action: actionData,
-        result
-      });
-      
-      this._emit(BATTLE_ENGINE_EVENTS.ACTION_EXECUTED, {
-        unitId,
-        action: actionData,
-        result
-      });
-      
-      // 检查战斗是否在此行动后结束
-      const battleEndCheck = this._checkBattleEnd();
-      if (battleEndCheck.isEnded) {
-        this._endBattle(battleEndCheck.result);
-        return { success: true, battleEnded: true, result: battleEndCheck.result };
+      if (!hasNext) {
+        break;
       }
     }
     
+    console.log(`🏁 [BattleEngine] 所有单位行动执行完成（双队列模式）`);
     this._setState(BATTLE_ENGINE_STATES.ROUND_END);
     this._emit(BATTLE_ENGINE_EVENTS.EXECUTION_COMPLETE, { results: executionResults });
     
@@ -604,9 +666,13 @@ export class BattleEngine {
     
     // 在autoAdvance模式下自动推进到回合结束处理
     if (this.options.autoAdvance) {
-      setTimeout(() => {
-        const result = this.advance();
-        this._log('自动推进回合结束结果', result);
+      setTimeout(async () => {
+        try {
+          const result = await this.advance();
+          this._log('自动推进回合结束结果', result);
+        } catch (error) {
+          this._log('自动推进回合结束失败', { error: error.message });
+        }
       }, 1000); // 给UI一点时间显示执行结果
     }
     
@@ -1460,6 +1526,15 @@ export class BattleEngine {
       unitId,
       hadAction
     };
+  }
+
+  /**
+   * 设置外部事件总线
+   * @param {Object} eventBus - 外部事件总线实例
+   */
+  setExternalEventBus(eventBus) {
+    this.externalEventBus = eventBus;
+    console.log(`🔗 [BattleEngine] 外部事件总线已设置:`, !!eventBus);
   }
 }
 

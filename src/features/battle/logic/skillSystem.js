@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-02 02:07:27
+ * @LastEditTime: 2025-06-10 08:30:19
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
@@ -32,16 +32,13 @@ import {
 export const getValidTargetsForUnit = (sourceUnit, allUnits, globalSummonConfig, attackType = 'normal', options = {}) => {
   if (!sourceUnit || !allUnits || allUnits.length === 0) return [];
   
-  // 获取攻击距离属性
-  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalSummonConfig, attackType);
-  
   // 默认情况下，只能攻击敌方单位
   const includeAllies = options.includeAllies || false;
   
   // 默认情况下，不能攻击自己
   const includeSelf = options.includeSelf || false;
   
-  // 过滤出可攻击的目标
+  // 直接筛选目标，跳过距离检查（攻击距离限制已移除）
   return allUnits.filter(targetUnit => {
     // 排除自己（除非明确指定可以攻击自己）
     if (targetUnit.id === sourceUnit.id && !includeSelf) return false;
@@ -52,8 +49,8 @@ export const getValidTargetsForUnit = (sourceUnit, allUnits, globalSummonConfig,
     // 排除已经死亡的单位
     if (targetUnit.stats.currentHp <= 0) return false;
     
-    // 检查是否在攻击范围内
-    return canUnitAttackTarget(sourceUnit, targetUnit, globalSummonConfig, attackType);
+    // 攻击距离限制已移除 - 现在所有活着的敌方单位都是有效目标
+    return true;
   });
 };
 
@@ -239,7 +236,8 @@ export const getSkillAffectedArea = (skillId, targetId, battleUnits, selectedUni
 };
 
 /**
- * 判断一个单位是否能够攻击到另一个单位，基于攻击距离
+ * 判断一个单位是否能够攻击到另一个单位
+ * 注意：攻击距离限制已移除，现在任何位置都可以攻击任何位置
  * @param {BattleUnit} sourceUnit - 发起攻击的单位
  * @param {BattleUnit} targetUnit - 攻击目标单位
  * @param {Object} globalSummonConfig - 全局宠物配置对象
@@ -247,23 +245,22 @@ export const getSkillAffectedArea = (skillId, targetId, battleUnits, selectedUni
  * @returns {boolean} - 如果可以攻击返回true，否则返回false
  */
 export const canUnitAttackTarget = (sourceUnit, targetUnit, globalSummonConfig, attackType = 'normal') => {
-  // 获取攻击距离属性
-  const rangeProps = getUnitAttackRangeProperties(sourceUnit, globalSummonConfig, attackType);
+  // 基本参数验证
+  if (!sourceUnit || !targetUnit) {
+    console.log('攻击验证失败: 缺少源单位或目标单位');
+    return false;
+  }
   
-  // 计算两个单位之间的距离
-  const distance = calculateBattleDistance(sourceUnit.gridPosition, targetUnit.gridPosition, rangeProps.type);
+  // 不能攻击已死亡的单位
+  if (targetUnit.stats && targetUnit.stats.currentHp <= 0) {
+    console.log(`攻击验证失败: 目标单位 ${targetUnit.name || targetUnit.id} 已死亡`);
+    return false;
+  }
   
-  // 打印调试信息
-  console.log(`攻击距离检查: 单位 ${sourceUnit.name || sourceUnit.id} -> ${targetUnit.name || targetUnit.id}`);
-  console.log(`源单位位置: 队伍=${sourceUnit.gridPosition.team}, 行=${sourceUnit.gridPosition.row}, 列=${sourceUnit.gridPosition.col}`);
-  console.log(`目标单位位置: 队伍=${targetUnit.gridPosition.team}, 行=${targetUnit.gridPosition.row}, 列=${targetUnit.gridPosition.col}`);
-  console.log(`计算距离: ${distance}, 最小范围: ${rangeProps.min}, 最大范围: ${rangeProps.max}`);
+  // 攻击距离限制已移除 - 现在任何位置都可以攻击任何位置
+  console.log(`攻击距离检查已移除: 单位 ${sourceUnit.name || sourceUnit.id} 可以攻击 ${targetUnit.name || targetUnit.id}`);
   
-  // 判断是否在攻击范围内
-  const canAttack = distance >= rangeProps.min && distance <= rangeProps.max;
-  console.log(`能否攻击: ${canAttack}`);
-  
-  return canAttack;
+  return true;
 };
 
 /**

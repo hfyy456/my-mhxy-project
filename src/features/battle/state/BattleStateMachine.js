@@ -27,7 +27,7 @@ import {
 import { triggerPassiveSkillEffects } from '../logic/passiveSkillSystem';
 import { BattleUnit } from '../models/BattleUnit';
 import { determineActionOrder } from '../logic/turnOrder';
-import { playAction } from '../logic/actionPlayer';
+// ActionPlayer已删除，现在使用BattleEngine的双队列系统
 import { setUnitFsmState } from '@/store/slices/battleSlice';
 
 // 战斗状态枚举
@@ -114,6 +114,12 @@ export class BattleStateMachine {
     // 引擎集成支持
     this.battleEngine = options.battleEngine || null;
     this.engineIntegrationEnabled = options.engineIntegrationEnabled || false;
+    
+    // 动画播放器已删除，现在使用BattleEngine的双队列系统
+    // if (options.eventBus) {
+    //   this._log('初始化动画播放器');
+    //   initializeActionPlayer(options.eventBus);
+    // }
   }
 
   /**
@@ -554,27 +560,41 @@ export class BattleStateMachine {
    * @private
    */
   _executeWithEngine() {
-    this._log('使用引擎执行战斗阶段');
+    this._log('使用引擎执行战斗阶段（禁用旧动画系统）');
     
     try {
-      // 引擎会自动处理行动执行
+      // 引擎会自动处理行动执行和动画播放
+      // 不需要状态机的动画系统介入
       const result = this.battleEngine.advance();
       
       if (result.success) {
-        this._log('引擎执行阶段完成');
+        this._log('引擎执行阶段完成，等待引擎事件完成');
         
-        // 设置自动推进到解析阶段
-        setTimeout(() => {
+        // 监听引擎完成事件而不是使用固定延迟
+        const handleExecutionComplete = () => {
+          this._log('收到引擎执行完成事件');
+          this.battleEngine.unsubscribe('EXECUTION_COMPLETE', handleExecutionComplete);
           this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
-        }, 2000);
+        };
+        
+        this.battleEngine.subscribe('EXECUTION_COMPLETE', handleExecutionComplete);
+        
+        // 添加超时保护，防止引擎事件丢失
+        setTimeout(() => {
+          this._log('引擎执行超时保护触发');
+          this.battleEngine.unsubscribe('EXECUTION_COMPLETE', handleExecutionComplete);
+          this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
+        }, 10000); // 10秒超时
       } else {
         this._logError(`引擎执行失败: ${result.error}`);
-        // 回退到原有逻辑
+        // 回退到原有逻辑但禁用动画
+        this.engineIntegrationEnabled = false;
         this._determineActionOrder();
       }
     } catch (error) {
       this._logError(`引擎执行异常: ${error.message}`);
-      // 回退到原有逻辑
+      // 回退到原有逻辑但禁用动画
+      this.engineIntegrationEnabled = false;
       this._determineActionOrder();
     }
   }
@@ -594,6 +614,12 @@ export class BattleStateMachine {
 
   // 将 _executeNextAction 修改为 async 函数
   async _executeNextAction() {
+    // 如果启用了引擎集成，不应该调用这个方法
+    if (this.engineIntegrationEnabled) {
+      this._log('警告：引擎集成模式下不应该调用_executeNextAction');
+      return;
+    }
+
     if (this.context.currentActionIndex >= this.context.actionQueue.length) {
       this._log('No more actions in queue.');
       this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
@@ -603,40 +629,31 @@ export class BattleStateMachine {
     const action = this.context.actionQueue[this.context.currentActionIndex];
     const { unitId, skillId, targetIds } = action; // 假设 action 结构如此
 
+    console.log(`🎯 [BattleStateMachine] 开始执行动作 #${this.context.currentActionIndex + 1}/${this.context.actionQueue.length} - 单位: ${unitId}`);
     this._log(`Executing action #${this.context.currentActionIndex + 1} for unit ${unitId}`);
     this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_EXECUTE_NEXT_ACTION);
 
-    // ******* 开始异步改造 *******
-
+    // ******* 紧急修复：移除对已删除playAction的调用 *******
+    
     // 1. 更新单位FSM状态为EXECUTING
     this.dispatch(setUnitFsmState({ unitId, fsmState: 'EXECUTING' }));
 
-    // 2. 调用 playAction 并等待其完成
-    // 注意：playAction 需要一个更完整的 action 对象
-    // 我们在这里模拟构建它
-    const battleState = this.getState().battle;
-    const skill = getSkillById(skillId, battleState); // 假设有这个函数
-    const damage = 10; // 伤害计算需要在这里或 playAction 内部完成，暂时硬编码
-
-    // 假设是单体技能
-    const targetId = targetIds[0];
-
-    const fullActionPayload = {
-      casterId: unitId,
-      targetId: targetId,
-      skill: skill,
-      damage: damage,
-    };
-
-    await playAction(fullActionPayload, this.dispatch);
+    // 2. 暂时使用简单延迟模拟动作执行（等待后续BattleEngine集成）
+    console.log(`⏳ [BattleStateMachine] 模拟执行动作: ${unitId} -> ${targetIds?.[0] || 'unknown'}`);
+    
+    // 简单的延迟来模拟动作执行时间
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    console.log(`✅ [BattleStateMachine] 动作完成: ${unitId}`);
 
     // 3. 动作完成后，将单位状态恢复为IDLE
     this.dispatch(setUnitFsmState({ unitId, fsmState: 'IDLE' }));
 
-    // ******* 结束异步改造 *******
+    // ******* 结束紧急修复 *******
 
     // 4. 继续下一个动作
     this.context.currentActionIndex++;
+    console.log(`➡️ [BattleStateMachine] 准备执行下个动作，当前索引: ${this.context.currentActionIndex}/${this.context.actionQueue.length}`);
     this._checkForMoreActions();
   }
 
@@ -652,10 +669,18 @@ export class BattleStateMachine {
    * 检查是否还有更多行动
    */
   _checkForMoreActions() {
+    // 如果启用了引擎集成，不应该调用这个方法
+    if (this.engineIntegrationEnabled) {
+      this._log('警告：引擎集成模式下不应该调用_checkForMoreActions');
+      return;
+    }
+
     if (this.context.currentActionIndex < this.context.actionQueue.length) {
+      console.log(`🔄 [BattleStateMachine] 还有更多动作，继续执行下一个`);
       this._log('There are more actions. Executing next one.');
       this._executeNextAction(); // 直接调用
     } else {
+      console.log(`🏁 [BattleStateMachine] 所有动作执行完毕，结束执行阶段`);
       this.trigger(BATTLE_EVENTS.NO_MORE_ACTIONS);
     }
   }
@@ -794,8 +819,8 @@ export class BattleStateMachine {
 /**
  * 创建战斗状态机实例
  */
-export const createBattleStateMachine = (dispatch, getState) => {
-  return new BattleStateMachine(dispatch, getState);
+export const createBattleStateMachine = (dispatch, getState, options = {}) => {
+  return new BattleStateMachine(dispatch, getState, options);
 };
 
 export default BattleStateMachine; 

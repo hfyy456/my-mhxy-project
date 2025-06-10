@@ -1,13 +1,11 @@
-import React from 'react';
+import React,{memo} from 'react';
 import BattleUnitSprite from './BattleUnitSprite';
 import './BattleGridRenderer.css';
 
 const BattleGridRenderer = ({ 
   // 基础数据
-  selectedUnitId, 
   selectedAction, 
-  selectedSkill, 
-  selectedTarget, 
+ 
   
   // 网格和单位数据
   playerFormation,
@@ -23,7 +21,6 @@ const BattleGridRenderer = ({
   // 预计算的UI数据
   attackableGridPositions = [],
   skillAffectedArea = [],
-  allUnitsHaveActions = false,
   
   // 按钮状态数据
   executionButtonText = '等待中...',
@@ -214,4 +211,4 @@ const BattleGridRenderer = ({
   );
 };
 
-export default BattleGridRenderer;
+export default memo(BattleGridRenderer);
