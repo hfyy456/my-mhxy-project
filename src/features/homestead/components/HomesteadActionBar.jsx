@@ -9,7 +9,8 @@ const HomesteadActionBar = ({
   onOpenSettings,
   onOpenWorldMap,
   onOpenQuestLog,
-  onStartDungeonDemo
+  onStartDungeonDemo,
+  onOpenFormationSystem
 }) => {
   const unlockedFeatures = useSelector(selectUnlockedFeatures);
 
@@ -21,6 +22,14 @@ const HomesteadActionBar = ({
       onClick: onOpenSummonSystem,
       isUnlocked: true,
       gradient: 'from-purple-500 to-indigo-600'
+    },
+    {
+      id: 'formation',
+      icon: '⚔️',
+      label: '阵型',
+      onClick: onOpenFormationSystem,
+      isUnlocked: true,
+      gradient: 'from-red-500 to-orange-600'
     },
     {
       id: 'inventory',

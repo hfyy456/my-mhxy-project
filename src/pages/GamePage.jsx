@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-10 05:59:08
+ * @LastEditTime: 2025-06-10 10:57:33
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,7 +22,7 @@ import MinimapPanel from "@/features/minimap/components/MinimapPanel";
 import DialoguePanel from "@/features/ui/components/DialoguePanel";
 import NpcPanel from "@/features/npc/components/NpcPanel";
 import CommonModal from "@/features/ui/components/CommonModal";
-import FormationSetup from "@/features/formation/components/FormationSetup";
+import FormationSystemModal from "@/features/formation/components/FormationSystemModal";
 import BattleScreen from "@/features/battle/components/BattleScreen";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
 import TowerSystem from "@/features/tower/components/TowerSystem";
@@ -141,6 +141,11 @@ const GamePageContent = ({
   const [isNpcOOPDemoOpen, setIsNpcOOPDemoOpen] = useState(false);
   const openNpcOOPDemo = () => setIsNpcOOPDemoOpen(true);
   const closeNpcOOPDemo = () => setIsNpcOOPDemoOpen(false);
+
+  // 添加新的阵型系统状态管理
+  const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] = useState(false);
+  const openFormationSystemModal = () => setIsFormationSystemModalOpen(true);
+  const closeFormationSystemModal = () => setIsFormationSystemModalOpen(false);
 
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
@@ -344,6 +349,7 @@ const GamePageContent = ({
                 onOpenMinimap={openMinimapModal}
                 onOpenNpcPanel={openNpcPanelModal}
                 onStartDungeonDemo={onStartDungeonDemo}
+                onOpenFormationSystem={openFormationSystemModal}
                 player={player}
               />
             )}
@@ -553,15 +559,7 @@ const GamePageContent = ({
             onClose={closeMinimapModal}
           />
 
-          <CommonModal
-            isOpen={isFormationModalOpen}
-            onClose={closeFormationModal}
-            title={uiText.titles.formationModal}
-            maxWidthClass="max-w-4xl"
-            centerContent={false}
-          >
-            <FormationSetup showToast={showToast} />
-          </CommonModal>
+   
 
           {isBattleActive && (
             <CommonModal
@@ -632,6 +630,12 @@ const GamePageContent = ({
           >
             <ConfigManager />
           </CommonModal>
+
+          {/* 新的阵型系统模态框 */}
+          <FormationSystemModal
+            isOpen={isFormationSystemModalOpen}
+            onClose={closeFormationSystemModal}
+          />
 
           {/* 世界地图模态框 */}
           <WorldMapModal
