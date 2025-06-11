@@ -13,6 +13,7 @@
 
 import buffsConfig from './buffs.json';
 import { ELEMENT_TYPES } from '../enumConfig';
+import { generateUniqueId } from '@/utils/idUtils';
 
 // BUFF类型枚举
 export const BUFF_TYPES = {
@@ -222,25 +223,31 @@ export const createBuffInstance = (buffId, sourceUnitId, level = 1) => {
   const buffConfig = getBuffById(buffId);
   if (!buffConfig) return null;
 
-  return {
-    id: `${buffId}_${Date.now()}`,  // 创建唯一ID
-    buffId,                         // 原始buff ID
+  const instance = {
+    instanceId: generateUniqueId('buff'), // 引入真正唯一的实例ID
+    id: buffConfig.id,                     // 保留原始的配置ID
+    buffId,                                // 兼容旧代码，buffId就是配置ID
     name: buffConfig.name,
     description: buffConfig.description,
     icon: buffConfig.icon,
     type: buffConfig.type,
     effectType: buffConfig.effectType,
-    sourceUnitId,                   // 施加buff的单位ID
-    level,                          // buff等级，可用于计算效果强度
-    stacks: 1,                      // 当前层数
+    sourceUnitId,
+    level,
+    stacks: 1,
     remainingRounds: buffConfig.durationRounds,
-    // 复制其他相关属性
     ...Object.fromEntries(
       Object.entries(buffConfig).filter(([key]) => 
         !['id', 'name', 'description', 'icon', 'type', 'effectType', 'maxStacks', 'durationRounds'].includes(key)
       )
     )
   };
+  
+  // 移除旧的不稳定的id生成方式
+  delete instance.id;
+  instance.id = buffConfig.id;
+
+  return instance;
 };
 
 // 导出buff配置数组（向后兼容）

@@ -553,6 +553,15 @@ export class BattleEngine {
    * @private
    */
   _advanceToPreparation() {
+    // 重置所有单位的防御状态
+    const allUnits = [...Object.values(this.battleData.playerUnits), ...Object.values(this.battleData.enemyUnits)];
+    allUnits.forEach(unit => {
+      if (unit.isDefending) {
+        unit.isDefending = false;
+        this._log(`${unit.name} 结束防御姿态`, { unitId: unit.id });
+      }
+    });
+    
     // 确定本回合能行动的单位
     this._determineActiveUnits();
     
@@ -698,20 +707,21 @@ export class BattleEngine {
   _processRoundEnd() {
     this._log('处理回合结束效果');
     
-    // 处理所有单位的回合结束效果
-    const allUnits = [...Object.values(this.battleData.playerUnits), ...Object.values(this.battleData.enemyUnits)];
+    // // 处理所有单位的回合结束效果
+    // const allUnits = [...Object.values(this.battleData.playerUnits), ...Object.values(this.battleData.enemyUnits)];
     
-    allUnits.forEach(unit => {
-      if (!unit.isDefeated) {
-        const buffResults = processBuffsOnTurnEnd(unit);
-        buffResults.forEach(result => {
-          this._log(result.message, { type: 'buff_effect', unitId: unit.id });
-        });
-      }
-    });
+    // allUnits.forEach(unit => {
+    //   if (!unit.isDefeated) {
+    //     const buffResults = processBuffsOnTurnEnd(unit);
+    //     buffResults.forEach(result => {
+    //       this._log(result.message, { type: 'buff_effect', unitId: unit.id });
+    //     });
+    //   }
+    // });
     
     // 检查战斗是否结束
     const battleEndCheck = this._checkBattleEnd();
+    console.log(battleEndCheck,"battleEndCheck");
     if (battleEndCheck.isEnded) {
       this._endBattle(battleEndCheck.result);
       return { success: true, battleEnded: true, result: battleEndCheck.result };

@@ -296,7 +296,7 @@ export const processBuffsOnTurnEnd = (targetUnit) => {
 
   // 移除过期的BUFF
   targetUnit.statusEffects = targetUnit.statusEffects.filter(
-    buff => !expiredBuffs.some(expiredBuff => expiredBuff.id === buff.id)
+    buff => !expiredBuffs.some(expiredBuff => expiredBuff.instanceId === buff.instanceId)
   );
 
   return results;

@@ -428,6 +428,7 @@ export class ReduxBattleAdapter {
             ...unit,
             isPlayerUnit: false,
             isDefeated: false,
+            isDefending: false,
             gridPosition: this._getUnitGridPosition(unit.id, enemyGroup.formation, index)
           };
         });
@@ -439,6 +440,7 @@ export class ReduxBattleAdapter {
             ...unit,
             isPlayerUnit: false,
             isDefeated: false,
+            isDefending: false,
             gridPosition: this._getUnitGridPosition(unit.id, enemyFormationGrid, index)
           };
         });

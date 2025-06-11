@@ -17,6 +17,7 @@ export class BattleUnit {
     this.name = unitData.name;
     this.isPlayerUnit = isPlayerUnit;
     this.isDefeated = false;
+    this.isDefending = false;
     this.stats = {
       currentHp: unitData.stats?.currentHp || 100,
       maxHp: unitData.stats?.maxHp || 100,

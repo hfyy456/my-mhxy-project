@@ -540,7 +540,7 @@ const BattleUnitSprite = ({
           setDamageTimestamp(Date.now());
           setShowDamageNumber(true);
         }
-        
+        console.log(unit,"unit.isDefending");
         // 如果单位正在防御，显示防御特效
         if (unit.isDefending) {
           // 🚨 清理之前的防御特效引用
