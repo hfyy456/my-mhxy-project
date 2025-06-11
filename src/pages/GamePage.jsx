@@ -2,14 +2,13 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-10 10:57:33
+ * @LastEditTime: 2025-06-11 08:33:01
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import store from "../store/index.js";
 import { BattleSystemProvider } from "@/features/battle/providers/BattleSystemProvider";
 
-import GameMap from "@/features/game-map/components/GameMap";
+
 import BeautifulHomesteadView from "@/features/homestead/components/BeautifulHomesteadView";
 import HomesteadActionBar from "@/features/homestead/components/HomesteadActionBar";
 import SummonSystem from "@/features/summon/components/SummonSystem";
@@ -21,7 +20,6 @@ import QuestLogPanel from "@/features/quests/components/QuestLogPanel";
 import MinimapPanel from "@/features/minimap/components/MinimapPanel";
 import DialoguePanel from "@/features/ui/components/DialoguePanel";
 import NpcPanel from "@/features/npc/components/NpcPanel";
-import CommonModal from "@/features/ui/components/CommonModal";
 import FormationSystemModal from "@/features/formation/components/FormationSystemModal";
 import BattleScreen from "@/features/battle/components/BattleScreen";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
@@ -29,11 +27,11 @@ import TowerSystem from "@/features/tower/components/TowerSystem";
 import TowerEntry from "@/features/tower/components/TowerEntry";
 import HomesteadView from "@/features/homestead/components/HomesteadView";
 import SummonManagerDemo from "@/components/SummonManagerDemo";
-import EquipmentRelationshipDemo from "../components/EquipmentRelationshipDemo";
 import ConfigManager from "../components/ConfigManager";
 import ElectronStoreNotification from "../components/ElectronStoreNotification";
 import WorldMapModal from "@/features/world-map/components/WorldMapModal";
 import NpcOOPDemo from "@/features/npc/components/NpcOOPDemo";
+import BattlePreparationModal from "@/features/formation/components/BattlePreparationModal";
 
 import { useAppModals } from "@/hooks/useAppModals";
 import { useInventoryManager } from "@/hooks/useInventoryManager";
@@ -44,6 +42,12 @@ import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import { selectIsBattleActive } from "@/store/slices/battleSlice";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
 import { useBattleStateMachine } from "@/features/battle/hooks/useBattleStateMachine";
+import { generateEnemyGroup } from '@/features/battle/utils/enemyGenerator';
+import worldMapConfig from '@/config/map/worldMapConfig.json';
+
+import CommonModal from "@/features/ui/components/CommonModal";
+
+
 
 const GamePageContent = ({
   showToast,
@@ -146,6 +150,10 @@ const GamePageContent = ({
   const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] = useState(false);
   const openFormationSystemModal = () => setIsFormationSystemModalOpen(true);
   const closeFormationSystemModal = () => setIsFormationSystemModalOpen(false);
+
+  // 添加战备弹窗状态
+  const [showBattlePrep, setShowBattlePrep] = useState(false);
+  const [enemyGroup, setEnemyGroup] = useState(null);
 
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
@@ -316,6 +324,36 @@ const GamePageContent = ({
     }
   };
 
+  // 测试战斗
+  const handleTestBattle = async () => {
+    const regionId = 'dongsheng_region';
+    const regionConfig = worldMapConfig[regionId];
+    if (!regionConfig || !regionConfig.randomEncounters) {
+      console.error(`区域 '${regionId}' 没有有效的随机遭遇配置`);
+      return;
+    }
+
+    const { averageLevel, enemyPool } = regionConfig.randomEncounters;
+    const generatedGroup = await generateEnemyGroup({
+      enemyPool: enemyPool,
+      level: averageLevel,
+      count: 5, // 生成5个敌人
+    });
+
+    if (generatedGroup) {
+      setEnemyGroup(generatedGroup);
+      setShowBattlePrep(true);
+    }
+  };
+
+  // 确认进入战斗
+  const handleConfirmBattle = (data) => {
+    console.log('战斗确认:', data);
+    // 开始战斗
+    setShowBattlePrep(false);
+    setEnemyGroup(null);
+  };
+
   // 如果游戏未初始化，显示加载提示
   if (!gameInitialized) {
     return (
@@ -363,89 +401,7 @@ const GamePageContent = ({
                   NPC系统
                 </button>
                 <button
-                  onClick={() => {
-                    // 导入并准备战斗数据
-                    import("@/features/battle/logic/battleLogic").then(
-                      ({ prepareBattleSetupData }) => {
-                        import("@/config/character/enemyConfig").then(
-                          ({ getEnemyTemplateById }) => {
-                            import("@/config/summon/summonConfig").then(
-                              ({ summonConfig }) => {
-                                // 获取玩家的召唤兽和阵型
-                                const playerSummons = Object.values(
-                                  allSummons || {}
-                                ).reduce((acc, summon) => {
-                                  acc[summon.id] = summon;
-                                  return acc;
-                                }, {});
-
-                                // 从 Redux store 中获取玩家设置的阵型
-                                const userFormation =
-                                  store.getState().formation.grid;
-
-                                // 如果用户没有设置阵型或阵型中没有召唤兽，创建一个默认阵型
-                                let playerFormation;
-
-                                // 检查用户阵型是否有效
-                                const hasValidFormation =
-                                  userFormation &&
-                                  userFormation.some((row) =>
-                                    row.some(
-                                      (summonId) =>
-                                        summonId && playerSummons[summonId]
-                                    )
-                                  );
-
-                                if (hasValidFormation) {
-                                  // 使用用户设置的阵型
-                                  playerFormation = JSON.parse(
-                                    JSON.stringify(userFormation)
-                                  );
-                                } else {
-                                  // 创建默认阵型，将第一个召唤兽放在中间
-                                  playerFormation = [
-                                    [null, null, null],
-                                    [
-                                      null,
-                                      Object.keys(playerSummons)[0] || null,
-                                      null,
-                                    ],
-                                    [null, null, null],
-                                  ];
-                                }
-
-                                // 创建敌人模板
-                                const enemyTemplates = [
-                                  {
-                                    template:
-                                      getEnemyTemplateById("goblin_grunt"),
-                                    position: { team: "enemy", row: 1, col: 1 },
-                                  },
-                                  {
-                                    template:
-                                      getEnemyTemplateById("test_dummy"),
-                                    position: { team: "enemy", row: 0, col: 0 },
-                                  },
-                                ];
-
-                                // 准备战斗数据
-                                const payload = prepareBattleSetupData(
-                                  `battle_${Date.now()}`,
-                                  playerSummons,
-                                  playerFormation,
-                                  enemyTemplates,
-                                  summonConfig
-                                );
-
-                                // 触发战斗
-                                handleStartBattle(payload);
-                              }
-                            );
-                          }
-                        );
-                      }
-                    );
-                  }}
+                  onClick={handleTestBattle}
                   className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-md shadow-lg"
                 >
                   测试战斗
@@ -672,6 +628,14 @@ const GamePageContent = ({
             <NpcOOPDemo />
           </CommonModal>
         )}
+
+        {/* 战备弹窗 */}
+        <BattlePreparationModal
+          show={showBattlePrep}
+          onCancel={() => setShowBattlePrep(false)}
+          onConfirm={handleConfirmBattle}
+          enemyGroup={enemyGroup}
+        />
       </div>
     </div>
   );

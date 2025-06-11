@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { formationManager } from '../managers/FormationManager.js';
 import { useSummonManager } from '@/hooks/useSummonManager';
+import cloneDeep from 'lodash.clonedeep';
 
 export const useFormationManager = () => {
   // 强制重新渲染的状态
@@ -56,7 +57,8 @@ export const useFormationManager = () => {
 
   // 获取当前阵型
   const currentFormation = useMemo(() => {
-    return formationManager.getCurrentFormation();
+    // 使用深拷贝来强制触发更新
+    return cloneDeep(formationManager.getCurrentFormation());
   }, [updateCounter]);
 
   // 获取当前阵型分析

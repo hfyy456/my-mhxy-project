@@ -248,10 +248,10 @@
     },
     {
       "id": "mana_flow",
-      "name": "法力流",
+      "name": "法力源泉",
       "description": "增加最大法力值",
-      "type": "magical",
-      "icon": "fa-droplet",
+      "type": "support",
+      "icon": "fa-water",
       "mode": "passive",
       "targetType": "none",
       "timing": "always",
@@ -436,6 +436,64 @@
       "elementalBonus": 0.25,
       "triggerBuffs": [
         { "buffId": "elemental_harmony", "level": 1, "target": "self", "chance": 0.8, "duration": 2 }
+      ]
+    },
+    {
+      "id": "boss_flame_shield",
+      "name": "烈焰护体",
+      "description": "每回合开始时，有30%几率获得一个吸收伤害的护盾。",
+      "type": "defensive",
+      "mode": "passive",
+      "timing": "turn_start",
+      "effects": [
+        {
+          "type": "apply_buff",
+          "target": "self",
+          "buffId": "buff_damage_shield_50_percent", 
+          "chance": 0.3
+        }
+      ]
+    },
+    {
+      "id": "boss_flame_burst",
+      "name": "火焰爆发",
+      "description": "生命值低于30%时，对所有敌人造成火属性伤害，并提高自身攻击力20%。",
+      "type": "attack",
+      "mode": "passive",
+      "timing": "on_any_damage",
+      "conditions": [
+        { "type": "health_percent", "operator": "less_than", "value": 0.3 },
+        { "type": "once_per_battle"}
+      ],
+      "effects": [
+        { "type": "area_damage", "target": "all_enemies", "damageType": "fire", "value": 50 },
+        { "type": "apply_buff", "target": "self", "buffId": "buff_attack_20_perm" }
+      ]
+    },
+    {
+      "id": "boss_crystal_shell",
+      "name": "水晶甲壳",
+      "description": "受到暴击伤害时，有50%几率反弹20%伤害给攻击者。",
+      "type": "defensive",
+      "mode": "passive",
+      "timing": "on_crit",
+      "chance": 0.5,
+      "effects": [
+        { "type": "reflect_damage", "value": 0.2 }
+      ]
+    },
+    {
+      "id": "boss_tidal_shelter",
+      "name": "潮汐庇护",
+      "description": "每3回合，为自身恢复10%最大生命值。",
+      "type": "healing",
+      "mode": "passive",
+      "timing": "turn_start",
+      "conditions": [
+        { "type": "turn_interval", "value": 3 }
+      ],
+      "effects": [
+        { "type": "heal_percent", "target": "self", "value": 0.1 }
       ]
     }
   ]

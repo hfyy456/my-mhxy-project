@@ -110,9 +110,9 @@ const BattleAnimations = () => {
     // 🚨 禁用BattleAnimations的伤害数字显示，避免与BattleUnitSprite双重显示
     // 现在统一由BattleUnitSprite的handleKnockback事件处理伤害数字
     console.log(`🚫 [BattleAnimations] 跳过伤害数字显示，交由BattleUnitSprite统一管理:`, {
-      targetId,
-      damage,
-      isCrit,
+        targetId,
+        damage,
+        isCrit,
       source: 'BattleAnimations_disabled'
     });
     

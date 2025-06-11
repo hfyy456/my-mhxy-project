@@ -634,7 +634,7 @@ export class BattleStateMachine {
     this._transitionTo(BATTLE_STATES.ACTIVE, BATTLE_STATES.EXEC_EXECUTE_NEXT_ACTION);
 
     // ******* 紧急修复：移除对已删除playAction的调用 *******
-    
+
     // 1. 更新单位FSM状态为EXECUTING
     this.dispatch(setUnitFsmState({ unitId, fsmState: 'EXECUTING' }));
 

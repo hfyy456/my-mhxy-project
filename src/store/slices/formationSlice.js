@@ -118,8 +118,8 @@ const formationSlice = createSlice({
     // 强制同步标记
     markForSync: (state) => {
       state.lastSyncTime = Date.now();
-    }
-  },
+      }
+    },
   
   extraReducers: (builder) => {
     builder

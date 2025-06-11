@@ -124,7 +124,7 @@ export class BattleEngine {
       // 自动推进到准备阶段
       if (this.options.autoAdvance) {
         this.advance().then(advanceResult => {
-          this._log('初始化后自动推进', advanceResult);
+        this._log('初始化后自动推进', advanceResult);
         }).catch(error => {
           this._log('自动推进失败', { error: error.message });
         });
@@ -526,7 +526,7 @@ export class BattleEngine {
       setTimeout(async () => {
         try {
           const result = await this.advance();
-          this._log('自动推进到准备阶段结果', result);
+        this._log('自动推进到准备阶段结果', result);
         } catch (error) {
           this._log('自动推进到准备阶段失败', { error: error.message });
         }
@@ -622,7 +622,7 @@ export class BattleEngine {
           unitId: action.unitId,
           action: action.action.action // 双层action结构中提取内层action
         };
-        
+      
         console.log(`🔧 [BattleEngine] 修正后的行动数据:`, {
           unitId: processActionData.unitId,
           actionType: processActionData.action.type,
@@ -635,13 +635,13 @@ export class BattleEngine {
         executionResults.push({
           unitId: action.unitId,
           actionData: action.action,
-          result
-        });
-        
-        // 检查战斗是否在此行动后结束
-        const battleEndCheck = this._checkBattleEnd();
-        if (battleEndCheck.isEnded) {
-          this._endBattle(battleEndCheck.result);
+        result
+      });
+      
+      // 检查战斗是否在此行动后结束
+      const battleEndCheck = this._checkBattleEnd();
+      if (battleEndCheck.isEnded) {
+        this._endBattle(battleEndCheck.result);
           return { ...result, battleEnded: true };
         }
         
@@ -669,7 +669,7 @@ export class BattleEngine {
       setTimeout(async () => {
         try {
           const result = await this.advance();
-          this._log('自动推进回合结束结果', result);
+        this._log('自动推进回合结束结果', result);
         } catch (error) {
           this._log('自动推进回合结束失败', { error: error.message });
         }

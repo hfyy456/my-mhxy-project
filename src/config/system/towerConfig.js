@@ -2,13 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-01 05:38:08
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-01 05:38:08
+ * @LastEditTime: 2025-06-11 07:18:23
  * @FilePath: \my-mhxy-project\src\config\system\towerConfig.js
  * @Description: 封妖塔系统配置文件
  */
 
 import { ELEMENT_TYPES, FIVE_ELEMENTS } from '@/config/enumConfig';
-import { getEnemyTemplateById } from '@/config/character/enemyConfig';
 
 // 封妖塔总层数
 export const TOWER_MAX_FLOOR = 60;
@@ -54,7 +53,7 @@ export const towerFloorConfig = {
         dropRate: 1.0
       },
       { 
-        enemyId: 'forest_wolf',
+        enemyId: 'wildLeopard',
         level: 2,
         position: { row: 0, col: 0 },
         dropRate: 1.0
@@ -88,19 +87,19 @@ export const towerFloorConfig = {
     ],
     enemies: [
       { 
-        enemyId: 'forest_wolf',
+        enemyId: 'wildLeopard',
         level: 3,
         position: { row: 1, col: 1 },
         dropRate: 1.0
       },
       { 
-        enemyId: 'forest_wolf',
+        enemyId: 'wildLeopard',
         level: 3,
         position: { row: 0, col: 0 },
         dropRate: 1.0
       },
       { 
-        enemyId: 'forest_wolf',
+        enemyId: 'wildLeopard',
         level: 3,
         position: { row: 2, col: 2 },
         dropRate: 1.0
@@ -134,7 +133,7 @@ export const towerFloorConfig = {
     ],
     enemies: [
       { 
-        enemyId: 'orc_warrior', // 作为小BOSS
+        enemyId: 'yaksha', // 作为小BOSS
         level: 5,
         position: { row: 1, col: 1 },
         dropRate: 1.5,

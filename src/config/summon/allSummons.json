@@ -2,6 +2,8 @@
   "ghost": {
     "id": "ghost",
     "name": "幽灵",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "metal",
     "quality": "rare",
     "growthRates": {
@@ -11,9 +13,7 @@
       "intelligence": 0.042,
       "luck": 0.02
     },
-    "type": "magical",
     "color": "blue",
-    "attackRange": 3,
     "basicAttributeRanges": {
       "constitution": [100, 200],
       "strength": [80, 180],
@@ -30,6 +30,8 @@
   "heavenGuard": {
     "id": "heavenGuard",
     "name": "持国巡守",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "earth",
     "quality": "epic",
     "growthRates": {
@@ -39,9 +41,7 @@
       "intelligence": 0.025,
       "luck": 0.02
     },
-    "type": "physical",
     "color": "amber",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [130, 230],
       "strength": [180, 280],
@@ -58,6 +58,8 @@
   "thunderBird": {
     "id": "thunderBird",
     "name": "雷鸟人",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "wood",
     "quality": "epic",
     "growthRates": {
@@ -67,9 +69,7 @@
       "intelligence": 0.03,
       "luck": 0.02
     },
-    "type": "speed",
     "color": "yellow",
-    "attackRange": 4,
     "basicAttributeRanges": {
       "constitution": [80, 180],
       "strength": [60, 160],
@@ -86,6 +86,8 @@
   "vampire": {
     "id": "vampire",
     "name": "吸血鬼",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "water",
     "quality": "rare",
     "growthRates": {
@@ -95,9 +97,7 @@
       "intelligence": 0.02,
       "luck": 0.02
     },
-    "type": "defense",
     "color": "green",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [200, 300],
       "strength": [100, 200],
@@ -114,6 +114,8 @@
   "mechanicalBird": {
     "id": "mechanicalBird",
     "name": "机关鸟",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "fire",
     "quality": "rare",
     "growthRates": {
@@ -123,9 +125,7 @@
       "intelligence": 0.042,
       "luck": 0.02
     },
-    "type": "magical",
     "color": "orange-500",
-    "attackRange": 5,
     "basicAttributeRanges": {
       "constitution": [100, 200],
       "strength": [80, 180],
@@ -142,6 +142,8 @@
   "catSpirit": {
     "id": "catSpirit",
     "name": "猫灵",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "metal",
     "quality": "rare",
     "growthRates": {
@@ -151,9 +153,7 @@
       "intelligence": 0.02,
       "luck": 0.02
     },
-    "type": "physical",
     "color": "pink-500",
-    "attackRange": 3,
     "basicAttributeRanges": {
       "constitution": [120, 220],
       "strength": [200, 300],
@@ -170,6 +170,8 @@
   "wildLeopard": {
     "id": "wildLeopard",
     "name": "狂豹",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "earth",
     "quality": "normal",
     "growthRates": {
@@ -179,9 +181,7 @@
       "intelligence": 0.02,
       "luck": 0.02
     },
-    "type": "physical",
     "color": "brown-500",
-    "attackRange": 4,
     "basicAttributeRanges": {
       "constitution": [110, 210],
       "strength": [190, 290],
@@ -198,6 +198,8 @@
   "yaksha": {
     "id": "yaksha",
     "name": "夜叉",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "water",
     "quality": "rare",
     "growthRates": {
@@ -207,9 +209,7 @@
       "intelligence": 0.02,
       "luck": 0.022
     },
-    "type": "physical",
     "color": "cyan-500",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [130, 230],
       "strength": [200, 300],
@@ -226,6 +226,8 @@
   "dragonSnake": {
     "id": "dragonSnake",
     "name": "蛟龙",
+    "creatureType": "summon",
+    "isCapturable": true,
     "fiveElement": "wood",
     "quality": "epic",
     "growthRates": {
@@ -235,9 +237,7 @@
       "intelligence": 0.042,
       "luck": 0.02
     },
-    "type": "magical",
     "color": "teal-500",
-    "attackRange": 5,
     "basicAttributeRanges": {
       "constitution": [100, 200],
       "strength": [80, 180],
@@ -263,9 +263,7 @@
       "intelligence": 0.042,
       "luck": 0.023
     },
-    "type": "magical",
     "color": "orange-600",
-    "attackRange": 5,
     "basicAttributeRanges": {
       "constitution": [110, 210],
       "strength": [90, 190],
@@ -291,9 +289,7 @@
       "intelligence": 0.035,
       "luck": 0.02
     },
-    "type": "support",
     "color": "purple-600",
-    "attackRange": 5,
     "basicAttributeRanges": {
       "constitution": [150, 250],
       "strength": [80, 180],
@@ -319,9 +315,7 @@
       "intelligence": 0.043,
       "luck": 0.022
     },
-    "type": "magical",
     "color": "blue-600",
-    "attackRange": 3,
     "basicAttributeRanges": {
       "constitution": [120, 220],
       "strength": [90, 190],
@@ -340,7 +334,6 @@
     "name": "星灵仙子",
     "fiveElement": "wood",
     "quality": "epic",
-    "type": "magical",
     "growthRates": {
       "constitution": 0.035,
       "strength": 0.025,
@@ -349,7 +342,6 @@
       "luck": 0.023
     },
     "color": "pink-600",
-    "attackRange": 4,
     "basicAttributeRanges": {
       "constitution": [130, 230],
       "strength": [100, 200],
@@ -375,9 +367,7 @@
       "intelligence": 0.02,
       "luck": 0.02
     },
-    "type": "physical",
     "color": "orange-500",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [140, 240],
       "strength": [210, 310],
@@ -403,9 +393,7 @@
       "intelligence": 0.04,
       "luck": 0.02
     },
-    "type": "defense",
     "color": "blue-900",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [220, 320],
       "strength": [120, 220],
@@ -431,9 +419,7 @@
       "intelligence": 0.045,
       "luck": 0.02
     },
-    "type": "magical",
     "color": "purple-800",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [130, 230],
       "strength": [100, 200],
@@ -459,9 +445,7 @@
       "intelligence": 0.02,
       "luck": 0.025
     },
-    "type": "physical",
     "color": "green",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [90, 190],
       "strength": [100, 200],
@@ -487,9 +471,7 @@
       "intelligence": 0.018,
       "luck": 0.02
     },
-    "type": "physical",
     "color": "brown",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [120, 220],
       "strength": [130, 230],
@@ -515,9 +497,7 @@
       "intelligence": 0.035,
       "luck": 0.025
     },
-    "type": "defense",
     "color": "teal-600",
-    "attackRange": 2,
     "basicAttributeRanges": {
       "constitution": [180, 280],
       "strength": [80, 180],
@@ -530,5 +510,141 @@
     "initialSkillCountMean": 2,
     "initialSkillCountStdDev": 1,
     "background": "游弋在深海中的古老生灵，经历了千百年的岁月洗礼。它的龟壳坚如磐石，承载着海洋的智慧与力量。虽然行动缓慢，但拥有极强的防御能力和水系法术，是战场上的守护者。在合成失败的混沌中，它会神秘地出现，为主人带来意外的惊喜。"
+  },
+  "flowerFairy": {
+    "id": "flowerFairy",
+    "name": "花仙子",
+    "creatureType": "summon",
+    "isCapturable": true,
+    "fiveElement": "wood",
+    "quality": "epic",
+    "growthRates": {
+      "constitution": 0.035,
+      "strength": 0.025,
+      "agility": 0.025,
+      "intelligence": 0.035,
+      "luck": 0.02
+    },
+    "color": "purple-600",
+    "basicAttributeRanges": {
+      "constitution": [150, 250],
+      "strength": [80, 180],
+      "agility": [100, 200],
+      "intelligence": [120, 220],
+      "luck": [100, 200]
+    },
+    "guaranteedInitialSkills": ["magic_defense"],
+    "initialSkillPool": ["luck_boost", "counter"],
+    "initialSkillCountMean": 2,
+    "initialSkillCountStdDev": 1,
+    "background": "居住在迷雾森林中的神秘仙子，掌握着治愈和防御的魔法。它们能够为队友施加各种增益状态，提高团队的生存能力，同时也能够使用强大的防御法术，保护队友免受敌人的攻击。"
+  },
+  "goblin_grunt": {
+    "id": "goblin_grunt",
+    "name": "哥布林小卒",
+    "creatureType": "monster",
+    "isCapturable": false,
+    "fiveElement": "earth",
+    "quality": "common",
+    "growthRates": {
+      "constitution": 0.02,
+      "strength": 0.025,
+      "agility": 0.015,
+      "intelligence": 0.01,
+      "luck": 0.01
+    },
+    "basicAttributeRanges": {
+      "constitution": [80, 120],
+      "strength": [90, 130],
+      "agility": [50, 80],
+      "intelligence": [20, 50],
+      "luck": [30, 60]
+    },
+    "guaranteedInitialSkills": ["power_strike"],
+    "initialSkillPool": [],
+    "initialSkillCountMean": 0,
+    "initialSkillCountStdDev": 0,
+    "background": "最基础的炮灰单位，通常成群出现。"
+  },
+  "dragon_prince": {
+    "id": "dragon_prince",
+    "name": "龙太子",
+    "creatureType": "special",
+    "isCapturable": true,
+    "fiveElement": "water",
+    "quality": "legendary",
+    "growthRates": {
+      "constitution": 0.04,
+      "strength": 0.03,
+      "agility": 0.035,
+      "intelligence": 0.045,
+      "luck": 0.03
+    },
+    "basicAttributeRanges": {
+      "constitution": [150, 250],
+      "strength": [120, 220],
+      "agility": [140, 240],
+      "intelligence": [200, 300],
+      "luck": [100, 200]
+    },
+    "guaranteedInitialSkills": ["magic_chain", "divine_protection"],
+    "initialSkillPool": ["magic_critical", "water_mountain"],
+    "initialSkillCountMean": 1,
+    "initialSkillCountStdDev": 1,
+    "background": "东海龙王之子，生来便拥有操纵水与风暴的力量，是极为罕见的特殊召唤兽。"
+  },
+  "fire_demon_lord": {
+    "id": "fire_demon_lord",
+    "name": "火焰魔王",
+    "creatureType": "monster",
+    "isCapturable": false,
+    "fiveElement": "fire",
+    "quality": "boss",
+    "growthRates": {
+      "constitution": 0.045,
+      "strength": 0.05,
+      "agility": 0.02,
+      "intelligence": 0.03,
+      "luck": 0.02
+    },
+    "basicAttributeRanges": {
+      "constitution": [400, 500],
+      "strength": [30, 40],
+      "agility": [10, 15],
+      "intelligence": [80, 120],
+      "luck": [50, 80]
+    },
+    "guaranteedInitialSkills": ["flame_burst", "fire_shield", "inferno", "boss_flame_shield", "boss_flame_burst"],
+    "initialSkillPool": [],
+    "initialSkillCountMean": 0,
+    "initialSkillCountStdDev": 0,
+    "background": "封印在锁妖塔深处的远古魔王，全身燃烧着不灭的烈焰。"
+  },
+  "crystal_crab_king": {
+    "id": "crystal_crab_king",
+    "name": "水晶巨蟹",
+    "creatureType": "monster",
+    "isCapturable": false,
+    "fiveElement": "water",
+    "quality": "boss",
+    "growthRates": {
+      "constitution": 0.06,
+      "strength": 0.04,
+      "agility": 0.015,
+      "intelligence": 0.02,
+      "luck": 0.02
+    },
+    "basicAttributeRanges": {
+      "constitution": [1000, 1200],
+      "strength": [50, 70],
+      "agility": [5, 10],
+      "intelligence": [130, 170],
+      "luck": [40, 70]
+    },
+    "guaranteedInitialSkills": ["water_cannon", "crystal_shield", "tidal_wave", "boss_crystal_shell", "boss_tidal_shelter"],
+    "initialSkillPool": [],
+    "initialSkillCountMean": 0,
+    "initialSkillCountStdDev": 0,
+    "background": "栖息于深海的巨大蟹王，其外壳由纯净的水晶构成，坚不可摧。"
   }
 }

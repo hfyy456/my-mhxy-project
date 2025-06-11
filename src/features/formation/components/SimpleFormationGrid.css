@@ -1,0 +1,40 @@
+.formation-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.formation-row {
+  display: flex;
+  gap: 4px;
+}
+
+.formation-cell {
+  width: 80px;
+  height: 80px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  cursor: default;
+  user-select: none;
+}
+
+.formation-cell.editable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.formation-cell.editable:hover {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+.formation-cell.editable:active {
+  background: #bae7ff;
+} 
