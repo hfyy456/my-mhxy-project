@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-11 10:25:21
+ * @LastEditTime: 2025-06-12 07:11:22
  */
 import allSummons from '../config/summon/allSummons.json';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '../config/config';
@@ -66,7 +66,8 @@ console.log('[summonUtils] Pre-calculated Meta Weights:', META_WEIGHTS);
  * @returns {Summon|null} A new instance of the Summon class, or null if template not found.
  */
 export const createCreatureFromTemplate = ({ templateId, level = 1, natureType = SUMMON_NATURE_TYPES.WILD }) => {
-    const template = allSummons[templateId];
+    console.log(templateId,"templateId");
+  const template = allSummons[templateId];
     if (!template) {
         console.error(`Creature template not found for ID: ${templateId}`);
         return null;
@@ -109,6 +110,7 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         skillLevels: {},
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        equippedItemIds: {},
     };
 
     // 4. Create and return the Summon instance

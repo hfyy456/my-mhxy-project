@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-16 03:01:24
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-04 05:30:52
+ * @LastEditTime: 2025-06-12 06:28:20
  */
 // gameLogic.js
 import {
@@ -28,7 +28,7 @@ import {
   getAttributeDisplayName,
   getFiveElementDisplayName,
 } from "@/config/ui/uiTextConfig";
-import { generateNewSummon } from '@/utils/summonUtils';
+import { createCreatureFromTemplate } from '@/utils/summonUtils';
 import { experienceConfig, playerBaseConfig } from '@/config/character/playerConfig';
 import { generateUniqueId } from '@/utils/idUtils';
 import { ITEM_BASE_CONFIG } from '@/config/item/inventoryConfig';
@@ -108,56 +108,47 @@ export const generateInitialEquipment = (count = 5) => {
 };
 
 // 修改refineMonster函数
-export const refineMonster = (playerLevel) => {
-  // 获取当前等级可炼妖的品质列表
-  const availableQualities = playerBaseConfig.getAvailableRefinementQualities(playerLevel);
-  
+export const  refineMonster =async () => {  
   // 随机选择一个宠物ID和其配置
   const summonEntries = Object.entries(summonConfig);
   const [selectedSummonId, summonDetails] = summonEntries[Math.floor(Math.random() * summonEntries.length)];
 
-  // 从可用品质中随机选择一个
-  const quality = availableQualities[Math.floor(Math.random() * availableQualities.length)];
-
-  // 使用公共函数生成新的召唤兽
-  const newSummon = generateNewSummon({
-    summonSourceId: selectedSummonId,
-    quality: quality,
-    source: REFINEMENT_SOURCES.REFINEMENT
+  console.log(selectedSummonId);
+  // 使用新的标准方法创建召唤兽实例
+  const newSummonInstance = await createCreatureFromTemplate({
+    templateId: selectedSummonId,
+    level: 1 
   });
+
+  if (!newSummonInstance) {
+    return {
+      error: true,
+      message: "炼妖失败，无法创建新的召唤兽实例。"
+    };
+  }
   
   // 生成初始装备 (纯数据对象数组) - 这已是最终数据
   const initialEquipmentData = generateInitialEquipment(3);
 
+  console.log(newSummonInstance,"newSummonInstance");
   // 准备历史记录
   const historyItem = {
-    id: newSummon.id,
+    id: newSummonInstance.id,
     summonSourceId: selectedSummonId,
-    quality: newSummon.quality,
-    level: newSummon.level,
-    basicAttributes: { ...newSummon.basicAttributes },
+    level: newSummonInstance.level,
+    basicAttributes: { ...newSummonInstance.basicAttributes },
     derivedAttributes: {},
-    skillSet: [...newSummon.skillSet],
-    equipment: newSummon.equippedItemIds,
+    skillSet: [...newSummonInstance.skillSet],
+    equipment: [],
   };
 
-  // 从配置中获取经验值
-  const qualityMap = {
-    [getQualityDisplayName(QUALITY_TYPES.NORMAL)]: QUALITY_TYPES.NORMAL,
-    [getQualityDisplayName(QUALITY_TYPES.RARE)]: QUALITY_TYPES.RARE,
-    [getQualityDisplayName(QUALITY_TYPES.EPIC)]: QUALITY_TYPES.EPIC,
-    [getQualityDisplayName(QUALITY_TYPES.LEGENDARY)]: QUALITY_TYPES.LEGENDARY,
-    [getQualityDisplayName(QUALITY_TYPES.MYTHIC)]: QUALITY_TYPES.MYTHIC
-  };
-  const experienceGained = experienceConfig.refinement[qualityMap[getQualityDisplayName(quality)]] || experienceConfig.refinement.normal;
 
   return {
-    newSummonPayload: newSummon,
+    newSummonInstance: newSummonInstance,
     newlyCreatedItems: initialEquipmentData,
     historyItem: historyItem,
     requireNickname: false,
-    message: `炼妖成功！召唤兽 ${summonDetails.name} (${getQualityDisplayName(quality)}) 生成完毕，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
-    experienceGained: experienceGained
+    message: `炼妖成功！召唤兽 ${newSummonInstance.nickname} 生成完毕，并获得 ${initialEquipmentData.length} 件随机装备到您的背包中。`,
   };
 };
 
@@ -357,11 +348,9 @@ export const drawSummon = (playerGachaState, dispatch) => {
         console.warn(`Falling back to a summon from NORMAL pool.`);
         determinedQuality = QUALITY_TYPES.NORMAL; // Explicitly set quality to normal for clarity
         const selectedSummonId = normalPool[Math.floor(Math.random() * normalPool.length)];
-         const newSummon = generateNewSummon({
-            summonSourceId: selectedSummonId,
-            quality: determinedQuality,
-            source: SUMMON_SOURCES.GACHA,
-            dispatch: dispatch
+         const newSummon = createCreatureFromTemplate({
+            templateId: selectedSummonId,
+            level: 1
         });
         // Update pity counts even on fallback if a draw happens
         updatedPlayerGachaState.totalDraws += 1;
@@ -413,11 +402,9 @@ export const drawSummon = (playerGachaState, dispatch) => {
     }
   }
 
-  const newSummon = generateNewSummon({
-    summonSourceId: selectedSummonId,
-    quality: determinedQuality,
-    source: SUMMON_SOURCES.GACHA,
-    dispatch: dispatch
+  const newSummon = createCreatureFromTemplate({
+    templateId: selectedSummonId,
+    level: 1
   });
 
   return {

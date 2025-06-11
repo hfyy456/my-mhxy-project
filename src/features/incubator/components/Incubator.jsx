@@ -13,7 +13,6 @@ import {
 
 } from "@/store/slices/incubatorSlice";
 import { useSummonManager } from "@/hooks/useSummonManager";
-import { generateNewSummon } from "@/utils/summonUtils";
 import { summonConfig } from "@/config/summon/summonConfig";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import { useToast } from "@/hooks/useToast";
@@ -91,14 +90,14 @@ export const Incubator = ({ toasts, setToasts }) => {
 
     if (action.payload.result) {
       const { summonType, summonQuality } = action.payload.result;
-      const newSummonData = generateNewSummon({
-        summonSourceId: summonType,
-        quality: summonQuality,
-        source: 'incubation'
-      });
+
+      const summonDataForCreation = {
+        templateId: summonType,
+        level: 1,
+      };
       
-      // 使用OOP系统创建召唤兽
-      const result = createSummon(newSummonData);
+      const result = createSummon(summonDataForCreation);
+
       if (result) {
         setErrorMessage(null);
         

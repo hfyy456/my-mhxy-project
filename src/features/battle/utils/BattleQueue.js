@@ -532,9 +532,12 @@ export class AnimationPlayQueue {
  */
 export class BattleQueueManager {
   constructor(eventBus) {
-    this.unitActionQueue = new UnitActionQueue();
-    this.animationPlayQueue = new AnimationPlayQueue(eventBus);
     this.eventBus = eventBus;
+    this.unitActionQueue = new UnitActionQueue();
+    this.animationQueue = new AnimationPlayQueue(eventBus);
+    this.isExecuting = false;
+
+ 
   }
 
   /**
@@ -562,7 +565,7 @@ export class BattleQueueManager {
     console.log(`🎯 [BattleQueueManager] 开始处理单位${action.unitId}的行动`);
 
     // 1. 处理单位行动逻辑（伤害计算等）
-    const actionResult = processActionCallback(action);
+    const actionResult =await processActionCallback(action);
 
     // 2. 如果行动被跳过，直接完成
     if (actionResult.skipped) {
@@ -572,7 +575,7 @@ export class BattleQueueManager {
     }
 
     // 3. 根据行动结果生成动画序列
-    const animations = this.animationPlayQueue.generateAnimationSequence({
+    const animations = this.animationQueue.generateAnimationSequence({
       unitId: action.unitId,
       action: action.action,
       result: actionResult
@@ -586,10 +589,10 @@ export class BattleQueueManager {
     }
 
     // 5. 将动画加入播放队列
-    this.animationPlayQueue.enqueue(animations);
+    this.animationQueue.enqueue(animations);
 
     // 6. 播放所有动画
-    await this.animationPlayQueue.playAll();
+    await this.animationQueue.playAll();
 
     // 5. 标记当前行动已完成
     this.unitActionQueue.markCurrentAsProcessed();
@@ -605,7 +608,7 @@ export class BattleQueueManager {
   getStatus() {
     return {
       unitQueue: this.unitActionQueue.getStatus(),
-      animationQueue: this.animationPlayQueue.getStatus()
+      animationQueue: this.animationQueue.getStatus()
     };
   }
 } 

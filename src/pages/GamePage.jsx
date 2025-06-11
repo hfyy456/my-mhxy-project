@@ -349,7 +349,14 @@ const GamePageContent = ({
   // 确认进入战斗
   const handleConfirmBattle = (data) => {
     console.log('战斗确认:', data);
-    // 开始战斗
+    
+    const battlePayload = {
+      playerFormation: data.playerFormation,
+      enemyGroup: enemyGroup,
+    };
+    
+    handleStartBattle(battlePayload);
+
     setShowBattlePrep(false);
     setEnemyGroup(null);
   };

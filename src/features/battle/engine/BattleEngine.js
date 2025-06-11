@@ -14,6 +14,7 @@ import { decideEnemyAction } from '@/features/battle/logic/battleAI';
 import { summonConfig } from '@/config/summon/summonConfig';
 import { activeSkillConfig } from '@/config/skill/activeSkillConfig';
 import { BattleQueueManager } from '../utils/BattleQueue';
+import { ANIMATION_EVENTS } from '../config/animationConfig.js';
 
 // 战斗引擎状态枚举
 export const BATTLE_ENGINE_STATES = {
@@ -86,6 +87,15 @@ export class BattleEngine {
     this._log('战斗引擎创建完成', { id: this.id });
   }
 
+  _subscribeToInternalEvents() {
+    if (!this.externalEventBus) {
+      this._log('事件总线不可用，无法订阅内部事件');
+      return;
+    }
+    this.externalEventBus.subscribe(ANIMATION_EVENTS.HIT_COMPLETE, this._handleApplyDamage.bind(this));
+    this._log('已成功订阅内部事件');
+  }
+
   /**
    * 初始化战斗
    * @param {Object} battleConfig - 战斗配置数据
@@ -120,6 +130,8 @@ export class BattleEngine {
         playerUnits: Object.keys(this.battleData.playerUnits).length,
         enemyUnits: Object.keys(this.battleData.enemyUnits).length
       });
+      
+      this._subscribeToInternalEvents(); // 初始化后订阅事件
       
       // 自动推进到准备阶段
       if (this.options.autoAdvance) {
@@ -805,7 +817,7 @@ export class BattleEngine {
    * 处理攻击行动
    * @private
    */
-  _processAttackAction(sourceUnit, action) {
+  async _processAttackAction(sourceUnit, action) {
     const targetIds = action.targets || action.targetIds || [];
     if (targetIds.length === 0) {
       return { success: false, error: '没有指定目标' };
@@ -821,74 +833,22 @@ export class BattleEngine {
         return;
       }
       
-                   // 计算伤害
-      const damageResult = calculateBattleDamage(sourceUnit, targetUnit, 'physical');
+      const damageResult = calculateBattleDamage(sourceUnit, targetUnit, 'auto');
       
-      // 应用伤害
-      const finalDamage = Math.max(0, damageResult.finalDamage);
-      const damageApplyResult = applyDamageToTarget(targetUnit, finalDamage, sourceUnit);
-      
-      // 更新目标单位数据
-      if (damageApplyResult.updatedTarget) {
-        // 找到目标单位的位置并更新
-        if (this.battleData.playerUnits[targetId]) {
-          this.battleData.playerUnits[targetId] = damageApplyResult.updatedTarget;
-        } else if (this.battleData.enemyUnits[targetId]) {
-          this.battleData.enemyUnits[targetId] = damageApplyResult.updatedTarget;
-        }
-        
-        // 检查是否被击败
-        if (damageApplyResult.isDead) {
-          damageApplyResult.updatedTarget.isDefeated = true;
-        }
-      }
-      
-      // 更新源单位数据（如果有反弹伤害）
-      if (damageApplyResult.updatedSource && damageApplyResult.reflectDamage > 0) {
-        if (this.battleData.playerUnits[sourceUnit.id]) {
-          this.battleData.playerUnits[sourceUnit.id] = damageApplyResult.updatedSource;
-        } else if (this.battleData.enemyUnits[sourceUnit.id]) {
-          this.battleData.enemyUnits[sourceUnit.id] = damageApplyResult.updatedSource;
-        }
-      }
-      
-      results.push({
-        targetId,
-        damage: finalDamage,
-        isCrit: damageResult.isCrit,
-        isDefeated: damageApplyResult.isDead,
-        previousHp: damageApplyResult.previousHp,
-        newHp: damageApplyResult.newHp,
-        shieldAbsorbed: damageApplyResult.shieldAbsorbed,
-        reflectDamage: damageApplyResult.reflectDamage
-      });
-      
-      // 创建符合BattleUnitSprite期待格式的日志消息
-      const critText = damageResult.isCrit ? '暴击！' : '';
-      const attackMessage = `${sourceUnit.name} 攻击 ${damageApplyResult.updatedTarget?.name || targetUnit.name} 造成了 ${finalDamage} 点伤害${critText ? `，${critText}` : ''}`;
-      
-      this._log(attackMessage, {
-        unitId: sourceUnit.id,      // 修复：使用unitId而不是sourceId
-        sourceId: sourceUnit.id,    // 保留sourceId用于向后兼容
-        targetId,
-        damage: finalDamage,
-        isCrit: damageResult.isCrit,
-        previousHp: damageApplyResult.previousHp,
-        newHp: damageApplyResult.newHp
-      });
-      
-      // 发射伤害事件供UI处理动画
-      this._emit('DAMAGE_DEALT', {
+      this.externalEventBus?.emit('DAMAGE_DEALT', {
         sourceId: sourceUnit.id,
         sourceName: sourceUnit.name,
         targetId,
-        targetName: damageApplyResult.updatedTarget?.name || targetUnit.name,
-        damage: finalDamage,
-        isCrit: damageResult.isCrit,
-        previousHp: damageApplyResult.previousHp,
-        newHp: damageApplyResult.newHp,
-        isDefeated: damageApplyResult.isDead,
+        targetName: targetUnit.name,
+        damage: damageResult.finalDamage,
+        isCrit: damageResult.details.isCritical,
         timestamp: Date.now()
+      });
+      
+      results.push({
+        targetId,
+        damage: damageResult.finalDamage,
+        isCrit: damageResult.details.isCritical,
       });
     });
     
@@ -950,17 +910,25 @@ export class BattleEngine {
    * @private
    */
   _checkBattleEnd() {
-    const playerUnitsAlive = Object.values(this.battleData.playerUnits)
-      .some(unit => !unit.isDefeated);
-    const enemyUnitsAlive = Object.values(this.battleData.enemyUnits)
-      .some(unit => !unit.isDefeated);
-    
-    if (!playerUnitsAlive) {
-      return { isEnded: true, result: { type: 'defeat', reason: 'all_player_units_defeated' } };
+    // Check for battle end conditions
+    if (Object.keys(this.battleData.playerUnits).length === 0 || Object.keys(this.battleData.enemyUnits).length === 0) {
+      this._log('战斗结束检查异常：一方单位列表为空，战斗无法继续', {
+        playerUnitCount: Object.keys(this.battleData.playerUnits).length,
+        enemyUnitCount: Object.keys(this.battleData.enemyUnits).length,
+      });
+      return { isEnded: false }; 
     }
-    
-    if (!enemyUnitsAlive) {
-      return { isEnded: true, result: { type: 'victory', reason: 'all_enemy_units_defeated' } };
+
+    const allPlayerUnitsDefeated = Object.values(this.battleData.playerUnits)
+      .every(unit => unit.isDefeated);
+    const allEnemyUnitsDefeated = Object.values(this.battleData.enemyUnits)
+      .every(unit => unit.isDefeated);
+      console.log(allPlayerUnitsDefeated,allEnemyUnitsDefeated,"allPlayerUnitsDefeated,allEnemyUnitsDefeated");
+    if (allPlayerUnitsDefeated || allEnemyUnitsDefeated) {
+      this.isBattleOver = true;
+      const winner = allPlayerUnitsDefeated ? 'enemies' : 'player';
+      this._log(`战斗结束. 胜利者: ${winner}`);
+      return { isEnded: true, result: { type: winner === 'player' ? 'victory' : 'defeat', reason: 'all_units_defeated' } };
     }
     
     return { isEnded: false };
@@ -1535,6 +1503,60 @@ export class BattleEngine {
   setExternalEventBus(eventBus) {
     this.externalEventBus = eventBus;
     console.log(`🔗 [BattleEngine] 外部事件总线已设置:`, !!eventBus);
+  }
+
+  _updateUnitInBattleData(unit) {
+    if (!unit) return;
+
+    if (this.battleData.playerUnits[unit.id]) {
+      this.battleData.playerUnits[unit.id] = unit;
+    } else if (this.battleData.enemyUnits[unit.id]) {
+      this.battleData.enemyUnits[unit.id] = unit;
+    }
+  }
+
+  _handleApplyDamage(event) {
+    const { unitId, damage, isCrit } = event.data;
+    const targetUnit = this.battleData.playerUnits[unitId] || this.battleData.enemyUnits[unitId];
+
+    if (!targetUnit || targetUnit.isDefeated) {
+      return;
+    }
+
+    const { 
+      updatedTarget,
+      updatedSource,
+      isDefeated 
+    } = applyDamageToTarget(targetUnit, damage);
+
+    this._updateUnitInBattleData(updatedTarget);
+    if (updatedSource) {
+      this._updateUnitInBattleData(updatedSource);
+    }
+
+    const critText = isCrit ? '暴击！' : '';
+    const attackMessage = `${updatedTarget.name} 受到 ${damage} 点伤害${critText ? `，${critText}` : ''}`;
+    
+    this._log(attackMessage, {
+      unitId: updatedTarget.id,
+      damage: damage,
+      isCrit: isCrit,
+      newHp: updatedTarget.stats.currentHp,
+    });
+
+    if (isDefeated) {
+      this._log('单位已被击败', { 
+        unitId: updatedTarget.id, 
+        unitName: updatedTarget.name 
+      });
+    }
+
+    // 发射数据更新事件，通知UI刷新
+    this._emit('BATTLE_DATA_UPDATED', {
+      battleUnits: this.getState().battleUnits,
+      reason: 'damage_applied',
+      updatedUnitId: unitId,
+    });
   }
 }
 

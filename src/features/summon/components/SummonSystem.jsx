@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:06:55
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-06 06:40:59
+ * @LastEditTime: 2025-06-12 07:17:25
  */
 import React, { useEffect, useCallback, useState, useMemo, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,11 +17,7 @@ import FusionHistoryModal from "./FusionHistoryModal";
 import { useSummonSystem } from "../hooks/useSummonSystem";
 // 引入OOP召唤兽管理系统
 import {
-  useSummonManager,
-  useCurrentSummon,
-  useSummonList,
-  useSummonStats,
-  useSummonOperations
+  useSummonManager
 } from "@/hooks/useSummonManager";
 
 import { useInventoryActions } from "../../../hooks/useInventoryManager";
@@ -58,6 +54,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
     deleteSummon,
     cloneSummon,
     clearError,
+    registerSummon,
     manager,
   } = useSummonManager();
 
@@ -168,8 +165,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
         }]);
         return;
       }
-      const result = refineMonster(playerLevel);
-      if (result.newSummonPayload && result.newlyCreatedItems && result.historyItem) {
+      const result = await refineMonster();
+      console.log(result,"result");
+      if (result.newSummonInstance && result.newlyCreatedItems && result.historyItem) {
         // 改进物品添加逻辑 - 使用异步并行处理
         // 关键修复：过滤掉可能的null值，防止后续代码出错
         const validItems = result.newlyCreatedItems.filter(item => item !== null);
@@ -219,17 +217,17 @@ const SummonSystem = ({ toasts, setToasts }) => {
 
         if (result.requireNickname) {
           setSelectedSummonForNickname({
-            ...result.newSummonPayload,
-            name: summonConfig[result.newSummonPayload.summonSourceId]?.name || result.newSummonPayload.name
+            ...result.newSummonInstance,
+            name: summonConfig[result.newSummonInstance.summonSourceId]?.name || result.newSummonInstance.name
           });
           setIsNicknameModalOpen(true);
           setTempSummonData({
-            summonPayload: result.newSummonPayload,
+            summonPayload: result.newSummonInstance,
             historyItem: result.historyItem
           });
         } else {
           // 直接使用OOP系统创建召唤兽
-          const oopResult = createSummon(result.newSummonPayload);
+          const oopResult = registerSummon(result.newSummonInstance);
           if (oopResult) {
             // dispatch(addRefinementHistoryItem(result.historyItem));
             manager.setCurrentSummon(oopResult.id);
@@ -250,7 +248,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
         type: 'error'
       }]);
     }
-  }, [summonsList.length, maxSummons, playerLevel, inventoryActions, setToasts, createSummon, dispatch, manager]);
+  }, [summonsList.length, maxSummons, playerLevel, inventoryActions, setToasts, createSummon, dispatch, manager, registerSummon]);
 
   const handleFusion = useCallback(async (newSummon, summon1Id, summon2Id) => {
     try {
@@ -292,7 +290,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
         manager.setCurrentSummon(null);
       }
     }
-  }, [summonsList, currentSummon, manager]);
+  }, [JSON.stringify(summonsList), currentSummon, manager]);
 
   const handleEquipItem = useCallback(async (itemId) => {
     try {
@@ -418,6 +416,8 @@ const SummonSystem = ({ toasts, setToasts }) => {
     }
   }, [equipmentError, clearEquipmentError]);
 
+  console.log('[SummonSystem] Rendering. currentSummonId from hook:', currentSummonId, 'Full data object id:', currentSummonFullData?.id);
+
   return (
     <div className="w-full h-full flex flex-col summon-system-compact relative">
       {/* 装饰性角落元素 */}
@@ -480,7 +480,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
                 summonsList.map(summon => (
                   <button
                     key={summon.id}
-                    onClick={() => manager.setCurrentSummon(summon.id)}
+                    onClick={() => {
+                      manager.setCurrentSummon(summon.id);
+                    }}
                     className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-all duration-150 flex items-center 
                                 ${currentSummon?.id === summon.id 
                                   ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white font-medium shadow-md border border-amber-500/50' 
@@ -502,6 +504,10 @@ const SummonSystem = ({ toasts, setToasts }) => {
           {currentSummon ? (
             <SummonInfo
               summon={currentSummon}
+              levelUpSummon={levelUpSummon}
+              allocatePoints={allocatePoints}
+              resetPoints={resetPoints}
+              deleteSummon={deleteSummon}
               onOpenEquipmentSelectorForSlot={onOpenEquipmentSelectorForSlot}
               onLearnSkill={handleOpenSkillEditor}
               onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}

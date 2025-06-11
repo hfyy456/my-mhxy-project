@@ -238,6 +238,25 @@ export const useSummonManager = () => {
       }
     },
 
+    // 注册已有的召唤兽实例
+    registerSummon: (summonInstance) => {
+      try {
+        setIsLoading(true);
+        const result = summonManager.registerSummon(summonInstance);
+        // 强制更新状态
+        setState(summonManager.getState());
+        return result;
+      } catch (error) {
+        setError({
+          message: '注册召唤兽失败',
+          details: error.message
+        });
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+
     // 删除召唤兽
     deleteSummon: (summonId) => {
       try {
@@ -341,11 +360,19 @@ export const useSummonManager = () => {
     }
   }), [summonManager]);
 
+  const currentSummonFullData = useMemo(() => {
+    if (!state.currentSummonId || !state.allSummons) {
+      return null;
+    }
+    return state.allSummons[state.currentSummonId] || null;
+  }, [state.currentSummonId, state.allSummons]);
+
   return {
     // 状态
     ...state,
     isLoading,
     error,
+    currentSummonFullData,
     
     // 操作
     ...operations,

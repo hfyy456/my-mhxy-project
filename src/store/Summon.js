@@ -89,6 +89,7 @@ class Summon {
 
   async recalculateAllAttributes() {
     try {
+    
       const equippedItems = await this.getEquippedItems();
       const effectiveBasic = this.getEffectiveBasicAttributes();
       const result = calculateDerivedAttributes(effectiveBasic, equippedItems, this.level);
@@ -257,24 +258,58 @@ class Summon {
       nickname: this.nickname,
       level: this.level,
       experience: this.experience,
+      quality: this.quality,
       creatureType: this.creatureType,
       isCapturable: this.isCapturable,
-      quality: this.quality,
       fiveElement: this.fiveElement,
       natureType: this.natureType,
       personalityId: this.personalityId,
       basicAttributes: { ...this.basicAttributes },
       allocatedPoints: { ...this.allocatedPoints },
       potentialPoints: this.potentialPoints,
-      derivedAttributes: { ...this.derivedAttributes },
-      equipmentContributions: { ...this.equipmentContributions },
-      equipmentBonusesToBasic: { ...this.equipmentBonusesToBasic },
-      power: this.power,
       skillSet: [...this.skillSet],
       skillLevels: { ...this.skillLevels },
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
-      combatRole: this.combatRole,
+      derivedAttributes: { ...this.derivedAttributes },
+      equipmentContributions: { ...this.equipmentContributions },
+      equipmentBonusesToBasic: { ...this.equipmentBonusesToBasic },
+      power: this.power, 
+    };
+  }
+
+  toBattleJSON() {
+    const config = this.getConfig();
+    return {
+      id: this.id,
+      name: this.nickname || config.name,
+      level: this.level,
+      isPlayerUnit: true, // 默认是玩家单位，可在适配器中修改
+      
+      // 战斗核心统计数据
+      stats: {
+        ...this.derivedAttributes,
+        // 确保战斗开始时currentHp和currentMp是满的
+        currentHp: this.derivedAttributes.hp, 
+        currentMp: this.derivedAttributes.mp,
+        maxHp: this.derivedAttributes.hp, 
+        maxMp: this.derivedAttributes.mp
+      },
+      
+      // 其他战斗相关数据
+      skillSet: [...this.skillSet],
+      skillLevels: { ...this.skillLevels },
+      fiveElement: this.fiveElement,
+      
+      // 原始数据，用于调试或非战斗场景
+      _source: {
+        summonSourceId: this.summonSourceId,
+        sourceId: this.sourceId,
+        quality: this.quality,
+        natureType: this.natureType,
+        basicAttributes: { ...this.basicAttributes },
+        allocatedPoints: { ...this.allocatedPoints },
+      }
     };
   }
 

@@ -198,6 +198,11 @@ export const processBuffsOnTurnStart = (targetUnit) => {
     return [];
   }
 
+  // 确保 statusEffects 是一个数组
+  if (!Array.isArray(targetUnit.statusEffects)) {
+    return [];
+  }
+
   const results = [];
 
   // 处理每个BUFF的效果
@@ -525,34 +530,52 @@ export const calculateModifiedAttribute = (targetUnit, attributeName) => {
   return Math.max(modifiedValue, 0);
 };
 
-
-
 /**
  * 计算伤害修正（考虑BUFF效果）
  * @param {Object} sourceUnit - 源战斗单位
  * @param {Object} targetUnit - 目标战斗单位
  * @param {number} baseDamage - 基础伤害值
  * @param {string} damageElement - 伤害元素类型
- * @returns {number} - 修正后的伤害值
+ * @returns {number} - 返回修正后的伤害值
  */
 export const calculateDamageModifiers = (sourceUnit, targetUnit, baseDamage, damageElement) => {
-  if (!sourceUnit || !targetUnit) {
-    return baseDamage;
-  }
-
   let modifiedDamage = baseDamage;
 
+  const sourceBuffs = Array.isArray(sourceUnit?.statusEffects) ? sourceUnit.statusEffects : [];
+  const targetBuffs = Array.isArray(targetUnit?.statusEffects) ? targetUnit.statusEffects : [];
+
+  // 攻击方伤害加成
+  sourceBuffs
+    .filter(buff => buff.effectType === BUFF_EFFECT_TYPES.DAMAGE_BOOST && buff.isActive !== false)
+    .forEach(buff => {
+      modifiedDamage *= (buff.valueMultiplier || 1.0);
+    });
+
+  // 防御方易伤效果
+  targetBuffs
+    .filter(buff => buff.effectType === BUFF_EFFECT_TYPES.VULNERABILITY && buff.isActive !== false)
+    .forEach(buff => {
+      modifiedDamage *= (buff.valueMultiplier || 1.0);
+    });
+
+  // 防御方伤害减免
+  targetBuffs
+    .filter(buff => buff.effectType === BUFF_EFFECT_TYPES.DAMAGE_REDUCTION && buff.isActive !== false)
+    .forEach(buff => {
+      modifiedDamage *= (1 - (buff.value || 0));
+    });
+  
   // 检查目标是否被冻结（受到更多伤害）
-  const freezeEffect = targetUnit.statusEffects.find(
+  const freezeEffect = targetBuffs.find(
     buff => buff.effectType === BUFF_EFFECT_TYPES.FREEZE
   );
   if (freezeEffect) {
-    modifiedDamage *= freezeEffect.damageTakenMultiplier || 1.5;
+    modifiedDamage *= (freezeEffect.valueMultiplier || 1.5); // 默认增加50%伤害
   }
 
   // 其他伤害修正逻辑...
 
-  return modifiedDamage;
+  return Math.max(modifiedDamage, 0);
 };
 
 /**

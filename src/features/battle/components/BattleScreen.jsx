@@ -57,16 +57,6 @@ const BattleScreen = () => {
   const selectedUnit = battleUI.selectedUnitId && battleUnits[battleUI.selectedUnitId] ? 
     battleUnits[battleUI.selectedUnitId] : null;
   
-
-  
-
-  
-
-  
-
-  
-
-
   // 处理退出战斗
   const handleExitBattle = () => {
     // 使用适配器系统结束战斗并将结果返回Redux
@@ -135,13 +125,9 @@ const BattleScreen = () => {
             {...componentData.gridData}
           />
         </div>
-      
 
-   
       </div>
-      
-
-      
+           
       {/* 回合和阶段信息已移至VS上方显示 */}
       
       {/* 行动顺序时间轴 - 悬浮在上方 */}

@@ -5,15 +5,17 @@
  */
 
 import { BattleEngineAdapter } from './BattleEngineAdapter';
+import summonManagerInstance from '@/store/SummonManager';
 
 /**
  * Redux战斗适配器类
  * 负责Redux状态与战斗引擎之间的数据转换和交换
  */
 export class ReduxBattleAdapter {
-  constructor(dispatch, getState, options = {}) {
+  constructor(dispatch, getState, summonManager, options = {}) {
     this.dispatch = dispatch;
     this.getState = getState;
+    this.summonManager = summonManager || summonManagerInstance;
     
     // 创建战斗引擎适配器
     this.engineAdapter = new BattleEngineAdapter(options);
@@ -43,6 +45,7 @@ export class ReduxBattleAdapter {
     this.getControlStatus = this.getControlStatus.bind(this);
     this.forceReset = this.forceReset.bind(this);
 
+    this._subscribeToEngineEvents(); // 订阅引擎事件
     this._log('Redux战斗适配器创建完成');
   }
 
@@ -332,25 +335,58 @@ export class ReduxBattleAdapter {
   // ==================== 私有方法 ====================
 
   /**
+   * 订阅关键的战斗引擎事件
+   * @private
+   */
+  _subscribeToEngineEvents() {
+    if (!this.eventBus) {
+      this._log('事件总线不可用，无法订阅事件');
+      return;
+    }
+
+    this.eventBus.subscribe('DAMAGE_DEALT', this._handleDamageDealt.bind(this));
+    // 在这里可以订阅更多事件...
+    
+    this._log('已成功订阅战斗引擎事件');
+  }
+
+  /**
+   * 处理伤害事件
+   * @private
+   */
+  _handleDamageDealt(event) {
+    const { targetId, newHp, isDefeated } = event.data;
+    this._log('接收到伤害事件，准备派发到Redux', event.data);
+
+    this.dispatch({
+      type: 'battle/applyDamage',
+      payload: {
+        unitId: targetId,
+        newHp,
+        isDefeated
+      }
+    });
+  }
+
+  /**
    * 转换Redux数据为战斗引擎配置
    * @private
    */
   _convertReduxToBattleConfig(initPayload, reduxState) {
     this._log('转换战斗配置数据', { initPayload });
     
-    const { battleUnits, playerTeam, enemyTeam, playerFormation, enemyFormation } = initPayload;
+    const { battleUnits, playerTeam, enemyTeam, playerFormation, enemyGroup } = initPayload;
     
-    // 处理新格式：battleUnits 对象
+    let playerUnits = {};
+    let enemyUnits = {};
+
+    // 优先处理新格式：battleUnits 对象
     if (battleUnits && typeof battleUnits === 'object') {
-      const playerUnits = {};
-      const enemyUnits = {};
-      
-      // 从 battleUnits 对象中分离玩家和敌方单位
       Object.entries(battleUnits).forEach(([unitId, unit]) => {
         const unitWithPosition = {
           ...unit,
           gridPosition: this._getUnitGridPosition(unitId, 
-            unit.isPlayerUnit ? playerFormation : enemyFormation, 
+            unit.isPlayerUnit ? playerFormation : enemyGroup?.formation, 
             0)
         };
         
@@ -360,43 +396,65 @@ export class ReduxBattleAdapter {
           enemyUnits[unitId] = unitWithPosition;
         }
       });
-      
-      this._log('数据转换完成', { 
-        playerUnitsCount: Object.keys(playerUnits).length,
-        enemyUnitsCount: Object.keys(enemyUnits).length 
-      });
-      
-      return {
-        battleId: initPayload.battleId,
-        playerUnits,
-        enemyUnits,
-        playerFormation: playerFormation || this._createEmptyFormation(),
-        enemyFormation: enemyFormation || this._createEmptyFormation()
-      };
-    }
-    
-    // 处理旧格式：playerTeam 和 enemyTeam 数组（向后兼容）
-    const playerUnits = {};
-    if (playerTeam && Array.isArray(playerTeam)) {
-      playerTeam.forEach((unit, index) => {
-        playerUnits[unit.id] = {
-          ...unit,
-          gridPosition: this._getUnitGridPosition(unit.id, playerFormation, index)
-        };
-      });
+    } else {
+      // 处理玩家单位 (向后兼容或新格式)
+      if (playerTeam && Array.isArray(playerTeam)) {
+        playerTeam.forEach((unit, index) => {
+          playerUnits[unit.id] = {
+            ...unit,
+            gridPosition: this._getUnitGridPosition(unit.id, playerFormation, index)
+          };
+        });
+      } else if (playerFormation) {
+        playerFormation.flat().forEach(summonId => {
+          if (summonId) {
+            const summonInstance = this.summonManager.getSummonById(summonId);
+            if (summonInstance) {
+              const unitData = summonInstance.toBattleJSON();
+              playerUnits[unitData.id] = {
+                ...unitData,
+                isPlayerUnit: true,
+                gridPosition: this._getUnitGridPosition(unitData.id, playerFormation, 0)
+              };
+            }
+          }
+        });
+      }
+
+      // 处理敌人单位
+      if (enemyGroup?.units) { // 保持旧逻辑以兼容
+        Object.values(enemyGroup.units).forEach((unit, index) => {
+          enemyUnits[unit.id] = {
+            ...unit,
+            isPlayerUnit: false,
+            isDefeated: false,
+            gridPosition: this._getUnitGridPosition(unit.id, enemyGroup.formation, index)
+          };
+        });
+      } else if (enemyGroup?.enemies && Array.isArray(enemyGroup.enemies)) { // 新增的正确逻辑
+        const enemyFormationGrid = enemyGroup.enemyFormation?.grid;
+        enemyGroup.enemies.forEach((summonInstance, index) => {
+          const unit = summonInstance.toBattleJSON(); // 转换为普通对象
+          enemyUnits[unit.id] = {
+            ...unit,
+            isPlayerUnit: false,
+            isDefeated: false,
+            gridPosition: this._getUnitGridPosition(unit.id, enemyFormationGrid, index)
+          };
+        });
+      } else if (enemyTeam && Array.isArray(enemyTeam)) { // 保持旧逻辑以兼容
+        enemyTeam.forEach((unit, index) => {
+          enemyUnits[unit.id] = {
+            ...unit,
+            isPlayerUnit: false,
+            isDefeated: false,
+            gridPosition: this._getUnitGridPosition(unit.id, initPayload.enemyFormation, index)
+          };
+        });
+      }
     }
 
-    const enemyUnits = {};
-    if (enemyTeam && Array.isArray(enemyTeam)) {
-      enemyTeam.forEach((unit, index) => {
-        enemyUnits[unit.id] = {
-          ...unit,
-          gridPosition: this._getUnitGridPosition(unit.id, enemyFormation, index)
-        };
-      });
-    }
-
-    this._log('旧格式数据转换完成', { 
+    this._log('数据转换完成', { 
       playerUnitsCount: Object.keys(playerUnits).length,
       enemyUnitsCount: Object.keys(enemyUnits).length 
     });
@@ -406,7 +464,8 @@ export class ReduxBattleAdapter {
       playerUnits,
       enemyUnits,
       playerFormation: playerFormation || this._createEmptyFormation(),
-      enemyFormation: enemyFormation || this._createEmptyFormation()
+      // 修正阵型路径
+      enemyFormation: enemyGroup?.enemyFormation?.grid || enemyGroup?.formation || initPayload.enemyFormation || this._createEmptyFormation()
     };
   }
 

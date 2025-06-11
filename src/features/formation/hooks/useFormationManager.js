@@ -33,7 +33,7 @@ export const useFormationManager = () => {
     const summonsArray = Object.values(summonManagerState.summonsData);
     console.log('[useFormationManager] 使用 summonsData，数组:', summonsArray);
     return summonsArray;
-  }, [summonManagerState?.summonsData, allSummonsFromOOP]);
+  }, [JSON.stringify(allSummonsFromOOP), summonManagerState?.summonsData]);
 
   // 强制更新函数
   const forceUpdate = useCallback(() => {

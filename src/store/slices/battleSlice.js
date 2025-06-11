@@ -845,6 +845,24 @@ const battleSlice = createSlice({
       return initialState; // 重置为初始状态
     },
     
+    // 应用伤害（由引擎事件触发）
+    applyDamage: (state, action) => {
+      const { unitId, newHp, isDefeated } = action.payload;
+      const unit = state.battleUnits[unitId];
+
+      if (unit) {
+        // 确保 stats 对象存在
+        if (unit.stats) {
+          unit.stats.currentHp = newHp;
+          unit.isDefeated = isDefeated;
+        } else {
+          console.warn(`[battleSlice] applyDamage: Unit ${unitId} has no stats object.`);
+        }
+      } else {
+        console.warn(`[battleSlice] applyDamage: Unit ${unitId} not found.`);
+      }
+    },
+    
     // 更新单位状态 (例如，HP变化，状态效果)
     updateBattleUnit: (state, action) => {
       // payload: { unitId: string, changes: Partial<BattleUnit> }

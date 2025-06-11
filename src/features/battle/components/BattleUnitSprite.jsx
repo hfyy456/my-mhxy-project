@@ -590,10 +590,18 @@ const BattleUnitSprite = ({
             
             // 通知AnimationManager受击动画完成
             if (adapter?.eventBus) {
-              adapter.eventBus.emit(ANIMATION_EVENTS.HIT_COMPLETE, {
+              const eventData = {
                 unitId: unit.id,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                damage: data.damage,
+                isCrit: data.isCrit,
+              };
+              console.log(`📤 [BattleUnitSprite] 发送受击完成事件:`, {
+                eventName: ANIMATION_EVENTS.HIT_COMPLETE,
+                eventData,
+                unitName: unit.name
               });
+              adapter.eventBus.emit(ANIMATION_EVENTS.HIT_COMPLETE, eventData);
             }
             
             // 检查是否应该触发死亡动画
@@ -832,8 +840,8 @@ const BattleUnitSprite = ({
           <img 
             src={
               unit.spriteAssetKey &&
-              images[`/src/assets/summons/${unit.spriteAssetKey}.png`]?.default
-                ? images[`/src/assets/summons/${unit.spriteAssetKey}.png`]
+              images[`/src/assets/summons/${unit.id}.png`]?.default
+                ? images[`/src/assets/summons/${unit.id}.png`]
                     .default
                 : images["/src/assets/summons/default.png"].default
             }

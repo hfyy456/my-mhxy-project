@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ReduxBattleAdapter } from '../adapters/ReduxBattleAdapter.js';
+import summonManagerInstance from '@/store/SummonManager';
 
 // 创建Context
 const BattleAdapterContext = createContext(null);
@@ -27,7 +28,7 @@ export const BattleAdapterProvider = ({ children }) => {
     const getState = () => ({ battle: battleState });
     
     // 创建Redux战斗适配器（内部会创建引擎适配器）
-    const reduxBattleAdapter = new ReduxBattleAdapter(dispatch, getState);
+    const reduxBattleAdapter = new ReduxBattleAdapter(dispatch, getState, summonManagerInstance);
     
     adapterRef.current = reduxBattleAdapter;
     setAdapter(reduxBattleAdapter);

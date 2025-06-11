@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-05-25 06:38:11
+ * @LastEditTime: 2025-06-12 05:40:56
  * @Description: 战斗系统伤害结算逻辑
  */
 import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
@@ -364,7 +364,7 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
       // 应用反弹伤害到源单位
       const sourceCurrentHp = source.stats.currentHp;
       const sourceNewHp = Math.max(0, sourceCurrentHp - reflectDamage);
-      const sourceIsDead = sourceNewHp <= 0;
+      const sourceisDefeated = sourceNewHp <= 0;
       
       // 更新源单位的生命值
       source = {
@@ -373,7 +373,7 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
           ...source.stats,
           currentHp: sourceNewHp
         },
-        isDead: sourceIsDead
+        isDefeated: sourceisDefeated
       };
     }
   }
@@ -383,7 +383,7 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
   const newHp = Math.max(0, currentHp - finalDamage);
   
   // 检查目标是否死亡
-  const isDead = newHp <= 0;
+  const isDefeated = newHp <= 0;
   
   // 更新目标单位的生命值
   const updatedTarget = {
@@ -392,7 +392,7 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
       ...target.stats,
       currentHp: newHp
     },
-    isDead
+    isDefeated
   };
   
   // 返回更新结果
@@ -402,7 +402,7 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
     damageApplied: finalDamage,
     previousHp: currentHp,
     newHp,
-    isDead,
+    isDefeated,
     shieldAbsorbed,
     reflectDamage,
     shieldResult,

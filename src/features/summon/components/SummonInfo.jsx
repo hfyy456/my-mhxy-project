@@ -120,11 +120,17 @@ const BASIC_ATTRIBUTE_KEYS = [
 ];
 
 const SummonInfo = ({
+  summon,
   onOpenEquipmentSelectorForSlot,
   onOpenSkillEditorForSlot,
   onOpenNicknameModal,
+  levelUpSummon,
+  allocatePoints,
+  resetPoints,
+  deleteSummon,
 }) => {
-  // 使用OOP召唤兽管理系统替代Redux
+  // 使用OOP召唤兽管理系统替代Redux (已从props接收，故移除)
+  /*
   const {
     currentSummonFullData: summon,
     getSummonById,
@@ -136,6 +142,7 @@ const SummonInfo = ({
     isLoading,
     error
   } = useSummonManager();
+  */
   
   // 实例化新的装备关系 Hook
   const { unequipFromSlot } = useEquipmentRelationship();

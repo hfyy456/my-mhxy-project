@@ -436,7 +436,7 @@ export class BattleEngineAdapter {
       battleId: engineState.battleId,
       currentPhase: engineState.currentPhase,
       currentRound: engineState.currentRound,
-      battleUnits,
+      battleUnits: JSON.parse(JSON.stringify(battleUnits)),
       playerFormation: engineState.battleData.playerFormation || [],
       enemyFormation: engineState.battleData.enemyFormation || [],
       turnOrder: engineState.battleData.turnOrder || [],

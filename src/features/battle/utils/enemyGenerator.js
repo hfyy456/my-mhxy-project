@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-11 05:54:32
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-11 10:18:45
+ * @LastEditTime: 2025-06-12 07:09:10
  */
 import { createCreatureFromTemplate } from '@/utils/summonUtils';
 import { SUMMON_NATURE_TYPES, SUMMON_SOURCES } from '@/config/enumConfig';
@@ -87,7 +87,7 @@ export const generateEnemyGroup = async ({ enemyPool, level, count }) => {
     const finalLevel = Math.max(1, level + levelVariance);
 
     // 1. 使用工厂函数创建 Summon 类的实例
-    const enemyInstance = createCreatureFromTemplate({
+    const enemyInstance = await createCreatureFromTemplate({
       templateId: randomTemplateId,
       level: 1, // Start at level 1
       natureType: natureType,

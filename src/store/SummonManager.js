@@ -3,17 +3,7 @@
  * 核心设计原则：封装、单一职责
  */
 import { EventEmitter } from "events";
-import {
-  summonConfig,
-  qualityConfig,
-  derivedAttributeConfig,
-  STANDARD_EQUIPMENT_SLOTS,
-  levelExperienceRequirements,
-  MAX_LEVEL,
-  POINTS_PER_LEVEL,
-  MAX_SKILLS,
-  ACTIVE_SKILL_LIMIT,
-} from "@/config/config";
+
 import {
   calculateDerivedAttributes,
   determineCombatRole,
@@ -50,13 +40,42 @@ class SummonManager extends EventEmitter {
       this.emit("error", { message: "召唤兽数量已达上限" });
       return null;
     }
-    const summon = createCreatureFromTemplate({ templateId: summonData.templateId, level: summonData.level });
+
+    // 增加兼容性，既能处理 templateId 也能处理 summonSourceId
+    const templateId = summonData.templateId || summonData.summonSourceId;
+    if (!templateId) {
+      console.error("[SummonManager] addSummon 失败: 传入的数据中缺少 templateId 或 summonSourceId。", summonData);
+      return null;
+    }
+
+    const summon = createCreatureFromTemplate({ templateId: templateId, level: summonData.level || 1 });
     if (!summon) return null;
 
     summon.setManager(this);
     this.summons[summon.id] = summon;
     this.emit("state_changed", this.getState());
     return summon;
+  }
+
+  /**
+   * Registers an already created summon instance.
+   * @param {Summon} summonInstance - The summon instance to register.
+   * @returns {Summon|null} The registered instance or null on failure.
+   */
+  registerSummon(summonInstance) {
+    if (Object.keys(this.summons).length >= this.maxSummons) {
+      this.emit("error", { message: "召唤兽数量已达上限" });
+      return null;
+    }
+    if (!(summonInstance instanceof Summon)) {
+      this.emit("error", { message: "registerSummon需要一个有效的Summon实例" });
+      return null;
+    }
+
+    summonInstance.setManager(this);
+    this.summons[summonInstance.id] = summonInstance;
+    this.emit("state_changed", this.getState());
+    return summonInstance;
   }
 
   removeSummon(summonId) {
@@ -119,7 +138,7 @@ class SummonManager extends EventEmitter {
   async recalculateSummonStats(summonId) {
     const summon = this.getSummonById(summonId);
     if (summon) {
-      await summon.recalculateAllAttributes();
+    await summon.recalculateAllAttributes();
       this.emit("state_changed", this.getState());
     }
   }
