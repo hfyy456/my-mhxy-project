@@ -398,14 +398,7 @@ export class ReduxBattleAdapter {
       });
     } else {
       // 处理玩家单位 (向后兼容或新格式)
-      if (playerTeam && Array.isArray(playerTeam)) {
-        playerTeam.forEach((unit, index) => {
-          playerUnits[unit.id] = {
-            ...unit,
-            gridPosition: this._getUnitGridPosition(unit.id, playerFormation, index)
-          };
-        });
-      } else if (playerFormation) {
+     if (playerFormation) {
         playerFormation.flat().forEach(summonId => {
           if (summonId) {
             const summonInstance = this.summonManager.getSummonById(summonId);
@@ -414,6 +407,8 @@ export class ReduxBattleAdapter {
               playerUnits[unitData.id] = {
                 ...unitData,
                 isPlayerUnit: true,
+                isDefeated: false,
+                isDefending: false,
                 gridPosition: this._getUnitGridPosition(unitData.id, playerFormation, 0)
               };
             }
@@ -422,17 +417,7 @@ export class ReduxBattleAdapter {
       }
 
       // 处理敌人单位
-      if (enemyGroup?.units) { // 保持旧逻辑以兼容
-        Object.values(enemyGroup.units).forEach((unit, index) => {
-          enemyUnits[unit.id] = {
-            ...unit,
-            isPlayerUnit: false,
-            isDefeated: false,
-            isDefending: false,
-            gridPosition: this._getUnitGridPosition(unit.id, enemyGroup.formation, index)
-          };
-        });
-      } else if (enemyGroup?.enemies && Array.isArray(enemyGroup.enemies)) { // 新增的正确逻辑
+       if (enemyGroup?.enemies && Array.isArray(enemyGroup.enemies)) { // 新增的正确逻辑
         const enemyFormationGrid = enemyGroup.enemyFormation?.grid;
         enemyGroup.enemies.forEach((summonInstance, index) => {
           const unit = summonInstance.toBattleJSON(); // 转换为普通对象
@@ -444,21 +429,14 @@ export class ReduxBattleAdapter {
             gridPosition: this._getUnitGridPosition(unit.id, enemyFormationGrid, index)
           };
         });
-      } else if (enemyTeam && Array.isArray(enemyTeam)) { // 保持旧逻辑以兼容
-        enemyTeam.forEach((unit, index) => {
-          enemyUnits[unit.id] = {
-            ...unit,
-            isPlayerUnit: false,
-            isDefeated: false,
-            gridPosition: this._getUnitGridPosition(unit.id, initPayload.enemyFormation, index)
-          };
-        });
       }
     }
 
     this._log('数据转换完成', { 
       playerUnitsCount: Object.keys(playerUnits).length,
-      enemyUnitsCount: Object.keys(enemyUnits).length 
+      playerUnits,
+      enemyUnitsCount: Object.keys(enemyUnits).length ,
+      enemyUnits
     });
 
     return {

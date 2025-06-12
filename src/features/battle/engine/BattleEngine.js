@@ -216,6 +216,18 @@ export class BattleEngine {
     }
 
     try {
+      const unit = this.getUnit(unitId);
+      if (!unit) {
+        throw new Error(`提交行动失败: 单位 ${unitId} 不存在`);
+      }
+
+      // 检查旧行动是否是防御，如果是，则重置防御状态
+      const oldActionData = this.unitActions.get(unitId);
+      if (oldActionData && oldActionData.action.type === 'defend' && unit.isDefending) {
+        unit.isDefending = false;
+        this._log(`${unit.name} 因新行动取消防御姿态`, { unitId });
+      }
+
       // 验证单位和行动
       this._validateAction(unitId, action);
       
@@ -225,8 +237,20 @@ export class BattleEngine {
         action,
         timestamp: Date.now()
       });
+
+      // 如果新行动是防御，立即设置防御状态
+      if (action.type === 'defend') {
+        unit.isDefending = true;
+        this._log(`${unit.name} 立即进入防御姿态 (准备阶段)`, { unitId });
+      }
       
       this._log('行动提交成功', { unitId, actionType: action.type });
+
+      // 发出事件通知UI更新
+      this._emit('BATTLE_DATA_UPDATED', {
+        reason: 'action_submitted',
+        updatedUnitId: unitId,
+      });
       
       // 检查是否所有单位都已提交行动
       if (this._allActionsSubmitted()) {
@@ -903,10 +927,8 @@ export class BattleEngine {
    * @private
    */
   _processDefendAction(sourceUnit, action) {
-    // 设置防御状态，减少受到的伤害
-    sourceUnit.isDefending = true;
-    
-    this._log(`${sourceUnit.name} 进入防御姿态`, { sourceId: sourceUnit.id });
+    // 防御状态已在准备阶段设置，此处只需记录日志
+    this._log(`${sourceUnit.name} 执行防御动作`, { sourceId: sourceUnit.id });
     
     return {
       success: true,
@@ -1486,9 +1508,23 @@ export class BattleEngine {
       };
     }
 
-    // 删除单位行动
+    // 在删除前获取旧的行动
     const hadAction = this.unitActions.has(unitId);
+    const oldActionData = hadAction ? this.unitActions.get(unitId) : null;
+
+    // 删除单位行动
     this.unitActions.delete(unitId);
+
+    // 如果旧行动是防御，则取消防御状态
+    if (oldActionData && oldActionData.action.type === 'defend' && unit.isDefending) {
+      unit.isDefending = false;
+      this._log(`${unit.name} 取消防御姿态`, { unitId });
+      // 发出事件通知UI更新
+      this._emit('BATTLE_DATA_UPDATED', {
+        reason: 'action_reset',
+        updatedUnitId: unitId,
+      });
+    }
     
     this._log('单位行动已重置', { unitId, unitName: unit.name, hadAction });
     

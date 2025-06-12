@@ -7,7 +7,7 @@ const BattleUnitDetailPanel = ({ unit }) => {
   if (!unit) return null;
 
   const { name, stats, level, elementType } = unit;
-  const { currentHp, maxHp, currentMp, maxMp, attack, defense, speed, magicAttack, magicDefense } = stats;
+  const { currentHp, maxHp, currentMp, maxMp, physicalAttack, physicalDefense, speed, magicalAttack, magicalDefense } = stats;
   
   // 计算百分比
   const hpPercent = (currentHp / maxHp) * 100;
@@ -105,20 +105,20 @@ const BattleUnitDetailPanel = ({ unit }) => {
       {/* 属性信息 */}
       <div className="grid grid-cols-2 gap-1 mb-2">
         <div className="flex items-center justify-between bg-gray-800 rounded p-1">
-          <span className="text-[10px] text-gray-400">攻击</span>
-          <span className="text-xs font-medium">{attack}</span>
+          <span className="text-[10px] text-gray-400">物攻</span>
+          <span className="text-xs font-medium">{physicalAttack}</span>
         </div>
         <div className="flex items-center justify-between bg-gray-800 rounded p-1">
           <span className="text-[10px] text-gray-400">防御</span>
-          <span className="text-xs font-medium">{defense}</span>
+          <span className="text-xs font-medium">{physicalDefense}</span>
         </div>
         <div className="flex items-center justify-between bg-gray-800 rounded p-1">
           <span className="text-[10px] text-gray-400">法攻</span>
-          <span className="text-xs font-medium">{magicAttack}</span>
+          <span className="text-xs font-medium">{magicalAttack}</span>
         </div>
         <div className="flex items-center justify-between bg-gray-800 rounded p-1">
           <span className="text-[10px] text-gray-400">法防</span>
-          <span className="text-xs font-medium">{magicDefense}</span>
+          <span className="text-xs font-medium">{magicalDefense}</span>
         </div>
         <div className="flex items-center justify-between bg-gray-800 rounded p-1 col-span-2">
           <span className="text-[10px] text-gray-400">速度</span>

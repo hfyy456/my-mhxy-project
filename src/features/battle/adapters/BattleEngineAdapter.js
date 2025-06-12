@@ -6,6 +6,7 @@
 
 import { BattleEngine } from '../engine/BattleEngine';
 import { BattleEventBus, BATTLE_EVENTS } from '../engine/BattleEventBus';
+import cloneDeep from 'lodash/cloneDeep';
 
 /**
  * 战斗引擎适配器类
@@ -430,13 +431,13 @@ export class BattleEngineAdapter {
 
     // 使用引擎直接提供的unitActions数据
     const unitActions = engineState.unitActions || {};
-
+    console.log(battleUnits,"更新，battleUnits");
     return {
       isActive: engineState.isActive,
       battleId: engineState.battleId,
       currentPhase: engineState.currentPhase,
       currentRound: engineState.currentRound,
-      battleUnits: JSON.parse(JSON.stringify(battleUnits)),
+      battleUnits: cloneDeep(battleUnits),
       playerFormation: engineState.battleData.playerFormation || [],
       enemyFormation: engineState.battleData.enemyFormation || [],
       turnOrder: engineState.battleData.turnOrder || [],

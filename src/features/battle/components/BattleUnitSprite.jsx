@@ -16,6 +16,7 @@ const BattleUnitSprite = ({
   allUnitActions = {},
   battleLog = [],
 }) => {
+
   // 🔍 调试计数器：追踪受击动画订阅和触发次数
   const hitAnimationCounters = useRef({
     subscriptions: 0,
@@ -85,6 +86,11 @@ const BattleUnitSprite = ({
   
   // 🚨 添加防御特效引用管理
   const defendEffectRef = useRef(null);
+  if (!unit) return null;
+
+  const { name, stats, isPlayerUnit, isDefeated,isDefending } = unit;
+  console.log(unit.name,unit.isDefending,"重新渲染");
+  const { currentHp, maxHp, currentMp, maxMp } = stats;
   
   // 组件挂载时初始化HP值
   useEffect(() => {
@@ -540,9 +546,9 @@ const BattleUnitSprite = ({
           setDamageTimestamp(Date.now());
           setShowDamageNumber(true);
         }
-        console.log(unit,"unit.isDefending");
+        console.log(isDefending,"unit.isDefending");
         // 如果单位正在防御，显示防御特效
-        if (unit.isDefending) {
+        if (isDefending) {
           // 🚨 清理之前的防御特效引用
           if (defendEffectRef.current) {
             defendEffectRef.current.shouldClear = true;
@@ -745,10 +751,7 @@ const BattleUnitSprite = ({
     };
   }, []);
 
-  if (!unit) return null;
 
-  const { name, stats, isPlayerUnit, isDefeated } = unit;
-  const { currentHp, maxHp, currentMp, maxMp } = stats;
   
   // 调试日志：检查unitAction结构（放在isPlayerUnit定义之后）
   useEffect(() => {

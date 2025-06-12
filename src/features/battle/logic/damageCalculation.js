@@ -7,6 +7,7 @@
  */
 import { DAMAGE_CONSTANTS, COMBAT_CONSTANTS } from '@/config/system/combatConfig';
 import { calculateDamageModifiers, processShieldAbsorption, processReflectDamage } from './buffManager';
+import cloneDeep from 'lodash/cloneDeep';
 
 /**
  * 计算物理伤害
@@ -339,6 +340,9 @@ export const simulateBattleDamage = (attacker, defender) => {
  * @returns {Object} - 更新后的目标单位和伤害应用结果
  */
 export const applyDamageToTarget = (target, damage, source = null, options = {}) => {
+  const updatedTarget = cloneDeep(target);
+  let updatedSource = source ? cloneDeep(source) : null;
+  
   // 确保伤害值为整数
   let finalDamage = Math.round(damage);
   let reflectDamage = 0;
@@ -347,8 +351,8 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
   let shieldResult = null;
   
   // 处理护盾吸收伤害
-  if (target.statusEffects && target.statusEffects.length > 0) {
-    shieldResult = processShieldAbsorption(target, finalDamage);
+  if (updatedTarget.statusEffects && updatedTarget.statusEffects.length > 0) {
+    shieldResult = processShieldAbsorption(updatedTarget, finalDamage);
     if (shieldResult && shieldResult.absorbedDamage > 0) {
       shieldAbsorbed = shieldResult.absorbedDamage;
       finalDamage = shieldResult.remainingDamage;
@@ -356,49 +360,37 @@ export const applyDamageToTarget = (target, damage, source = null, options = {})
   }
   
   // 处理伤害反弹
-  if (source && target.statusEffects && target.statusEffects.length > 0) {
-    reflectResult = processReflectDamage(source, target, finalDamage);
+  if (updatedSource && updatedTarget.statusEffects && updatedTarget.statusEffects.length > 0) {
+    reflectResult = processReflectDamage(updatedSource, updatedTarget, finalDamage);
     if (reflectResult && reflectResult.reflectedDamage > 0) {
       reflectDamage = reflectResult.reflectedDamage;
       
       // 应用反弹伤害到源单位
-      const sourceCurrentHp = source.stats.currentHp;
+      const sourceCurrentHp = updatedSource.stats.currentHp;
       const sourceNewHp = Math.max(0, sourceCurrentHp - reflectDamage);
       const sourceisDefeated = sourceNewHp <= 0;
       
       // 更新源单位的生命值
-      source = {
-        ...source,
-        stats: {
-          ...source.stats,
-          currentHp: sourceNewHp
-        },
-        isDefeated: sourceisDefeated
-      };
+      updatedSource.stats.currentHp = sourceNewHp;
+      updatedSource.isDefeated = sourceisDefeated;
     }
   }
   
   // 计算目标剩余生命值
-  const currentHp = target.stats.currentHp;
+  const currentHp = updatedTarget.stats.currentHp;
   const newHp = Math.max(0, currentHp - finalDamage);
   
   // 检查目标是否死亡
   const isDefeated = newHp <= 0;
   
   // 更新目标单位的生命值
-  const updatedTarget = {
-    ...target,
-    stats: {
-      ...target.stats,
-      currentHp: newHp
-    },
-    isDefeated
-  };
+  updatedTarget.stats.currentHp = newHp;
+  updatedTarget.isDefeated = isDefeated;
   
   // 返回更新结果
   return {
     updatedTarget,
-    updatedSource: source,  // 可能被反弹伤害影响的源单位
+    updatedSource,  // 可能被反弹伤害影响的源单位
     damageApplied: finalDamage,
     previousHp: currentHp,
     newHp,

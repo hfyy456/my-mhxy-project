@@ -1,8 +1,8 @@
 /*
  * @Author: Claude
  * @Date: 2025-01-27
- * @LastEditors: Claude
- * @LastEditTime: 2025-01-27
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-12 16:24:13
  * @Description: 战斗状态机 React Hook - 重构为使用独立适配器系统
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
