@@ -142,6 +142,14 @@ export class AnimationPlayQueue {
         // 2. 目标受击动画（设置延迟，与攻击动画时机同步）
         if (targets && targets.length > 0) {
           targets.forEach(targetId => {
+            const targetResult = result.results?.find(r => r.targetId === targetId);
+
+            // 如果没有找到对应的目标结果，可能意味着该目标没有受到伤害（例如，免疫或闪避），跳过受击动画
+            if (!targetResult) {
+              console.warn(`[AnimationPlayQueue] 未找到目标 ${targetId} 的攻击结果，跳过受击动画`);
+              return;
+            }
+
             animations.push({
               type: 'hit',
               unitId: targetId,
@@ -150,14 +158,14 @@ export class AnimationPlayQueue {
               data: {
                 targetId: targetId,
                 attackerId: unitId,
-                damage: result.totalDamage || result.damage || 0
+                damage: targetResult.damage,
+                isCrit: targetResult.isCrit,
+                isDefending: targetResult.isDefending,
               }
             });
 
             // 3. 死亡动画（如果目标死亡）
-            // 检查result中是否有目标死亡信息
-            const targetResult = result.results && result.results.find(r => r.targetId === targetId);
-            if (targetResult && targetResult.isDefeated) {
+            if (targetResult.isDefeated) {
               animations.push({
                 type: 'death',
                 unitId: targetId,
@@ -406,10 +414,13 @@ export class AnimationPlayQueue {
         break;
 
       case 'hit':
+        console.log(animation.data,"animation.data");
         const hitEventData = {
           targetId: animation.data.targetId,
           attackerId: animation.data.attackerId,
-          damage: animation.data.damage
+          damage: animation.data.damage,
+          isCrit: animation.data.isCrit,
+          isDefending: animation.data.isDefending,
         };
         const hitTimestamp = performance.now();
         console.log(`📤 [EventBus] 发布受击动画事件:`, {
@@ -417,6 +428,8 @@ export class AnimationPlayQueue {
           attackerId: animation.data.attackerId,
           targetId: animation.data.targetId,
           damage: animation.data.damage,
+          isCrit: animation.data.isCrit,
+          isDefending: animation.data.isDefending,
           timestamp: hitTimestamp,
           delay: animation.delay || 0,
           eventData: hitEventData
