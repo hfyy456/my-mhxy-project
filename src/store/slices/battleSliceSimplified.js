@@ -218,11 +218,11 @@ const battleSlice = createSlice({
     // 接收战斗结果（别名）- 新增
     receiveBattleResult: (state, action) => {
       // 直接调用 receiveEngineResults 的逻辑
-      const { result, rewards, finalState } = action.payload;
+      const { result, rewards, finalState, capturedSummons } = action.payload;
       
-      state.battleResult = { result };
+      state.battleResult = { result, capturedSummons: capturedSummons || [] };
       state.rewards = rewards;
-      state.currentPhase = result === 'victory' ? 'victory' : 'defeat';
+      state.currentPhase = 'battle_over'; // 修正：统一战斗结束阶段
       state.isActive = false;
       state.controlMode = 'redux';
       

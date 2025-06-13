@@ -404,10 +404,14 @@ export const DIALOGUE_STATES = {
 
 // 战斗行动类型
 export const BATTLE_ACTION_TYPES = {
-  ATTACK: "attack",
-  DEFEND: "defend",
-  SKILL: "skill",
-  ITEM: "item",
-  CAPTURE: "capture",
-  ESCAPE: "escape",
-}; 
+  ATTACK: 'attack',
+  DEFEND: 'defend',
+  SKILL: 'skill',
+  ITEM: 'item',
+  FLEE: 'flee',
+  CAPTURE: 'capture',
+  UNIT_STATS_UPDATED: 'unit_stats_updated' // 新增：单位状态更新事件
+};
+
+// 战斗动画事件
+// ... existing code ... 

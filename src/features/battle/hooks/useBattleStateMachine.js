@@ -8,6 +8,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useBattleAdapter } from '../context/BattleAdapterContext.jsx';
+import { BATTLE_ACTION_TYPES } from '@/config/enumConfig.js';
 
 /**
  * 战斗状态机 Hook
@@ -167,13 +168,40 @@ export const useBattleStateMachineState = () => {
   useEffect(() => {
     if (!adapter) return;
 
-    // 订阅状态变化
-    const unsubscribe = adapter.subscribeToEngineChanges((newState) => {
+    // 订阅完整的状态变化
+    const unsubscribeStateChanges = adapter.subscribeToEngineChanges((newState) => {
       console.log('[useBattleStateMachineState] 收到引擎状态更新:', newState);
       setBattleState(newState);
     });
 
-    return unsubscribe;
+    // 订阅精确的单位状态更新
+    const unsubscribeUnitUpdates = adapter.eventBus.subscribe(
+      BATTLE_ACTION_TYPES.UNIT_STATS_UPDATED,
+      (event) => {
+        console.log('[useBattleStateMachineState] 收到单位状态更新:', event.data);
+        const { unitId, newHp, isDefeated } = event.data;
+        
+        setBattleState(currentState => {
+          if (!currentState) return null;
+
+          // 使用immer或类似的库会更优雅，但这里为了减少依赖，直接深拷贝
+          const nextState = JSON.parse(JSON.stringify(currentState));
+          
+          const unitToUpdate = nextState.battleUnits[unitId];
+          if (unitToUpdate) {
+            unitToUpdate.stats.currentHp = newHp;
+            unitToUpdate.isDefeated = isDefeated;
+          }
+          
+          return nextState;
+        });
+      }
+    );
+
+    return () => {
+      unsubscribeStateChanges();
+      unsubscribeUnitUpdates();
+    };
   }, [adapter]);
 
   // 如果没有状态，返回默认值

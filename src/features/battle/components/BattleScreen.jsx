@@ -4,7 +4,6 @@ import ActionTypeSelector from './ActionTypeSelector';
 import ActionContentSelector from './ActionContentSelector';
 import ActionOrderTimeline from './ActionOrderTimeline';
 import BattleLogPanel from './BattleLogPanel';
-import BattleAnimations from './BattleAnimations';
 import BattleResultsScreen from './BattleResultsScreen';
 import BattleUnitStats from './BattleUnitStats';
 import BattleUnitDetailPanel from './BattleUnitDetailPanel';
@@ -25,7 +24,8 @@ const BattleScreen = () => {
   // 使用新的UI Hook
   const battleUI = useBattleUI();
   const componentData = useBattleComponentData();
-  console.log(componentData,"componentData");
+  // console.log(componentData,"componentData");
+  
   // 集成状态机 (保留用于调试和控制)
   const {
     state: machineState,
@@ -40,14 +40,9 @@ const BattleScreen = () => {
   const {
     isActive: isBattleActive,
     currentPhase,
-    currentRound,
     battleUnits,
     battleResult,
-    playerFormation,
-    enemyFormation,
-    currentTurnUnitId,
-    turnOrder,
-    battleLog
+
   } = useBattleStateMachineState();
   
   // 获取选中的单位信息（直接从battleUI获取）
@@ -59,7 +54,7 @@ const BattleScreen = () => {
     // 使用适配器系统结束战斗并将结果返回Redux
     if (adapter) {
       adapter.transferResultsToRedux();
-      console.log('战斗结束，结果已返回Redux');
+      // console.log('战斗结束，结果已返回Redux');
     }
   };
 
@@ -93,8 +88,7 @@ const BattleScreen = () => {
           <BattleStateMachineVisualizer isVisible={true} />
         )} */}
       
-      {/* 战斗动画层 - 绝对定位在最上层 */}
-      <BattleAnimations />
+
       
       战斗单位属性面板 - 右侧悬浮
       <BattleUnitStats />
@@ -107,10 +101,8 @@ const BattleScreen = () => {
       )}
       
       {/* 战斗结算界面 - 绝对定位在最上层 */}
-      {currentPhase === 'battle_end' && battleResult && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-          <BattleResultsScreen result={battleResult} onExit={handleExitBattle} />
-        </div>
+      {currentPhase === 'battle_over' && battleResult && (
+          <BattleResultsScreen />
       )}
       
       {/* 战斗网格背景 - 铺满整个屏幕 */}

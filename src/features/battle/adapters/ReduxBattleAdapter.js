@@ -344,10 +344,23 @@ export class ReduxBattleAdapter {
       return;
     }
 
+    this.eventBus.subscribe('BATTLE_ENDED', this._handleBattleEnded.bind(this));
     this.eventBus.subscribe('DAMAGE_DEALT', this._handleDamageDealt.bind(this));
     // 在这里可以订阅更多事件...
     
     this._log('已成功订阅战斗引擎事件');
+  }
+
+  /**
+   * 处理战斗结束事件
+   * @private
+   */
+  _handleBattleEnded(event) {
+    this._log('接收到战斗结束事件，延迟1.5秒后将结果转移回Redux', event.data);
+    
+    setTimeout(() => {
+      this.transferResultsToRedux();
+    }, 1500); // 延迟1.5秒，等待动画播放
   }
 
   /**
@@ -460,6 +473,7 @@ export class ReduxBattleAdapter {
       reason: battleResult.reason,
       rounds: battleResult.rounds,
       timestamp: battleResult.timestamp,
+      capturedSummons: engineState.capturedUnits || [],
       rewards: this._calculateRewards(battleResult, engineState),
       statistics: this._generateBattleStatistics(engineState),
       finalState: {
@@ -651,7 +665,7 @@ export class ReduxBattleAdapter {
    * @private
    */
   _log(message, data = {}) {
-    console.log(`[ReduxBattleAdapter] ${message}`, data);
+    // console.log(`[ReduxBattleAdapter] ${message}`, data);
   }
 
   /**

@@ -45,6 +45,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   }
 
   // 如果有技能且MP足够，有30%的概率使用技能
+  /*
   if (unit.skillSet && unit.skillSet.length > 0 && unit.stats.currentMp >= 10 && Math.random() < 0.3) {
     // 随机选择一个技能
     const skillId = unit.skillSet[Math.floor(Math.random() * unit.skillSet.length)];
@@ -70,6 +71,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
       };
     }
   }
+  */
 
   // 获取可以普通攻击的目标
   const validAttackTargets = getValidTargetsForUnit(unit, allUnits, globalPetConfig, 'normal');

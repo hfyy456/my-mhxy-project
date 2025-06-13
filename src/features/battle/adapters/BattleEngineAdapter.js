@@ -387,7 +387,7 @@ export class BattleEngineAdapter {
     });
 
     this.engine.subscribe('battle_ended', (event) => {
-      this.eventBus.emit(BATTLE_EVENTS.BATTLE_ENDED, event.data);
+      this.eventBus.emit('BATTLE_ENDED', event.data);
       this._updateCachedState();
       this._notifyStateSubscribers();
     });

@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-11 07:21:01
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-14 05:15:29
+ */
 import React, { useState } from 'react';
 import { Col } from 'antd';
 import PlayerFormationEditor from './PlayerFormationEditor';

@@ -106,18 +106,6 @@ export class BattleEngine {
     this._log("战斗引擎创建完成", { id: this.id });
   }
 
-  _subscribeToInternalEvents() {
-    if (!this.externalEventBus) {
-      this._log("事件总线不可用，无法订阅内部事件");
-      return;
-    }
-    this.externalEventBus.subscribe(
-      ANIMATION_EVENTS.HIT_COMPLETE,
-      this._handleApplyDamage.bind(this)
-    );
-    this._log("已成功订阅内部事件");
-  }
-
   /**
    * 初始化战斗
    * @param {Object} battleConfig - 战斗配置数据
@@ -153,8 +141,6 @@ export class BattleEngine {
         playerUnits: Object.keys(this.battleData.playerUnits).length,
         enemyUnits: Object.keys(this.battleData.enemyUnits).length,
       });
-      
-      this._subscribeToInternalEvents(); // 初始化后订阅事件
       
       // 自动推进到准备阶段
       if (this.options.autoAdvance) {
@@ -558,12 +544,12 @@ export class BattleEngine {
     
     // 🚨 新增：检查单位是否已死亡
     if (unit.isDefeated) {
-      console.warn(`⚰️ [BattleEngine] 死亡单位试图提交行动:`, {
-        unitId,
-        unitName: unit.name,
-        isDefeated: unit.isDefeated,
-        currentHp: unit.stats?.currentHp,
-      });
+      // console.warn(`⚰️ [BattleEngine] 死亡单位试图提交行动:`, {
+      //   unitId,
+      //   unitName: unit.name,
+      //   isDefeated: unit.isDefeated,
+      //   currentHp: unit.stats?.currentHp,
+      // });
       throw new Error(`单位已死亡，无法提交行动: ${unit.name} (${unitId})`);
     }
     
@@ -677,10 +663,10 @@ export class BattleEngine {
         unsubscribe: (event, callback) => this.unsubscribe(event, callback),
       };
       
-      console.log(`🔧 [BattleEngine] 初始化队列管理器，使用事件总线:`, {
-        hasExternalEventBus: !!this.externalEventBus,
-        eventBusType: this.externalEventBus ? "external" : "internal",
-      });
+      // console.log(`🔧 [BattleEngine] 初始化队列管理器，使用事件总线:`, {
+      //   hasExternalEventBus: !!this.externalEventBus,
+      //   eventBusType: this.externalEventBus ? "external" : "internal",
+      // });
       
       this.queueManager = new BattleQueueManager(eventBus);
     }
@@ -693,21 +679,32 @@ export class BattleEngine {
     // 使用队列管理器依次执行每个单位的行动
     while (true) {
       const hasNext = await this.queueManager.executeNext((action) => {
-        console.log(`🎯 [BattleEngine] 处理单位${action.unitId}的行动逻辑`);
+        // 1. 在处理任何行动前，预先检查其所有目标是否已经死亡
+        const actionDetails = action.action?.action;
+        const actionTargets = actionDetails?.targets || actionDetails?.targetIds || [];
+
+        if (actionTargets.length > 0) {
+          const allTargetsDefeated = actionTargets.every(targetId => {
+            const target = this.getUnit(targetId);
+            return target?.isDefeated;
+          });
+
+          if (allTargetsDefeated) {
+            this._log(`行动被跳过，因为所有目标 (${actionTargets.join(', ')}) 都已被击败。`, {
+              unitId: action.unitId,
+              actionType: actionDetails?.type,
+            });
+            return { success: false, skipped: true, reason: "all_targets_defeated" };
+          }
+        }
         
-        // 检查单位是否还活着
+        // 2. 检查行动的发起者是否还活着
         const sourceUnit =
           this.battleData.playerUnits[action.unitId] ||
           this.battleData.enemyUnits[action.unitId];
-        console.log(`🔍 [BattleEngine] 检查单位${action.unitId}状态:`, {
-          unitExists: !!sourceUnit,
-          isDefeated: sourceUnit?.isDefeated,
-          currentHp: sourceUnit?.stats?.currentHp,
-          unitName: sourceUnit?.name,
-        });
         
         if (!sourceUnit || sourceUnit.isDefeated) {
-          console.log(`⚰️ [BattleEngine] 单位${action.unitId}已死亡，跳过行动`);
+          // console.log(`⚰️ [BattleEngine] 单位${action.unitId}已死亡，跳过行动`);
           return { success: false, skipped: true, reason: "unit_defeated" };
         }
         
@@ -717,12 +714,12 @@ export class BattleEngine {
           action: action.action.action, // 双层action结构中提取内层action
         };
       
-        console.log(`🔧 [BattleEngine] 修正后的行动数据:`, {
-          unitId: processActionData.unitId,
-          actionType: processActionData.action.type,
-          targets: processActionData.action.targets,
-          
-        });
+        // console.log(`🔧 [BattleEngine] 修正后的行动数据:`, {
+        //   unitId: processActionData.unitId,
+        //   actionType: processActionData.action.type,
+        //   targets: processActionData.action.targets,
+        //   
+        // });
         
         // 执行行动逻辑（伤害计算等）
         const result = this._processAction(processActionData);
@@ -735,7 +732,7 @@ export class BattleEngine {
       
       // 检查战斗是否在此行动后结束
       const battleEndCheck = this._checkBattleEnd();
-      console.log(battleEndCheck, "battleEndCheck");
+      // console.log(battleEndCheck, "battleEndCheck");
       if (battleEndCheck.isEnded) {
         this._endBattle(battleEndCheck.result);
           return { ...result, battleEnded: true };
@@ -744,37 +741,43 @@ export class BattleEngine {
         return result;
       });
       
+      // 新增：如果上一个行动已经结束了战斗，则立即中断行动队列
+      if (this.state === BATTLE_ENGINE_STATES.COMPLETED) {
+        this._log("战斗已在执行阶段结束，中断后续所有行动。");
+        break;
+      }
+
       if (!hasNext) {
         break;
       }
     }
     
-    console.log(`🏁 [BattleEngine] 所有单位行动执行完成（双队列模式）`);
+    // 检查战斗是否已经结束，如果结束则直接返回，不再进入ROUND_END
+    if (this.state === BATTLE_ENGINE_STATES.COMPLETED) {
+      this._log("战斗已在执行阶段结束，跳过回合结束状态设置。");
+      return { success: true, state: this.state, battleEnded: true, executionResults };
+    }
+    
+    // console.log(`🏁 [BattleEngine] 所有单位行动执行完成（双队列模式）`);
     this._setState(BATTLE_ENGINE_STATES.ROUND_END);
     this._emit(BATTLE_ENGINE_EVENTS.EXECUTION_COMPLETE, {
       results: executionResults,
     });
     
-    // 发射数据更新事件，通知UI刷新
-    this._emit("BATTLE_DATA_UPDATED", {
-      battleUnits: this.getState().battleUnits,
-      round: this.currentRound,
-      timestamp: Date.now(),
-    });
-    
-    // 在autoAdvance模式下自动推进到回合结束处理
-    if (this.options.autoAdvance) {
-      setTimeout(async () => {
-        try {
-          const result = await this.advance();
-          this._log("自动推进回合结束结果", result);
-        } catch (error) {
-          this._log("自动推进回合结束失败", { error: error.message });
-        }
-      }, 1000); // 给UI一点时间显示执行结果
+    // 检查战斗是否结束
+    const battleEndCheck = this._checkBattleEnd();
+    // console.log(battleEndCheck, "battleEndCheck");
+    if (battleEndCheck.isEnded) {
+      this._endBattle(battleEndCheck.result);
+      return {
+        success: true,
+        battleEnded: true,
+        result: battleEndCheck.result,
+      };
     }
     
-    return { success: true, state: this.state, executionResults };
+    // 推进到下一回合
+    return this._advanceToNextRound();
   }
 
   /**
@@ -798,7 +801,7 @@ export class BattleEngine {
     
     // 检查战斗是否结束
     const battleEndCheck = this._checkBattleEnd();
-    console.log(battleEndCheck, "battleEndCheck");
+    // console.log(battleEndCheck, "battleEndCheck");
     if (battleEndCheck.isEnded) {
       this._endBattle(battleEndCheck.result);
       return {
@@ -924,24 +927,72 @@ export class BattleEngine {
     
     const results = [];
     
-    targetIds.forEach((targetId) => {
-      const targetUnit =
-        this.battleData.playerUnits[targetId] ||
-                        this.battleData.enemyUnits[targetId];
+    // 加固逻辑：首先过滤掉所有已经死亡或不存在的目标
+    const aliveTargetIds = targetIds.filter(id => {
+      const target = this.getUnit(id);
       
-      if (!targetUnit || targetUnit.isDefeated) {
-        return;
+      // 如果目标不存在，或者目标已死亡，则过滤掉
+      if (!target || target.isDefeated) {
+        if (target) { // 目标存在但已死亡
+          this._log(`攻击被部分跳过：目标 ${target.name} (${id}) 已被击败。`, {
+            sourceId: sourceUnit.id,
+            targetId: id
+          });
+        } else { // 目标已不存在
+          this._log(`攻击被部分跳过：目标ID ${id} 已不存在（可能已被捕获或移除）。`, {
+            sourceId: sourceUnit.id,
+            targetId: id
+          });
+        }
+        return false;
       }
+      return true;
+    });
+
+    if (aliveTargetIds.length === 0) {
+      this._log(`攻击被完全跳过：所有预定目标都已被击败。`, { sourceId: sourceUnit.id });
+      return { success: true, actionType: "attack", results: [], totalDamage: 0 };
+    }
+
+    aliveTargetIds.forEach((targetId) => {
+      const targetUnit = this.getUnit(targetId); // 此时目标保证是存活的
       
       // 获取目标是否处于防御状态
-      const isDefending = targetUnit.isDefending || false;
+      const isDefending = targetUnit.isDefeated ? false : (targetUnit.isDefending || false);
+      const oldHp = targetUnit.stats.currentHp; // 记录旧HP
 
+      // 1. 同步计算伤害
       const damageResult = calculateBattleDamage(
         sourceUnit,
         targetUnit,
         "auto"
       );
       
+      // 2. 同步应用伤害并更新单位状态
+      const { updatedTarget, isDefeated } = applyDamageToTarget(
+        targetUnit,
+        damageResult.finalDamage
+      );
+      this._updateUnitInBattleData(updatedTarget); // 立即更新战斗数据
+
+      // 发出精确的状态更新事件
+      this.externalEventBus?.emit(BATTLE_ACTION_TYPES.UNIT_STATS_UPDATED, {
+        unitId: targetId,
+        newHp: updatedTarget.stats.currentHp,
+        oldHp,
+        damage: damageResult.finalDamage,
+        isDefeated,
+        timestamp: Date.now(),
+      });
+
+      if (isDefeated) {
+        this._log("单位已被击败", {
+          unitId: updatedTarget.id, 
+          unitName: updatedTarget.name,
+        });
+      }
+
+      // 3. 发出事件通知UI（仅用于动画表现）
       this.externalEventBus?.emit("DAMAGE_DEALT", {
         sourceId: sourceUnit.id,
         sourceName: sourceUnit.name,
@@ -950,6 +1001,8 @@ export class BattleEngine {
         damage: damageResult.finalDamage,
         isCrit: damageResult.details.isCritical,
         isDefending,
+        newHp: updatedTarget.stats.currentHp,
+        isDefeated, // 将死亡状态也通知给UI
         timestamp: Date.now(),
       });
       
@@ -958,6 +1011,7 @@ export class BattleEngine {
         damage: damageResult.finalDamage,
         isCrit: damageResult.details.isCritical,
         isDefending,
+        isDefeated,
       });
     });
     
@@ -1035,11 +1089,11 @@ export class BattleEngine {
     const allEnemyUnitsDefeated = Object.values(
       this.battleData.enemyUnits
     ).every((unit) => unit.isDefeated);
-    console.log(
-      allPlayerUnitsDefeated,
-      allEnemyUnitsDefeated,
-      "allPlayerUnitsDefeated,allEnemyUnitsDefeated"
-    );
+    // console.log(
+    //   allPlayerUnitsDefeated,
+    //   allEnemyUnitsDefeated,
+    //   "allPlayerUnitsDefeated,allEnemyUnitsDefeated"
+    // );
     if (allPlayerUnitsDefeated || allEnemyUnitsDefeated) {
       this.isBattleOver = true;
       const winner = allPlayerUnitsDefeated ? "enemies" : "player";
@@ -1308,7 +1362,7 @@ export class BattleEngine {
     
     if (actionType === "attack") {
       let validTargets = getValidTargetsForUnit(unit, allUnits, "normal");
-      console.log(validTargets,"validTargets");
+      // console.log(validTargets,"validTargets");
       return validTargets
     } else if (actionType === "skill" && skillId) {
       return getValidTargetsForSkill(
@@ -1504,27 +1558,30 @@ export class BattleEngine {
   getActionDescription(unitId) {
     const actionData = this.unitActions.get(unitId);
     const unit = this.getUnit(unitId);
-    
-    if (!actionData || !unit) return "无";
-    
+
+    if (!actionData || !unit) return '无';
+
     const action = actionData.action;
-    
+
+    const getTargetName = (targetId) => {
+      if (!targetId) return '未知目标';
+      const targetUnit = this.getUnit(targetId);
+      return targetUnit ? targetUnit.name : '一个目标';
+    };
+
     switch (action.type) {
-      case "attack":
-        const target = action.targetIds[0]
-          ? this.getUnit(action.targetIds[0]).name
-          : "未知目标";
-        return `攻击 ${target}`;
-      case "defend":
-        return "防御";
-      case "skill":
-        const skillTarget = action.targetIds[0]
-          ? this.getUnit(action.targetIds[0]).name
-          : "未知目标";
+      case 'attack':
+        return `攻击 ${getTargetName(action.targetIds[0])}`;
+      case 'defend':
+        return '防御';
+      case 'skill':
+        const skillTargetName = getTargetName(action.targetIds[0]);
         const skill = activeSkillConfig.find((s) => s.id === action.skillId);
         return `使用技能 ${
           skill ? skill.name : action.skillId
-        } 对 ${skillTarget}`;
+        } 对 ${skillTargetName}`;
+      case 'capture':
+        return `捕捉 ${getTargetName(action.targetIds[0])}`;
       default:
         return action.type;
     }
@@ -1694,7 +1751,7 @@ export class BattleEngine {
    */
   setExternalEventBus(eventBus) {
     this.externalEventBus = eventBus;
-    console.log(`🔗 [BattleEngine] 外部事件总线已设置:`, !!eventBus);
+    // console.log(`🔗 [BattleEngine] 外部事件总线已设置:`, !!eventBus);
   }
 
   _updateUnitInBattleData(unit) {
@@ -1707,58 +1764,12 @@ export class BattleEngine {
     }
   }
 
-  _handleApplyDamage(event) {
-    const { unitId, damage, isCrit } = event.data;
-    const targetUnit =
-      this.battleData.playerUnits[unitId] || this.battleData.enemyUnits[unitId];
-
-    if (!targetUnit || targetUnit.isDefeated) {
-      return;
-    }
-
-    const { updatedTarget, updatedSource, isDefeated } = applyDamageToTarget(
-      targetUnit,
-      damage
-    );
-
-    this._updateUnitInBattleData(updatedTarget);
-    if (updatedSource) {
-      this._updateUnitInBattleData(updatedSource);
-    }
-
-    const critText = isCrit ? "暴击！" : "";
-    const attackMessage = `${updatedTarget.name} 受到 ${damage} 点伤害${
-      critText ? `，${critText}` : ""
-    }`;
-    
-    this._log(attackMessage, {
-      unitId: updatedTarget.id,
-      damage: damage,
-      isCrit: isCrit,
-      newHp: updatedTarget.stats.currentHp,
-    });
-
-    if (isDefeated) {
-      this._log("单位已被击败", {
-        unitId: updatedTarget.id, 
-        unitName: updatedTarget.name,
-      });
-    }
-
-    // 发射数据更新事件，通知UI刷新
-    this._emit("BATTLE_DATA_UPDATED", {
-      battleUnits: this.getState().battleUnits,
-      reason: "damage_applied",
-      updatedUnitId: unitId,
-    });
-  }
-
   /**
    * 获取可捕捉的目标及其成功率
    * @returns {Array<Object>} - 返回一个数组，包含可捕捉的单位对象和对应的捕捉成功率
    */
   getCapturableTargets() {
-    console.log(this.battleData,"this.battleData");
+    // console.log(this.battleData,"this.battleData");
     if (!this.battleData || !this.battleData.enemyUnits) {
       return [];
     }
@@ -1766,14 +1777,14 @@ export class BattleEngine {
     const capturableTargets = Object.values(this.battleData.enemyUnits)
       .filter(unit => {
         // 确保单位是可捕捉的（例如，基础捕捉率大于0且单位存活）
-        console.log(unit.isCapturable,unit.stats.currentHp > 0,"unit.isCapturable");
+        // console.log(unit.isCapturable,unit.stats.currentHp > 0,"unit.isCapturable");
 
         return unit.isCapturable && unit.stats.currentHp > 0;
       })
       .map(unit => {
         const baseCaptureRate = 0.99;
         const captureChance = getCaptureChance(unit, baseCaptureRate);
-        console.log(captureChance,unit,"captureChance");
+        // console.log(captureChance,unit,"captureChance");
         return {
           ...unit,
           captureChance,

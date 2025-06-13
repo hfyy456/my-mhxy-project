@@ -38,16 +38,16 @@ export const calculatePhysicalDamage = (
 ) => {
   // 从配置中获取平衡常数
   const k = DAMAGE_CONSTANTS.PHYSICAL.BALANCE_CONSTANT;
-  console.log(
-    `[calcPhysDmg] AttackerPAtk: ${attackerPAtk}, DefenderPDef: ${defenderPDef}, CritRate: ${critRate}, CritDmg: ${critDamage}, SkillBonus: ${skillBonus}, FixedRed: ${fixedReduction}, PctRed: ${percentReduction}, k: ${k}`
-  );
+  // console.log(
+  //   `[calcPhysDmg] AttackerPAtk: ${attackerPAtk}, DefenderPDef: ${defenderPDef}, CritRate: ${critRate}, CritDmg: ${critDamage}, SkillBonus: ${skillBonus}, FixedRed: ${fixedReduction}, PctRed: ${percentReduction}, k: ${k}`
+  // );
 
   // 计算基础物理伤害
   const damageReductionRatio = defenderPDef / (defenderPDef + k);
   const basePhysicalDamage = attackerPAtk * (1 - damageReductionRatio);
-  console.log(
-    `[calcPhysDmg] DamageReductionRatio: ${damageReductionRatio}, BasePhysicalDamage: ${basePhysicalDamage}`
-  );
+  // console.log(
+  //   `[calcPhysDmg] DamageReductionRatio: ${damageReductionRatio}, BasePhysicalDamage: ${basePhysicalDamage}`
+  // );
 
   // 判断是否暴击
   const isCritical = Math.random() < critRate;
@@ -106,16 +106,16 @@ export const calculateMagicalDamage = (
 ) => {
   // 从配置中获取平衡常数
   const k = DAMAGE_CONSTANTS.MAGICAL.BALANCE_CONSTANT;
-  console.log(
-    `[calcMagDmg] AttackerMAtk: ${attackerMAtk}, DefenderMDef: ${defenderMDef}, CritRate: ${critRate}, CritDmg: ${critDamage}, SkillBonus: ${skillBonus}, FixedRed: ${fixedReduction}, PctRed: ${percentReduction}, k: ${k}`
-  );
-  console.log(`法术平衡常数: ${k}`);
-  console.log(`法术攻击力: ${attackerMAtk}`);
-  console.log(`法术防御力: ${defenderMDef}`);
+  // console.log(
+  //   `[calcMagDmg] AttackerMAtk: ${attackerMAtk}, DefenderMDef: ${defenderMDef}, CritRate: ${critRate}, CritDmg: ${critDamage}, SkillBonus: ${skillBonus}, FixedRed: ${fixedReduction}, PctRed: ${percentReduction}, k: ${k}`
+  // );
+  // console.log(`法术平衡常数: ${k}`);
+  // console.log(`法术攻击力: ${attackerMAtk}`);
+  // console.log(`法术防御力: ${defenderMDef}`);
   // 计算基础法术伤害
   // 防止除数为0或者计算结果为NaN
   if (!attackerMAtk || attackerMAtk <= 0) {
-    console.log(`警告: 法术攻击力无效 (${attackerMAtk})`);
+    // console.log(`警告: 法术攻击力无效 (${attackerMAtk})`);
     return {
       finalDamage: 0,
       details: {
@@ -135,22 +135,22 @@ export const calculateMagicalDamage = (
 
   // 计算减伤比例
   const damageReductionRatio = validDefenderMDef / (validDefenderMDef + k);
-  console.log(
-    `法术减伤比例: ${damageReductionRatio.toFixed(
-      4
-    )} (法术防御: ${validDefenderMDef}, k: ${k})`
-  );
+  // console.log(
+  //   `法术减伤比例: ${damageReductionRatio.toFixed(
+  //     4
+  //   )} (法术防御: ${validDefenderMDef}, k: ${k})`
+  // );
 
   // 计算基础伤害
   const baseMagicalDamage = attackerMAtk * (1 - damageReductionRatio);
-  console.log(
-    `[calcMagDmg] DamageReductionRatio: ${damageReductionRatio}, BaseMagicalDamage: ${baseMagicalDamage}`
-  );
-  console.log(
-    `基础法术伤害: ${baseMagicalDamage.toFixed(
-      2
-    )} (法术攻击: ${attackerMAtk}, 法术防御: ${validDefenderMDef})`
-  );
+  // console.log(
+  //   `[calcMagDmg] DamageReductionRatio: ${damageReductionRatio}, BaseMagicalDamage: ${baseMagicalDamage}`
+  // );
+  // console.log(
+  //   `基础法术伤害: ${baseMagicalDamage.toFixed(
+  //     2
+  //   )} (法术攻击: ${attackerMAtk}, 法术防御: ${validDefenderMDef})`
+  // );
 
   // 判断是否暴击
   const isCritical = Math.random() < critRate;
@@ -203,20 +203,20 @@ export const calculateBattleDamage = (
   skillBonus = DAMAGE_CONSTANTS.COMMON.DEFAULT_SKILL_BONUS,
   options = {}
 ) => {
-  console.log(
-    "[calcBattleDmg] Attacker:",
-    JSON.stringify(attacker.stats),
-    "Defender:",
-    JSON.stringify(defender.stats),
-    "DamageType:",
-    damageType,
-    "SkillBonus:",
-    skillBonus,
-    "Options:",
-    JSON.stringify(options),
-    "Defender.isDefending:",
-    defender.isDefending
-  );
+  // console.log(
+  //   "[calcBattleDmg] Attacker:",
+  //   JSON.stringify(attacker.stats),
+  //   "Defender:",
+  //   JSON.stringify(defender.stats),
+  //   "DamageType:",
+  //   damageType,
+  //   "SkillBonus:",
+  //   skillBonus,
+  //   "Options:",
+  //   JSON.stringify(options),
+  //   "Defender.isDefending:",
+  //   defender.isDefending
+  // );
   // 如果自动选择伤害类型，根据攻击者的物理攻击和法术攻击值决定
   if (damageType === "auto") {
     // 获取物理攻击和法术攻击值，支持简写和完整属性名
@@ -227,9 +227,9 @@ export const calculateBattleDamage = (
 
     const determinedDamageType =
       physicalAttack >= magicalAttack ? "physical" : "magical"; // Prefer physical if equal
-    console.log(
-      `[calcBattleDmg] Auto-determining damage type. pAtk: ${physicalAttack}, mAtk: ${magicalAttack}. Determined type: ${determinedDamageType}`
-    );
+    // console.log(
+    //   `[calcBattleDmg] Auto-determining damage type. pAtk: ${physicalAttack}, mAtk: ${magicalAttack}. Determined type: ${determinedDamageType}`
+    // );
     damageType = determinedDamageType;
     console.log(
       `自动选择伤害类型: ${damageType} (物理攻击: ${physicalAttack}, 法术攻击: ${magicalAttack})`
@@ -259,9 +259,9 @@ export const calculateBattleDamage = (
     const physicalDefense =
       defenderStats.physicalDefense || defenderStats.pDef || 0;
 
-    console.log(
-      `物理伤害计算: 攻击=${physicalAttack}, 防御=${physicalDefense}`
-    );
+    // console.log(
+    //   `物理伤害计算: 攻击=${physicalAttack}, 防御=${physicalDefense}`
+    // );
 
     damageResult = calculatePhysicalDamage(
       physicalAttack,
@@ -279,7 +279,7 @@ export const calculateBattleDamage = (
     const magicalDefense =
       defenderStats.magicalDefense || defenderStats.mDef || 0;
 
-    console.log(`法术伤害计算: 攻击=${magicalAttack}, 防御=${magicalDefense}`);
+    // console.log(`法术伤害计算: 攻击=${magicalAttack}, 防御=${magicalDefense}`);
 
     damageResult = calculateMagicalDamage(
       magicalAttack,
