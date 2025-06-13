@@ -231,6 +231,35 @@ export class BattleEngineAdapter {
   }
 
   /**
+   * 获取单位的交互数据
+   * @param {string} unitId - 单位ID
+   * @returns {Object} - 包含可用技能、目标等信息的对象
+   */
+  getUnitInteractionData(unitId) {
+    if (!this.engine || !unitId) {
+      return {
+        activeSkills: [],
+        validTargets: [],
+        availableActionTypes: [],
+        actionDescription: '无',
+        skillAffectedArea: []
+      };
+    }
+
+    const unit = this.engine.getUnit(unitId);
+    if (!unit) return {};
+
+    // 注意：这里需要从引擎获取更多数据
+    return {
+      activeSkills: this.engine.getUnitActiveSkills(unitId),
+      validTargets: [], // 暂时为空
+      availableActionTypes: this.engine.getAvailableActionTypes(unitId),
+      actionDescription: this.engine.getActionDescription(unitId),
+      skillAffectedArea: [], // 暂时为空
+    };
+  }
+
+  /**
    * 获取兼容Redux选择器的代理对象
    * @returns {Object} 选择器代理
    */

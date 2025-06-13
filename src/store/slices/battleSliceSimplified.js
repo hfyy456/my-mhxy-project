@@ -5,12 +5,8 @@
  * @LastEditTime: 2025-06-13 09:41:53
  * @Description: 简化版战斗Redux Slice - 仅保留基本状态管理，战斗逻辑交由独立引擎处理
  */
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 import { generateUniqueId } from '@/utils/idUtils';
-import { selectFormationGrid } from '@/store/slices/formationSlice';
-import { summonConfig } from '@/config/config';
-import { WORLD_REGIONS, selectEncounterForRegion } from '@/config/map/worldMapConfig.js';
-import { calculateSummonStats } from '@/features/battle/logic/summonUtils';
 
 const BATTLE_GRID_ROWS = 3;
 const BATTLE_GRID_COLS = 3;

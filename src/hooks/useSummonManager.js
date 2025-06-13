@@ -542,7 +542,7 @@ export const useSummonOperations = () => {
       
       for (const summonId of targetIds) {
         try {
-          const result = await recalculateSummonStats(summonId);
+          const result =  recalculateSummonStats(summonId);
           results.push({ summonId, success: result });
         } catch (error) {
           results.push({ summonId, success: false, error: error.message });

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-12 07:39:53
+ * @LastEditTime: 2025-06-13 16:19:59
  */
 import allSummons from '../config/summon/allSummons.json';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '../config/config';
@@ -66,21 +66,24 @@ console.log('[summonUtils] Pre-calculated Meta Weights:', META_WEIGHTS);
  * @returns {Summon|null} A new instance of the Summon class, or null if template not found.
  */
 export const createCreatureFromTemplate = ({ templateId, level = 1, natureType = SUMMON_NATURE_TYPES.WILD }) => {
-    console.log(templateId,"templateId");
-  const template = allSummons[templateId];
+    const template = allSummons[templateId];
     if (!template) {
         console.error(`Creature template not found for ID: ${templateId}`);
         return null;
     }
 
-    // 1. Generate Basic Attributes
-    const basicAttributes = {};
+    // 1. Generate innate (Level 1) attributes, which represent the creature's "genes".
+    const innateAttributes = {};
     for (const [attr, range] of Object.entries(template.basicAttributeRanges)) {
         const [min, max] = range;
-        basicAttributes[attr] = Math.floor(Math.random() * (max - min + 1)) + min;
+        innateAttributes[attr] = Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // 2. Determine Skills
+    // 2. Basic attributes at creation are the innate (Level 1) attributes.
+    // The calculation to the current level will be handled by updateSummonStats.
+    const basicAttributes = { ...innateAttributes };
+
+    // 3. Determine Skills
     let finalSkillSet = [...(template.guaranteedInitialSkills || [])];
     const skillPool = template.initialSkillPool?.filter(skill => !finalSkillSet.includes(skill)) || [];
     if (skillPool.length > 0) {
@@ -89,7 +92,7 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         finalSkillSet.push(randomSkill);
     }
 
-    // 3. Construct the data object for the Summon class
+    // 4. Construct the data object for the Summon class
     const creatureData = {
         id: generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON),
         summonSourceId: templateId,
@@ -103,7 +106,9 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         fiveElement: template.fiveElement,
         natureType: natureType,
         personalityId: getRandomPersonalityId(),
-        basicAttributes: basicAttributes,
+        basicAttributes: basicAttributes, // Level 1 stats
+        innateAttributes: innateAttributes,
+        growthRates: template.growthRates || {},
         allocatedPoints: {},
         potentialPoints: (level - 1) * 5, // Assuming 5 points per level
         skillSet: finalSkillSet,
@@ -113,9 +118,6 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         equippedItemIds: {},
     };
 
-    // 4. Create and return the Summon instance
-    // This assumes Summon class is correctly imported and can be instantiated.
-    // We might need to adjust the import from '../store/SummonManager' if it's not a direct export.
     return new Summon(creatureData);
 };
 
@@ -151,112 +153,148 @@ export const determineCombatRole = (effectiveBasicAttributes) => {
 };
 
 /**
- * 计算召唤兽的派生属性
- * @param {Object} basicAttributesWithPoints - 基础属性加点后的值
- * @param {Object} equippedItemsDataMap - 装备数据映射
- * @param {number} currentLevel - 当前等级
- * @returns {Object} 派生属性计算结果
+ * Calculates the final basic attributes of a summon, including effects from leveling, points allocation, and equipment.
+ * @param {Summon} summonInstance - The summon instance.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the final basic attributes and the map of equipped items.
  */
-export const calculateDerivedAttributes = (basicAttributesWithPoints, equippedItemsDataMap, currentLevel) => {
-  const derived = {};
-  const equipmentContributions = {}; // 装备提供的所有加成
-  const equipmentBonusesToBasic = {}; // 装备对基础属性的加成
+export const calculateFinalBasicAttributes = async (summonInstance) => {
+    if (!summonInstance) {
+        console.error("calculateFinalBasicAttributes requires a summon instance.");
+        return { finalBasicAttributes: {}, equippedItemsDataMap: {} };
+    }
 
-  const finalBasicAttributes = { ...basicAttributesWithPoints };
+    const { level, innateAttributes, growthRates, allocatedPoints } = summonInstance;
 
-  // 1. 第一阶段：处理对基础属性的装备效果
-  const basicAttributeEffects = {};  // 基础属性的装备效果
-  const derivedAttributeEffects = {}; // 派生属性的装备效果（待第二阶段处理）
-  
-  if (equippedItemsDataMap) {
-    for (const slot in equippedItemsDataMap) {
-      const item = equippedItemsDataMap[slot];
-      if (item && item.effects) {
-        for (const effectKey in item.effects) {
-          const effect = item.effects[effectKey];
-          
-          // 判断是基础属性还是派生属性
-          if (finalBasicAttributes.hasOwnProperty(effectKey)) {
-            // 基础属性：立即计算并应用
-            const baseValue = finalBasicAttributes[effectKey] || 0;
-            const effectValue = calculateEffectValue(effect, baseValue, effectKey);
-            
-            finalBasicAttributes[effectKey] = (finalBasicAttributes[effectKey] || 0) + effectValue;
-            equipmentBonusesToBasic[effectKey] = (equipmentBonusesToBasic[effectKey] || 0) + effectValue;
-            equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + effectValue;
-          } else {
-            // 派生属性：存储效果配置，待第二阶段处理
-            if (!derivedAttributeEffects[effectKey]) {
-              derivedAttributeEffects[effectKey] = [];
-            }
-            derivedAttributeEffects[effectKey].push(effect);
-          }
+    // 1. Calculate level-based attributes
+    const levelBasedAttributes = {};
+    for (const attr in innateAttributes) {
+        const growthRate = growthRates[attr] || 0;
+        levelBasedAttributes[attr] = Math.floor(innateAttributes[attr] * (1 + (level - 1) * growthRate));
+    }
+
+    // 2. Apply allocated points
+    const attributesWithPoints = { ...levelBasedAttributes };
+    if (allocatedPoints) {
+        for (const attr in allocatedPoints) {
+            attributesWithPoints[attr] = (attributesWithPoints[attr] || 0) + allocatedPoints[attr];
         }
-      }
-    }
-  }
-
-  // 2. 第二阶段：基于最终基础属性计算派生属性，并应用装备的派生属性效果
-  for (const [attrKey, config] of Object.entries(derivedAttributeConfig)) {
-    // 首先基于基础属性计算派生属性的基础值
-    let baseValue = 0;
-    for (const baseAttr of config.attributes) {
-      baseValue += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
     }
 
-    // 应用装备对该派生属性的效果
-    let finalValue = baseValue;
-    if (derivedAttributeEffects[attrKey]) {
-      for (const effect of derivedAttributeEffects[attrKey]) {
-        const effectValue = calculateEffectValue(effect, baseValue, attrKey);
-        finalValue += effectValue;
-                 // 更新装备贡献为实际生效值
-         equipmentContributions[attrKey] = (equipmentContributions[attrKey] || 0) + effectValue;
-      }
+    // 3. Get equipped items
+    const equippedItemsDataMap = await summonInstance.getEquippedItems();
+    
+    // 4. Apply equipment effects on basic attributes
+    const finalBasicAttributes = { ...attributesWithPoints };
+    if (equippedItemsDataMap) {
+        for (const slot in equippedItemsDataMap) {
+            const item = equippedItemsDataMap[slot];
+            if (item && item.effects) {
+                for (const effectKey in item.effects) {
+                    const effect = item.effects[effectKey];
+                    if (finalBasicAttributes.hasOwnProperty(effectKey)) {
+                        const baseValue = finalBasicAttributes[effectKey] || 0;
+                        const effectValue = calculateEffectValue(effect, baseValue, effectKey);
+                        finalBasicAttributes[effectKey] += effectValue;
+                    }
+                }
+            }
+        }
+    }
+
+    return { finalBasicAttributes, equippedItemsDataMap };
+};
+
+/**
+ * Calculates the derived attributes of a summon based on its final basic attributes and equipment.
+ * This is a synchronous function that relies on pre-calculated/fetched data.
+ * @param {number} level - The summon's current level.
+ * @param {Object} finalBasicAttributes - The final basic attributes.
+ * @param {Object} equippedItemsDataMap - The map of equipped items.
+ * @returns {Object} An object containing derived attributes, combat power, and contribution breakdowns.
+ */
+export const calculateDerivedAttributes = (level, finalBasicAttributes, equippedItemsDataMap) => {
+    if (!finalBasicAttributes || !equippedItemsDataMap) {
+        console.error("calculateDerivedAttributes requires final basic attributes and an equipment map.");
+        return {};
     }
     
-    // 格式化最终值
-    const criticalAttributeKeys = [
-      EQUIPMENT_EFFECT_TYPES.CRIT_RATE,
-      EQUIPMENT_EFFECT_TYPES.CRIT_DAMAGE,
-      EQUIPMENT_EFFECT_TYPES.DODGE_RATE
-    ];
-
-    if (criticalAttributeKeys.includes(attrKey)) {
-      derived[attrKey] = parseFloat(finalValue.toFixed(5));
-    } else {
-      derived[attrKey] = Math.floor(finalValue);
+    const derived = {};
+    const equipmentContributions = {};
+    
+    // 1. Calculate base derived values from final basic attributes
+    for (const [attrKey, config] of Object.entries(derivedAttributeConfig)) {
+        let baseValue = 0;
+        for (const baseAttr of config.attributes) {
+            baseValue += (finalBasicAttributes[baseAttr] || 0) * config.multiplier;
+        }
+        derived[attrKey] = baseValue;
     }
-  }
+    
+    // 2. Apply equipment effects that target derived attributes
+    if (equippedItemsDataMap) {
+        for (const slot in equippedItemsDataMap) {
+            const item = equippedItemsDataMap[slot];
+            if (item && item.effects) {
+                for (const effectKey in item.effects) {
+                    const effect = item.effects[effectKey];
+                    if (derived.hasOwnProperty(effectKey) && !finalBasicAttributes.hasOwnProperty(effectKey)) {
+                        const baseValue = derived[effectKey] || 0;
+                        const effectValue = calculateEffectValue(effect, baseValue, effectKey);
+                        derived[effectKey] += effectValue;
+                        equipmentContributions[effectKey] = (equipmentContributions[effectKey] || 0) + effectValue;
+                    }
+                }
+            }
+        }
+    }
 
-  // === 战力值计算 ===
-  // 以主要衍生属性为基础，加入等级和品质加成
-  // 你可以根据实际需要调整权重
-  const hp = derived.hp || 0;
-  const mp = derived.mp || 0;
-  const patk = derived.physicalAttack || 0;
-  const matk = derived.magicalAttack || 0;
-  const pdef = derived.physicalDefense || 0;
-  const mdef = derived.magicalDefense || 0;
-  const speed = derived.speed || 0;
-  const level = currentLevel || 1;
-  // let qualityMultiplier = 1; // qualityMultiplier logic removed
-  // if (basicAttributesWithPoints.quality) {
-  //   // 如果传入了quality字段
-  //   const idx = qualityConfig.names.indexOf(basicAttributesWithPoints.quality);
-  //   qualityMultiplier = qualityConfig.attributeMultipliers[idx] || 1;
-  // }
-  // 简单加权公式，可根据实际调整
-  const power = Math.floor(
-    hp * 0.2 + mp * 0.1 + patk * 1.2 + matk * 1.2 + pdef * 0.8 + mdef * 0.8 + speed * 1.0 + level * 10 // qualityMultiplier removed from calculation
-  );
+    // 3. Format final values
+    for (const attrKey in derived) {
+        const criticalAttributeKeys = [
+            EQUIPMENT_EFFECT_TYPES.CRIT_RATE,
+            EQUIPMENT_EFFECT_TYPES.CRIT_DAMAGE,
+            EQUIPMENT_EFFECT_TYPES.DODGE_RATE
+        ];
 
-  return {
-    derivedAttributes: derived,
-    equipmentContributions,
-    equipmentBonusesToBasic,
-    power, // 新增战力值
-  };
+        if (criticalAttributeKeys.includes(attrKey)) {
+            derived[attrKey] = parseFloat(derived[attrKey].toFixed(5));
+        } else {
+            derived[attrKey] = Math.floor(derived[attrKey]);
+        }
+    }
+    
+    // 4. Calculate Combat Power
+    const combatPower = Math.floor(
+        (derived.hp || 0) / 10 +
+        (derived.mp || 0) / 10 +
+        (derived.physicalAttack || 0) * 2 +
+        (derived.magicalAttack || 0) * 2 +
+        (derived.physicalDefense || 0) * 1.5 +
+        (derived.magicalDefense || 0) * 1.5 +
+        (derived.speed || 0) * 3 +
+        (level * 5)
+    );
+
+    return {
+        derivedAttributes: derived,
+        combatPower: combatPower,
+        equipmentContributions,
+    };
+};
+
+/**
+ * Orchestrator function to fully update a summon's stats.
+ * @param {Summon} summonInstance The summon to update.
+ * @returns {Promise<Object>} A promise that resolves to an object containing all calculated stats.
+ */
+export const updateSummonStats = async (summonInstance) => {
+    const { finalBasicAttributes, equippedItemsDataMap } = await calculateFinalBasicAttributes(summonInstance);
+    const derivedResult = calculateDerivedAttributes(summonInstance.level, finalBasicAttributes, equippedItemsDataMap);
+    
+    return {
+        basicAttributes: finalBasicAttributes,
+        ...derivedResult,
+    };
 };
 
 /**
@@ -441,6 +479,8 @@ export const generateNewSummon = ({ summonSourceId, quality, natureType = 'wild'
       luck: 0
     },
     basicAttributes,
+    innateAttributes: basicAttributes,
+    growthRates: summonData.growthRates,
     skillSet: finalSkillSet,
     equippedItemIds: {},
     source: source,

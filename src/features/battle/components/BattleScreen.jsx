@@ -28,7 +28,7 @@ const BattleScreen = () => {
   // 使用新的UI Hook
   const battleUI = useBattleUI();
   const componentData = useBattleComponentData();
-  console.log(componentData.gridData.battleUnits,"componentData");
+  console.log(componentData,"componentData");
   // 集成状态机 (保留用于调试和控制)
   const {
     state: machineState,

@@ -4,6 +4,7 @@
     "name": "幽灵",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.5,
     "fiveElement": "metal",
     "quality": "rare",
     "growthRates": {
@@ -32,6 +33,7 @@
     "name": "持国巡守",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.3,
     "fiveElement": "earth",
     "quality": "epic",
     "growthRates": {
@@ -60,6 +62,7 @@
     "name": "雷鸟人",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.3,
     "fiveElement": "wood",
     "quality": "epic",
     "growthRates": {
@@ -88,6 +91,7 @@
     "name": "吸血鬼",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.5,
     "fiveElement": "water",
     "quality": "rare",
     "growthRates": {
@@ -116,6 +120,7 @@
     "name": "机关鸟",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.5,
     "fiveElement": "fire",
     "quality": "rare",
     "growthRates": {
@@ -144,6 +149,7 @@
     "name": "猫灵",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.5,
     "fiveElement": "metal",
     "quality": "rare",
     "growthRates": {
@@ -172,6 +178,7 @@
     "name": "狂豹",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.7,
     "fiveElement": "earth",
     "quality": "normal",
     "growthRates": {
@@ -200,6 +207,7 @@
     "name": "夜叉",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.5,
     "fiveElement": "water",
     "quality": "rare",
     "growthRates": {
@@ -228,6 +236,7 @@
     "name": "蛟龙",
     "creatureType": "summon",
     "isCapturable": true,
+    "captureRate": 0.3,
     "fiveElement": "wood",
     "quality": "epic",
     "growthRates": {

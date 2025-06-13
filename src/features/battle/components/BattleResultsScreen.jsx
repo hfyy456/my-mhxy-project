@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setBattleActive, selectBattleUnits, } from '@/store/slices/battleSliceSimplified';
+import { setBattleActive, selectBattleUnits, selectRewards } from '@/store/slices/battleSliceSimplified';
+import { useSummonManager } from '@/hooks/useSummonManager';
 
-const BattleResultsScreen = ({ result }) => {
+const BattleResultsScreen = ({ result, onExit }) => {
   const dispatch = useDispatch();
   const battleUnits = useSelector(selectBattleUnits);
+  const rewards = useSelector(selectRewards);
+  const { summonManager } = useSummonManager();
   
   // 获取玩家单位和敌方单位
   const playerUnits = Object.values(battleUnits).filter(unit => unit.isPlayerUnit);
@@ -13,6 +16,17 @@ const BattleResultsScreen = ({ result }) => {
   // 检查是胜利还是失败
   const isVictory = result === 'victory';
   
+  useEffect(() => {
+    // 当组件挂载时，处理捕捉到的召唤兽
+    if (result.outcome === 'victory' && result.capturedSummons && result.capturedSummons.length > 0) {
+      result.capturedSummons.forEach(capturedData => {
+        console.log("正在添加捕捉到的召唤兽:", capturedData);
+        summonManager.addSummonFromCapture(capturedData);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 空依赖数组确保只在挂载时运行一次
+
   // 处理退出战斗
   const handleExitBattle = () => {
     dispatch(setBattleActive(false));

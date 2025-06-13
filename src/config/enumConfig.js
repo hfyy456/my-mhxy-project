@@ -291,7 +291,8 @@ export const PASSIVE_SKILL_TIMING = {
   ALWAYS: "always",                        // 始终生效
   ON_ACTION: "on_action",                  // 任何行动时
   BEFORE_ACTION: "before_action",          // 行动前
-  AFTER_ACTION: "after_action"             // 行动后
+  AFTER_ACTION: "after_action",             // 行动后
+  ON_HEAL_RECEIVED: "on_heal_received"      // 受到治疗后
 };
 
 // Unique ID Prefixes
@@ -399,4 +400,14 @@ export const DIALOGUE_STATES = {
   ACTIVE: 'active',
   WAITING: 'waiting',
   ENDED: 'ended'
+};
+
+// 战斗行动类型
+export const BATTLE_ACTION_TYPES = {
+  ATTACK: "attack",
+  DEFEND: "defend",
+  SKILL: "skill",
+  ITEM: "item",
+  CAPTURE: "capture",
+  ESCAPE: "escape",
 }; 

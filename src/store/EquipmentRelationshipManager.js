@@ -83,7 +83,7 @@ class EquipmentRelationshipManager extends EventEmitter {
       this.summonEquipmentIndex.get(summonId)[slotType] = itemId;
 
       // 4. 更新召唤兽属性 (Summon类内部的getEquippedItems会从ERM取数据)
-      await summon.recalculateAllAttributes();
+      await summon.recalculateStats();
 
       this.clearCache(itemId, summonId); // 清除ERM内部缓存
       this.emit('item_equipped', { itemId, summonId, slotType, relation: newRelation });
@@ -136,7 +136,7 @@ class EquipmentRelationshipManager extends EventEmitter {
 
       // 2. 更新召唤兽属性 (如果召唤兽实例存在)
       if (summon) {
-        await summon.recalculateAllAttributes();
+        await summon.recalculateStats();
       }
 
       this.clearCache(itemId, summonId); // 清除ERM内部缓存

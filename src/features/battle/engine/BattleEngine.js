@@ -23,7 +23,10 @@ import { decideEnemyAction } from "@/features/battle/logic/battleAI";
 import { summonConfig } from "@/config/summon/summonConfig";
 import { activeSkillConfig } from "@/config/skill/activeSkillConfig";
 import { BattleQueueManager } from "../utils/BattleQueue";
-import { ANIMATION_EVENTS } from "../config/animationConfig.js";
+import { BATTLE_ACTION_TYPES } from "@/config/enumConfig";
+import { ANIMATION_EVENTS 
+  
+} from "../config/animationConfig.js";
 
 // 战斗引擎状态枚举
 export const BATTLE_ENGINE_STATES = {
@@ -1522,19 +1525,24 @@ export class BattleEngine {
   getAvailableActionTypes(unitId) {
     const unit = this.getUnit(unitId);
     if (!unit) return [];
-    
-    const actionTypes = ["attack", "defend"];
-    
+
+    const actionTypes = [BATTLE_ACTION_TYPES.ATTACK, BATTLE_ACTION_TYPES.DEFEND];
+
     // 检查是否有可用技能
     if (this.getUnitActiveSkills(unitId).length > 0) {
-      actionTypes.push("skill");
+      actionTypes.push(BATTLE_ACTION_TYPES.SKILL);
     }
-    
+
+    // 如果是玩家单位，可以进行捕捉
+    if (unit.isPlayerUnit) {
+      actionTypes.push(BATTLE_ACTION_TYPES.CAPTURE);
+    }
+
     // 检查特殊行动（如逃跑等）
     if (this.canUnitFlee && this.canUnitFlee(unitId)) {
-      actionTypes.push("flee");
+      actionTypes.push(BATTLE_ACTION_TYPES.ESCAPE);
     }
-    
+
     return actionTypes;
   }
 

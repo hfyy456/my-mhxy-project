@@ -5,13 +5,10 @@
 import { EventEmitter } from "events";
 
 import {
-  calculateDerivedAttributes,
-  determineCombatRole,
+  
   createCreatureFromTemplate,
 } from "@/utils/summonUtils";
-import { EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
-import equipmentRelationshipManagerInstance from "./EquipmentRelationshipManager";
-import inventoryManagerInstance from "./InventoryManager";
+
 import Summon, { SummonFactory } from './Summon';
 
 // ===========================================
@@ -54,6 +51,43 @@ class SummonManager extends EventEmitter {
     summon.setManager(this);
     this.summons[summon.id] = summon;
     this.emit("state_changed", this.getState());
+    return summon;
+  }
+
+  /**
+   * Adds a new summon from captured battle data.
+   * This method ensures that the captured creature's unique stats are preserved.
+   * @param {object} capturedData - The data snapshot from BattleEngine.
+   * @returns {Summon|null} The newly created Summon instance, or null on failure.
+   */
+  addSummonFromCapture(capturedData) {
+    if (Object.keys(this.summons).length >= this.maxSummons) {
+      this.emit("error", { message: "召唤兽数量已达上限" });
+      return null;
+    }
+
+    if (!capturedData || !capturedData.templateId || !capturedData.innateProfile) {
+      this.emit("error", { message: "无效的捕捉数据" });
+      return null;
+    }
+    
+    // Create the base creature instance from the profile.
+    // This correctly sets up the "genes" (innateAttributes, growthRates).
+    const summon = SummonFactory.createSummon({
+      summonSourceId: capturedData.templateId,
+      level: capturedData.level,
+      innateAttributes: capturedData.innateProfile.innateAttributes,
+      growthRates: capturedData.innateProfile.growthRates,
+      personalityId: capturedData.innateProfile.personalityId,
+    });
+
+    if (!summon) return null;
+
+    // After creation, immediately recalculate stats to apply level/growth effects.
+    // The constructor's recalculate might not be sufficient if level > 1.
+    summon.recalculateStats();
+
+    this.registerSummon(summon);
     return summon;
   }
 
@@ -135,10 +169,10 @@ class SummonManager extends EventEmitter {
     return await summon.getEquippedItems();
   }
 
-  async recalculateSummonStats(summonId) {
+   recalculateSummonStats(summonId) {
     const summon = this.getSummonById(summonId);
     if (summon) {
-    await summon.recalculateAllAttributes();
+     summon.recalculateStats();
       this.emit("state_changed", this.getState());
     }
   }

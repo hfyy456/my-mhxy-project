@@ -9,7 +9,7 @@ import {
   STANDARD_EQUIPMENT_SLOTS
 } from "@/config/config";
 import {
-  calculateDerivedAttributes,
+  updateSummonStats,
   getExperienceForLevel,
   determineCombatRole,
 } from "@/utils/summonUtils";
@@ -30,6 +30,8 @@ class Summon {
     this.fiveElement = data.fiveElement || (data.summonSourceId && summonConfig[data.summonSourceId]?.fiveElement) || "metal";
     this.natureType = data.natureType || "wild";
     this.personalityId = data.personalityId || "neutral";
+    this.innateAttributes = data.innateAttributes || {};
+    this.growthRates = data.growthRates || {};
     this.basicAttributes = {
       constitution: data.basicAttributes?.constitution || 0,
       strength: data.basicAttributes?.strength || 0,
@@ -56,7 +58,7 @@ class Summon {
     this.createdAt = data.createdAt || Date.now();
     this.updatedAt = data.updatedAt || Date.now();
     this.manager = null;
-    this.recalculateAllAttributes();
+    this.recalculateStats();
   }
 
   get combatRole() {
@@ -87,16 +89,15 @@ class Summon {
     return effective;
   }
 
-  async recalculateAllAttributes() {
+  async recalculateStats() {
     try {
-    
-      const equippedItems = await this.getEquippedItems();
-      const effectiveBasic = this.getEffectiveBasicAttributes();
-      const result = calculateDerivedAttributes(effectiveBasic, equippedItems, this.level);
-      this.derivedAttributes = result.derivedAttributes;
-      this.equipmentContributions = result.equipmentContributions;
-      this.equipmentBonusesToBasic = result.equipmentBonusesToBasic;
-      this.power = result.power;
+      const allNewStats = await updateSummonStats(this);
+      this.basicAttributes = allNewStats.basicAttributes;
+      this.derivedAttributes = allNewStats.derivedAttributes;
+      this.power = allNewStats.combatPower;
+      this.equipmentContributions = allNewStats.equipmentContributions;
+      this.equipmentBonusesToBasic = {};
+
       this.updatedAt = Date.now();
       this.notifyChange("attributes_updated");
     } catch (error) {
@@ -108,7 +109,7 @@ class Summon {
     this.level = Math.max(1, newLevel);
     this.experience = 0;
     this.potentialPoints = (this.level - 1) * POINTS_PER_LEVEL;
-    await this.recalculateAllAttributes();
+    await this.recalculateStats();
     this.notifyChange("level_changed");
   }
 
@@ -151,6 +152,7 @@ class Summon {
     if (levelsGained > 0) {
       this.updatedAt = Date.now();
       this.notifyChange("level_up", { levelsGained, newLevel: this.level });
+      this.recalculateStats();
     }
     return levelsGained > 0;
   }
@@ -158,6 +160,8 @@ class Summon {
   levelUp() {
     this.level++;
     this.potentialPoints += POINTS_PER_LEVEL;
+    this.recalculateStats();
+
   }
 
   getExperienceToNextLevel() {
@@ -172,7 +176,7 @@ class Summon {
     this.allocatedPoints[attributeName] += amount;
     this.potentialPoints -= amount;
     this.updatedAt = Date.now();
-    this.recalculateAllAttributes();
+    this.recalculateStats();
     this.notifyChange("points_allocated", { attributeName, amount });
     return true;
   }
@@ -184,7 +188,7 @@ class Summon {
     });
     this.potentialPoints += totalAllocated;
     this.updatedAt = Date.now();
-    this.recalculateAllAttributes();
+    this.recalculateStats();
     this.notifyChange("points_reset");
     return true;
   }
@@ -264,6 +268,8 @@ class Summon {
       fiveElement: this.fiveElement,
       natureType: this.natureType,
       personalityId: this.personalityId,
+      innateAttributes: { ...this.innateAttributes },
+      growthRates: { ...this.growthRates },
       basicAttributes: { ...this.basicAttributes },
       allocatedPoints: { ...this.allocatedPoints },
       potentialPoints: this.potentialPoints,
@@ -309,8 +315,12 @@ class Summon {
         natureType: this.natureType,
         basicAttributes: { ...this.basicAttributes },
         allocatedPoints: { ...this.allocatedPoints },
-      }
-    };
+        derivedAttributes: { ...this.derivedAttributes },
+        power: this.power,
+        innateAttributes: { ...this.innateAttributes },
+        growthRates: { ...this.growthRates }
+    }
+  }
   }
 
   generateId() {
