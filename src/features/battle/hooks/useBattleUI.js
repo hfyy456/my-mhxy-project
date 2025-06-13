@@ -169,6 +169,7 @@ export const useBattleUI = () => {
       // 交互数据
       activeSkills: [],
       validTargets: [],
+      capturableTargets: [],
       actionDescription: '无',
       skillAffectedArea: [],
       availableActionTypes: [],
@@ -199,6 +200,7 @@ export const useBattleUI = () => {
     // 交互数据
     activeSkills: interactionData?.activeSkills || [],
     validTargets: interactionData?.validTargets || [],
+    capturableTargets: interactionData?.capturableTargets || [],
     actionDescription: interactionData?.actionDescription || '无',
     skillAffectedArea: interactionData?.skillAffectedArea || [],
     availableActionTypes: interactionData?.availableActionTypes || ['attack', 'defend'],
@@ -362,6 +364,7 @@ export const useBattleComponentData = () => {
       // 数据列表
       activeSkills: battleUI.activeSkills,
       validTargets: battleUI.validTargets,
+      capturableTargets: battleUI.capturableTargets,
       
       // 状态信息
       actionDescription: battleUI.actionDescription,

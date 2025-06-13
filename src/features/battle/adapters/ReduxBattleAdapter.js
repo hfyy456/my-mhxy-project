@@ -752,8 +752,7 @@ export class ReduxBattleAdapter {
     if (this.isEngineControlled && this.engineAdapter) {
       const engine = this.engineAdapter.engine;
       if (!engine) return null;
-      
-      return {
+      let result = {
         unit: engine.getUnit(unitId),
         activeSkills: engine.getUnitActiveSkills(unitId),
         validTargets: engine.getValidTargets(
@@ -761,12 +760,15 @@ export class ReduxBattleAdapter {
           this.uiState.selectedAction, 
           this.uiState.selectedSkill
         ),
+        capturableTargets: engine.getCapturableTargets(),
         actionDescription: engine.getActionDescription(unitId),
         skillAffectedArea: this.uiState.selectedSkill && this.uiState.selectedTarget
           ? engine.getSkillAffectedArea(this.uiState.selectedSkill, this.uiState.selectedTarget)
           : [],
         availableActionTypes: engine.getAvailableActionTypes(unitId)
       };
+      console.log(result,"result123");
+      return result
     }
     
     // 回退到Redux数据

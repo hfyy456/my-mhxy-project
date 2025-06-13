@@ -27,6 +27,12 @@ import { BATTLE_ACTION_TYPES } from "@/config/enumConfig";
 import { ANIMATION_EVENTS 
   
 } from "../config/animationConfig.js";
+import {
+  calculateCaptureSuccess,
+  getCaptureChance,
+  attemptCapture,
+} from "@/features/battle/logic/captureLogic";
+import cloneDeep from 'lodash/cloneDeep';
 
 // 战斗引擎状态枚举
 export const BATTLE_ENGINE_STATES = {
@@ -66,6 +72,7 @@ export class BattleEngine {
     this.actionQueue = [];
     this.battleLog = [];
     this.result = null;
+    this.capturedUnits = []; // 存储本场战斗中成功捕捉的单位
     
     // 回合制相关状态
     this.turnOrder = []; // 行动顺序（按速度排序）
@@ -133,6 +140,7 @@ export class BattleEngine {
       this.actionQueue = [];
       this.battleLog = [];
       this.result = null;
+      this.capturedUnits = [];
       
       this._setState(BATTLE_ENGINE_STATES.ROUND_START);
       this._emit(BATTLE_ENGINE_EVENTS.BATTLE_INITIALIZED, {
@@ -324,6 +332,7 @@ export class BattleEngine {
           };
       }
     } catch (error) {
+      console.log(error, "error");
       this._setState(BATTLE_ENGINE_STATES.ERROR);
       this._emit(BATTLE_ENGINE_EVENTS.ERROR_OCCURRED, { error });
       return {
@@ -389,6 +398,7 @@ export class BattleEngine {
     this.actionQueue = [];
     this.battleLog = [];
     this.result = null;
+    this.capturedUnits = [];
     
     // 重置回合制状态
     this.turnOrder = [];
@@ -725,6 +735,7 @@ export class BattleEngine {
       
       // 检查战斗是否在此行动后结束
       const battleEndCheck = this._checkBattleEnd();
+      console.log(battleEndCheck, "battleEndCheck");
       if (battleEndCheck.isEnded) {
         this._endBattle(battleEndCheck.result);
           return { ...result, battleEnded: true };
@@ -876,36 +887,36 @@ export class BattleEngine {
     const sourceUnit =
       this.battleData.playerUnits[unitId] || this.battleData.enemyUnits[unitId];
     
-    if (!sourceUnit) {
-      this._log("源单位不存在", { unitId });
-      return { success: false, error: "源单位不存在" };
+    if (!sourceUnit || sourceUnit.isDefeated) {
+      this._log(`行动被跳过：单位 ${unitId} 不存在或已被击败。`);
+      return;
     }
     
-    this._log("处理行动", { unitId, actionType: action.type });
-    
-    try {
-      switch (action.type) {
-        case "attack":
-          return this._processAttackAction(sourceUnit, action);
-        case "skill":
-          return this._processSkillAction(sourceUnit, action);
-        case "defend":
-          return this._processDefendAction(sourceUnit, action);
-        default:
-          this._log("未知行动类型", { actionType: action.type });
-          return { success: false, error: `未知行动类型: ${action.type}` };
-      }
-    } catch (error) {
-      this._log("行动处理失败", { unitId, error: error.message });
-      return { success: false, error: error.message };
+    this._log(`${sourceUnit.name} 开始执行行动: ${action.type}`, { actionData });
+
+    switch (action.type) {
+      case BATTLE_ACTION_TYPES.ATTACK:
+       return this._processAttackAction(sourceUnit, action);
+      case BATTLE_ACTION_TYPES.DEFEND:
+        return this._processDefendAction(sourceUnit, action);
+        
+      case BATTLE_ACTION_TYPES.SKILL:
+        return this._processSkillAction(sourceUnit, action);
+      case BATTLE_ACTION_TYPES.CAPTURE:
+        return this._processCaptureAction(sourceUnit, action);
+      default:
+        this._log(`未知的行动类型: ${action.type}`, { actionData });
+        return { success: false, error: `未知行动类型: ${action.type}` };
     }
+    
+    // 行动后效果处理（如移除增益）
   }
 
   /**
    * 处理攻击行动
    * @private
    */
-  async _processAttackAction(sourceUnit, action) {
+   _processAttackAction(sourceUnit, action) {
     const targetIds = action.targets || action.targetIds || [];
     if (targetIds.length === 0) {
       return { success: false, error: "没有指定目标" };
@@ -1296,7 +1307,9 @@ export class BattleEngine {
     });
     
     if (actionType === "attack") {
-      return getValidTargetsForUnit(unit, allUnits, summonConfig, "normal");
+      let validTargets = getValidTargetsForUnit(unit, allUnits, "normal");
+      console.log(validTargets,"validTargets");
+      return validTargets
     } else if (actionType === "skill" && skillId) {
       return getValidTargetsForSkill(
         unit,
@@ -1525,7 +1538,7 @@ export class BattleEngine {
   getAvailableActionTypes(unitId) {
     const unit = this.getUnit(unitId);
     if (!unit) return [];
-
+    
     const actionTypes = [BATTLE_ACTION_TYPES.ATTACK, BATTLE_ACTION_TYPES.DEFEND];
 
     // 检查是否有可用技能
@@ -1540,9 +1553,9 @@ export class BattleEngine {
 
     // 检查特殊行动（如逃跑等）
     if (this.canUnitFlee && this.canUnitFlee(unitId)) {
-      actionTypes.push(BATTLE_ACTION_TYPES.ESCAPE);
+      actionTypes.push("flee"); // 直接使用 'flee' 以匹配UI
     }
-
+    
     return actionTypes;
   }
 
@@ -1738,6 +1751,115 @@ export class BattleEngine {
       reason: "damage_applied",
       updatedUnitId: unitId,
     });
+  }
+
+  /**
+   * 获取可捕捉的目标及其成功率
+   * @returns {Array<Object>} - 返回一个数组，包含可捕捉的单位对象和对应的捕捉成功率
+   */
+  getCapturableTargets() {
+    console.log(this.battleData,"this.battleData");
+    if (!this.battleData || !this.battleData.enemyUnits) {
+      return [];
+    }
+
+    const capturableTargets = Object.values(this.battleData.enemyUnits)
+      .filter(unit => {
+        // 确保单位是可捕捉的（例如，基础捕捉率大于0且单位存活）
+        console.log(unit.isCapturable,unit.stats.currentHp > 0,"unit.isCapturable");
+
+        return unit.isCapturable && unit.stats.currentHp > 0;
+      })
+      .map(unit => {
+        const baseCaptureRate = 0.99;
+        const captureChance = getCaptureChance(unit, baseCaptureRate);
+        console.log(captureChance,unit,"captureChance");
+        return {
+          ...unit,
+          captureChance,
+        };
+      });
+
+    return capturableTargets;
+  }
+
+  _processCaptureAction(sourceUnit, action) {
+    const targetId = action.targetIds[0];
+    if (!targetId) {
+      const msg = `${sourceUnit.name} 的捕捉动作缺少目标。`;
+      this._log(msg, { source: sourceUnit.id, action });
+      return {
+        success: false,
+        actionType: 'capture',
+        targetId: null,
+        isCaptured: false,
+        captureChance: 0,
+        message: msg,
+      };
+    }
+
+    const targetUnit = this.getUnit(targetId);
+
+    if (!targetUnit || targetUnit.isPlayerUnit || targetUnit.isDefeated) {
+      const msg = `${sourceUnit.name} 尝试捕捉一个无效或已死亡的目标。`;
+      this._log(msg, { targetId });
+      return {
+        success: false,
+        actionType: 'capture',
+        targetId,
+        isCaptured: false,
+        captureChance: 0,
+        message: msg,
+      };
+    }
+
+    // 假设召唤兽模板数据中的 captureRate 已经传递到了战斗单位实例上
+    const baseCaptureRate = 0.99;
+    const captureChance = getCaptureChance(targetUnit, baseCaptureRate);
+    const success = attemptCapture(targetUnit, baseCaptureRate);
+
+    let msg;
+    if (success) {
+      msg = `${sourceUnit.name} 成功捕捉了 ${targetUnit.name}!`;
+      this._log(msg, {
+        type: 'capture_success',
+        source: sourceUnit.id,
+        target: targetId,
+      });
+      // 将单位标记为已捕捉，并从敌方单位列表中移除
+      targetUnit.isCaptured = true;
+      // 添加到 capturedUnits 数组，确保是数据的深拷贝快照
+      this.capturedUnits.push(cloneDeep(targetUnit));
+      // 从敌方阵营中移除
+      delete this.battleData.enemyUnits[targetId];
+      // 更新阵型数据
+      this.battleData.enemyFormation = this.battleData.enemyFormation.map(row =>
+        row.map(cell => (cell === targetId ? null : cell))
+      );
+    } else {
+      msg = `${sourceUnit.name} 尝试捕捉 ${targetUnit.name}，但是失败了。`;
+      this._log(msg, {
+        type: 'capture_fail',
+        source: sourceUnit.id,
+        target: targetId,
+      });
+    }
+
+    this._emit('ACTION_EXECUTED', {
+      sourceUnit,
+      targetUnits: [targetUnit],
+      action,
+      result: { success },
+    });
+
+    return {
+      success,
+      actionType: 'capture',
+      targetId,
+      isCaptured: !!success,
+      captureChance,
+      message: msg,
+    };
   }
 }
 

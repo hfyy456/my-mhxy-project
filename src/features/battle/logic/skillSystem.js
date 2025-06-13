@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-10 08:30:19
+ * @LastEditTime: 2025-06-13 19:58:43
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
@@ -29,27 +29,44 @@ import {
  * @param {boolean} options.includeSelf - 是否包含自己作为可能目标
  * @returns {BattleUnit[]} - 可攻击的目标单位数组
  */
-export const getValidTargetsForUnit = (sourceUnit, allUnits, globalSummonConfig, attackType = 'normal', options = {}) => {
-  if (!sourceUnit || !allUnits || allUnits.length === 0) return [];
+export const getValidTargetsForUnit = (sourceUnit, allUnits, attackType = 'normal', options = {}) => {
+  if (!sourceUnit || !allUnits || allUnits.length === 0) {
+    return [];
+  }
+  console.log(sourceUnit,"sourceUnit");
+  console.log(allUnits,"allUnits");
+  console.log(attackType,"attackType");
+  const { includeAllies = false, includeSelf = false } = options;
   
-  // 默认情况下，只能攻击敌方单位
-  const includeAllies = options.includeAllies || false;
-  
-  // 默认情况下，不能攻击自己
-  const includeSelf = options.includeSelf || false;
-  
-  // 直接筛选目标，跳过距离检查（攻击距离限制已移除）
   return allUnits.filter(targetUnit => {
-    // 排除自己（除非明确指定可以攻击自己）
-    if (targetUnit.id === sourceUnit.id && !includeSelf) return false;
+    // 目标必须是有效且存活的单位
+    if (!targetUnit || targetUnit.stats.currentHp <= 0) {
+      return false;
+    }
+
+    const isSelf = targetUnit.id === sourceUnit.id;
+    const isAlly = targetUnit.isPlayerUnit === sourceUnit.isPlayerUnit;
+
+    // 处理普通攻击的目标选择
+    if (attackType === 'normal') {
+      // 普通攻击只能选择非自身的敌方单位
+      return !isSelf && !isAlly;
+    }
+
+    // 处理技能等其他动作的目标选择
+    // 1. 处理自身
+    if (isSelf) {
+      return includeSelf;
+    }
+
+    // 2. 处理友方
+    if (isAlly) {
+      return includeAllies;
+    }
     
-    // 排除友方单位（除非明确指定可以攻击友方）
-    if (targetUnit.isPlayerUnit === sourceUnit.isPlayerUnit && !includeAllies) return false;
-    
-    // 排除已经死亡的单位
-    if (targetUnit.stats.currentHp <= 0) return false;
-    
-    // 攻击距离限制已移除 - 现在所有活着的敌方单位都是有效目标
+    // 3. 默认情况下，目标是敌人，总是有效的，除非该技能明确设定为只对友方生效
+    //    （在这种情况下，调用者应将 includeAllies 设为 true，此时敌方单位会因为 isAlly 为 false 而通过）
+    //    这个逻辑保留了原有的灵活性：默认允许攻击敌人。
     return true;
   });
 };

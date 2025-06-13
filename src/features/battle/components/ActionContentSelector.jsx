@@ -54,6 +54,9 @@ const ActionContentSelector = ({
   onNextStep,
   onPrevStep,
   
+  // 新增：捕捉相关
+  capturableTargets = [],
+  
   // 配置
   showStepIndicator = true,
   disabled = false
@@ -195,6 +198,69 @@ const ActionContentSelector = ({
               <span>确认防御</span>
             </div>
           </button>
+        </div>
+      );
+    }
+    
+    // 捕捉目标选择
+    if (selectedAction === 'capture') {
+      return (
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-center mb-4 pb-2 border-b border-gray-600/50">
+            <div className="w-6 h-6 rounded-full bg-green-900/50 flex items-center justify-center mr-2">
+              <span className="text-green-300 text-xs">🥅</span>
+            </div>
+            <div className="text-green-300 font-bold">选择捕捉目标</div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-900/30 pr-1 py-1">
+            {capturableTargets.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="bg-gray-700/30 rounded-lg border border-gray-600/50 p-3 text-center">
+                  <span className="text-xs text-gray-300">当前没有可捕捉的目标。</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {capturableTargets.map(target => {
+                  const chancePercentage = (target.captureChance * 100).toFixed(0);
+                  let chanceColor = 'text-green-300';
+                  if (target.captureChance < 0.5) chanceColor = 'text-yellow-300';
+                  if (target.captureChance < 0.2) chanceColor = 'text-red-400';
+
+                  return (
+                    <button
+                      key={target.id}
+                      className={`p-1.5 rounded-md transition-all duration-200 shadow-sm border ${selectedTarget === target.id ? 'bg-green-800/60 border-green-500' : 'bg-gray-700/40 border-transparent hover:bg-gray-700/70'}`}
+                      onClick={() => onTargetSelect?.(target.id)}
+                      disabled={disabled}
+                    >
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="font-bold text-white truncate">{target.name}</span>
+                        <span className={`font-black ${chanceColor}`}>{chancePercentage}%</span>
+                      </div>
+                      <div className="w-full bg-black/30 rounded-full h-1">
+                        <div className="bg-red-500 h-1 rounded-full" style={{ width: `${(target.stats.currentHp / target.stats.maxHp) * 100}%` }}></div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-auto pt-1">
+            <button 
+              className={`w-full px-3 py-1.5 rounded-lg font-bold text-white text-xs transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 shadow-lg ${(!selectedTarget || disabled) ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'}`}
+              onClick={onConfirmAction}
+              disabled={!selectedTarget || disabled}
+            >
+              <div className="flex items-center justify-center">
+                <span className="mr-2">✅</span>
+                <span>确认捕捉</span>
+              </div>
+            </button>
+          </div>
         </div>
       );
     }

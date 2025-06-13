@@ -291,6 +291,7 @@ class Summon {
       name: this.nickname || config.name,
       level: this.level,
       isPlayerUnit: true, // 默认是玩家单位，可在适配器中修改
+      isCapturable: this.isCapturable,
       
       // 战斗核心统计数据
       stats: {

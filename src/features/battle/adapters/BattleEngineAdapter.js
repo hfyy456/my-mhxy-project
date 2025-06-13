@@ -240,6 +240,7 @@ export class BattleEngineAdapter {
       return {
         activeSkills: [],
         validTargets: [],
+        capturableTargets: [],
         availableActionTypes: [],
         actionDescription: '无',
         skillAffectedArea: []
@@ -252,7 +253,8 @@ export class BattleEngineAdapter {
     // 注意：这里需要从引擎获取更多数据
     return {
       activeSkills: this.engine.getUnitActiveSkills(unitId),
-      validTargets: [], // 暂时为空
+      validTargets: [], // 遵从指示，此处不作修改
+      capturableTargets: this.engine.getCapturableTargets(), // 新增
       availableActionTypes: this.engine.getAvailableActionTypes(unitId),
       actionDescription: this.engine.getActionDescription(unitId),
       skillAffectedArea: [], // 暂时为空
@@ -540,6 +542,18 @@ export class BattleEngineAdapter {
     } catch (error) {
       this._log('AI行动处理检查失败', { error: error.message });
     }
+  }
+
+  getValidTargets(unitId, actionType, skillId) {
+    return this.engine.getValidTargets(unitId, actionType, skillId);
+  }
+
+  getCapturableTargets() {
+    return this.engine.getCapturableTargets();
+  }
+
+  getSkillAffectedArea(skillId, targetId) {
+    return this.engine.getSkillAffectedArea(skillId, targetId);
   }
 }
 

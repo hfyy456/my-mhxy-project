@@ -13,10 +13,7 @@ import { useBattleStateMachine, useBattleStateMachineState } from '../hooks/useB
 import { useBattleAdapter } from '../context/BattleAdapterContext.jsx';
 import { useBattleUI, useBattleComponentData } from '../hooks/useBattleUI.js';
 
-// Redux选择器已移除，现在完全使用状态机状态
 
-// 导入单位状态，以便在UI中响应
-import { UNIT_FSM_STATES } from '../state/UnitStateMachine';
 
 // 使用Tailwind CSS，不需要导入样式文件
 
