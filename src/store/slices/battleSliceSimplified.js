@@ -1,8 +1,8 @@
 /*
  * @Author: Claude
  * @Date: 2025-01-27
- * @LastEditors: Claude
- * @LastEditTime: 2025-01-27
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-13 09:41:53
  * @Description: 简化版战斗Redux Slice - 仅保留基本状态管理，战斗逻辑交由独立引擎处理
  */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
@@ -48,122 +48,7 @@ const initialState = {
   isLoading: false
 };
 
-// 异步Thunk - 从地图触发战斗（简化版）
-export const initiateMapBattleAction = createAsyncThunk(
-  'battle/initiateMapBattle',
-  async ({ areaId, playerLevel, playerPosition }, { getState, dispatch }) => {
-    console.log('[battleSliceSimplified] initiateMapBattleAction called with:', { areaId, playerLevel, playerPosition });
 
-    if (!areaId || playerLevel === undefined) {
-      throw new Error('areaId and playerLevel are required to initiate map battle.');
-    }
-
-    const state = getState();
-    const formationGrid = selectFormationGrid(state);
-    
-    // 获取玩家召唤兽数据
-    const playerSummonsData = [];
-    if (formationGrid) {
-      for (let r = 0; r < formationGrid.length; r++) {
-        for (let c = 0; c < formationGrid[r].length; c++) {
-          const summonId = formationGrid[r][c];
-          if (summonId) {
-            const summonDetails = summonConfig[summonId];
-            if (summonDetails) {
-              playerSummonsData.push({
-                id: summonDetails.id,
-                sourceId: summonDetails.summonSourceId,
-                name: summonDetails.nickname || summonDetails.name,
-                level: summonDetails.level,
-                stats: {
-                  currentHp: summonDetails.derivedAttributes?.hp || 1,
-                  maxHp: summonDetails.derivedAttributes?.hp || 1,
-                  currentMp: summonDetails.derivedAttributes?.mp || 0,
-                  maxMp: summonDetails.derivedAttributes?.mp || 0,
-                  physicalAttack: summonDetails.derivedAttributes?.physicalAttack || 0,
-                  magicalAttack: summonDetails.derivedAttributes?.magicalAttack || 0,
-                  physicalDefense: summonDetails.derivedAttributes?.physicalDefense || 0,
-                  magicalDefense: summonDetails.derivedAttributes?.magicalDefense || 0,
-                  speed: summonDetails.derivedAttributes?.speed || 0,
-                  critRate: summonDetails.derivedAttributes?.critRate || 0,
-                  critDamage: summonDetails.derivedAttributes?.critDamage || 1.5,
-                  hitRate: summonDetails.derivedAttributes?.hitRate || 1,
-                  dodgeRate: summonDetails.derivedAttributes?.dodgeRate || 0,
-                },
-                skillSet: summonDetails.skillSet || [],
-                isPlayerUnit: true,
-                type: 'player_summon',
-                spriteAssetKey: summonDetails.spriteAssetKey || summonConfig[summonDetails.summonSourceId]?.sprite,
-              });
-            }
-          }
-        }
-      }
-    }
-
-    if (playerSummonsData.length === 0) {
-      throw new Error('No player summons in formation. Cannot initiate battle.');
-    }
-
-    // 获取敌方单位数据
-    const currentRegion = WORLD_REGIONS[areaId];
-    if (!currentRegion) {
-      throw new Error(`Region configuration not found for area ${areaId}.`);
-    }
-
-    const encounter = selectEncounterForRegion(areaId, playerLevel);
-    if (!encounter || !encounter.team || encounter.team.length === 0) {
-      throw new Error(`No suitable encounter found for area ${areaId} at level ${playerLevel}.`);
-    }
-
-    const enemyUnitsData = [];
-    encounter.team.forEach((summonSourceId, index) => {
-      const summonTemplate = summonConfig[summonSourceId];
-      if (!summonTemplate) {
-        console.warn(`Summon template with sourceId ${summonSourceId} not found. Skipping.`);
-        return;
-      }
-
-      let currentLevel = summonTemplate.defaultLevel || 1;
-      if (encounter.summonLevelFixed) {
-        currentLevel = encounter.summonLevelFixed;
-      } else if (encounter.summonLevelOffset) {
-        currentLevel = (summonTemplate.defaultLevel || 1) + encounter.summonLevelOffset;
-      }
-      currentLevel = Math.max(1, currentLevel);
-
-      const calculatedStats = calculateSummonStats(summonTemplate, currentLevel);
-      const enemySummonId = `enemy_summon_${summonSourceId}_${Date.now()}_${index}`;
-      
-      enemyUnitsData.push({
-        id: enemySummonId,
-        sourceId: summonSourceId,
-        name: summonTemplate.name,
-        level: currentLevel,
-        stats: calculatedStats,
-        skillSet: summonTemplate.skills || [],
-        isPlayerUnit: false,
-        type: summonTemplate.type || 'unknown_type',
-        spriteAssetKey: summonTemplate.sprite,
-      });
-    });
-
-    if (enemyUnitsData.length === 0) {
-      throw new Error('Failed to load any valid enemies from encounter.');
-    }
-
-    return {
-      playerUnits: playerSummonsData,
-      enemyUnits: enemyUnitsData,
-      battleConfig: {
-        areaId,
-        playerLevel,
-        playerPosition,
-        encounter
-      }
-    };
-  }
-);
 
 // 简化版战斗Slice
 const battleSlice = createSlice({
@@ -373,64 +258,7 @@ const battleSlice = createSlice({
       state.isLoading = action.payload;
     }
   },
-  
-  extraReducers: (builder) => {
-    builder
-      .addCase(initiateMapBattleAction.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(initiateMapBattleAction.fulfilled, (state, action) => {
-        state.isLoading = false;
-        
-        const { playerUnits, enemyUnits, battleConfig } = action.payload;
-        
-        // 设置战斗单位
-        const battleUnits = {};
-        const playerFormation = createEmptyGrid();
-        const enemyFormation = createEmptyGrid();
-        
-        // 放置玩家单位
-        playerUnits.forEach((unit, index) => {
-          battleUnits[unit.id] = unit;
-          const row = Math.floor(index / BATTLE_GRID_COLS);
-          const col = index % BATTLE_GRID_COLS;
-          if (row < BATTLE_GRID_ROWS) {
-            playerFormation[row][col] = unit.id;
-          }
-        });
-        
-        // 放置敌方单位
-        enemyUnits.forEach((unit, index) => {
-          battleUnits[unit.id] = unit;
-          const row = Math.floor(index / BATTLE_GRID_COLS);
-          const col = index % BATTLE_GRID_COLS;
-          if (row < BATTLE_GRID_ROWS) {
-            enemyFormation[row][col] = unit.id;
-          }
-        });
-        
-        state.battleUnits = battleUnits;
-        state.playerFormation = playerFormation;
-        state.enemyFormation = enemyFormation;
-        state.isActive = true;
-        state.currentPhase = 'preparation';
-        state.currentRound = 1;
-        
-        // 添加战斗开始日志
-        state.battleLog.push({
-          id: generateUniqueId(),
-          message: `战斗开始！区域：${battleConfig.areaId}`,
-          timestamp: Date.now(),
-          type: 'system'
-        });
-      })
-      .addCase(initiateMapBattleAction.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.error.message;
-        console.error('[battleSliceSimplified] Battle initiation failed:', action.error);
-      });
-  }
+
 });
 
 // 导出actions

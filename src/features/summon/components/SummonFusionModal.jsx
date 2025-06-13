@@ -154,176 +154,129 @@ const SummonFusionModal = ({ isOpen, onClose, onFusion }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-slate-700 px-4 py-3 flex justify-between items-center">
-          <h2 className="text-white font-semibold text-lg">召唤兽合成</h2>
+      <div className="bg-theme-modal rounded-lg p-6 max-w-2xl w-full mx-4 border border-theme-dark">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-theme-dark">召唤兽融合</h3>
           <button
             onClick={onClose}
-            className="text-gray-300 hover:text-white"
+            className="text-theme-secondary hover:text-theme-dark"
           >
             <i className="fas fa-times"></i>
           </button>
         </div>
-        
-        <div className="p-4 flex-grow overflow-y-auto">
-          {/* 选择召唤兽部分 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-700/50 p-4 rounded-lg">
-              <h3 className="text-white font-medium mb-2">选择第一个召唤兽</h3>
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {summonsList.map(summon => (
-                  <button
-                    key={`summon1_${summon.id}`}
-                    onClick={() => setSelectedSummon1(summon)}
-                    className={`w-full text-left p-2 rounded-md transition-colors ${
-                      selectedSummon1?.id === summon.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-600 hover:bg-slate-500 text-gray-200'
-                    }`}
-                    disabled={selectedSummon2?.id === summon.id}
-                  >
-                    <div className="flex items-center">
-                      <span className="flex-grow">
-                        {summon.nickname || summonConfig[summon.summonSourceId]?.name || "未知召唤兽"}
-                      </span>
-                      <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                        Lv.{summon.level}
-                      </span>
-                      <i className={`ml-2 ${getElementIcon(summonConfig[summon.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[summon.summonSourceId]?.fiveElement)}`}></i>
-                    </div>
-                  </button>
-                ))}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 主召唤兽 */}
+          <div className="bg-theme-light border border-theme-dark rounded-lg p-4">
+            <h4 className="text-lg font-medium text-theme-dark mb-4">主召唤兽</h4>
+            {selectedSummon1 ? (
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-theme-light rounded-lg flex items-center justify-center">
+                  <img
+                    src={summonConfig[selectedSummon1.summonSourceId]?.icon}
+                    alt={summonConfig[selectedSummon1.summonSourceId]?.name}
+                    className="w-12 h-12 object-contain"
+                  />
+                </div>
+                <div>
+                  <h5 className="text-base font-medium text-theme-dark">
+                    {selectedSummon1.nickname || summonConfig[selectedSummon1.summonSourceId]?.name}
+                  </h5>
+                  <p className="text-sm text-theme-secondary">
+                    等级: {selectedSummon1.level}
+                  </p>
+                </div>
               </div>
-            </div>
-            
-            <div className="bg-slate-700/50 p-4 rounded-lg">
-              <h3 className="text-white font-medium mb-2">选择第二个召唤兽</h3>
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {summonsList.map(summon => (
-                  <button
-                    key={`summon2_${summon.id}`}
-                    onClick={() => setSelectedSummon2(summon)}
-                    className={`w-full text-left p-2 rounded-md transition-colors ${
-                      selectedSummon2?.id === summon.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-600 hover:bg-slate-500 text-gray-200'
-                    }`}
-                    disabled={selectedSummon1?.id === summon.id}
-                  >
-                    <div className="flex items-center">
-                      <span className="flex-grow">
-                        {summon.nickname || summonConfig[summon.summonSourceId]?.name || "未知召唤兽"}
-                      </span>
-                      <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                        Lv.{summon.level}
-                      </span>
-                      <i className={`ml-2 ${getElementIcon(summonConfig[summon.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[summon.summonSourceId]?.fiveElement)}`}></i>
-                    </div>
-                  </button>
-                ))}
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-theme-secondary">请选择主召唤兽</p>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* 选择了两个召唤兽后显示合成信息 */}
-          {selectedSummon1 && selectedSummon2 && (
-            <div className="bg-slate-700/50 p-4 rounded-lg mb-4">
-              <h4 className="text-white font-medium mb-2">选择的召唤兽</h4>
-              <p className="text-gray-300 text-sm mb-4">
-                合成后，原有的两个召唤兽将被消耗，随机生成一个新的召唤兽。
-                每个技能有30%的概率被继承，如果技能数量较多，概率会适当降低。
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-800 p-3 rounded-md">
-                  <div className="flex items-center">
-                    <h5 className="text-white flex-grow">
-                      {selectedSummon1?.nickname || summonConfig[selectedSummon1?.summonSourceId]?.name || "未知召唤兽"}
-                    </h5>
-                    <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                      Lv.{selectedSummon1?.level}
-                    </span>
-                    <i className={`ml-2 ${getElementIcon(summonConfig[selectedSummon1?.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[selectedSummon1?.summonSourceId]?.fiveElement)}`}></i>
-                  </div>
-                  {selectedSummon1?.skillSet?.filter(Boolean).length > 0 && (
-                    <div className="mt-2">
-                      <h6 className="text-xs text-gray-400 mb-1">技能:</h6>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedSummon1.skillSet.filter(Boolean).map((skillId, idx) => {
-                          const skillInfo = getSkillById(skillId);
-                          return (
-                            <div key={`s1_skill_${idx}`} className="relative group">
-                              <span className="text-xs bg-slate-700 px-2 py-1 rounded flex items-center">
-                                {skillInfo?.icon && <i className={`fas ${skillInfo.icon} mr-1 text-xs`}></i>}
-                                {skillInfo?.name || skillId}
-                              </span>
-                              <div className="absolute z-10 hidden group-hover:block bg-slate-800 p-2 rounded shadow-lg min-w-[200px] text-xs text-gray-300 top-full left-0 mt-1">
-                                <p className="font-medium text-white mb-1">{skillInfo?.name || skillId}</p>
-                                <p>{skillInfo?.description || "无描述"}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+          {/* 材料召唤兽 */}
+          <div className="bg-theme-light border border-theme-dark rounded-lg p-4">
+            <h4 className="text-lg font-medium text-theme-dark mb-4">材料召唤兽</h4>
+            {selectedSummon2 ? (
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-theme-light rounded-lg flex items-center justify-center">
+                  <img
+                    src={summonConfig[selectedSummon2.summonSourceId]?.icon}
+                    alt={summonConfig[selectedSummon2.summonSourceId]?.name}
+                    className="w-12 h-12 object-contain"
+                  />
                 </div>
-                
-                <div className="bg-slate-800 p-3 rounded-md">
-                  <div className="flex items-center">
-                    <h5 className="text-white flex-grow">
-                      {selectedSummon2?.nickname || summonConfig[selectedSummon2?.summonSourceId]?.name || "未知召唤兽"}
-                    </h5>
-                    <span className="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                      Lv.{selectedSummon2?.level}
-                    </span>
-                    <i className={`ml-2 ${getElementIcon(summonConfig[selectedSummon2?.summonSourceId]?.fiveElement)} ${getElementColor(summonConfig[selectedSummon2?.summonSourceId]?.fiveElement)}`}></i>
-                  </div>
-                  {selectedSummon2?.skillSet?.filter(Boolean).length > 0 && (
-                    <div className="mt-2">
-                      <h6 className="text-xs text-gray-400 mb-1">技能:</h6>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedSummon2.skillSet.filter(Boolean).map((skillId, idx) => {
-                          const skillInfo = getSkillById(skillId);
-                          return (
-                            <div key={`s2_skill_${idx}`} className="relative group">
-                              <span className="text-xs bg-slate-700 px-2 py-1 rounded flex items-center">
-                                {skillInfo?.icon && <i className={`fas ${skillInfo.icon} mr-1 text-xs`}></i>}
-                                {skillInfo?.name || skillId}
-                              </span>
-                              <div className="absolute z-10 hidden group-hover:block bg-slate-800 p-2 rounded shadow-lg min-w-[200px] text-xs text-gray-300 top-full left-0 mt-1">
-                                <p className="font-medium text-white mb-1">{skillInfo?.name || skillId}</p>
-                                <p>{skillInfo?.description || "无描述"}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <h5 className="text-base font-medium text-theme-dark">
+                    {selectedSummon2.nickname || summonConfig[selectedSummon2.summonSourceId]?.name}
+                  </h5>
+                  <p className="text-sm text-theme-secondary">
+                    等级: {selectedSummon2.level}
+                  </p>
                 </div>
               </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-theme-secondary">请选择材料召唤兽</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 融合结果预览 */}
+        <div className="mt-6 bg-theme-light border border-theme-dark rounded-lg p-4">
+          <h4 className="text-lg font-medium text-theme-dark mb-4">融合结果预览</h4>
+          {fusionInProgress ? (
+            <div className="text-center py-4">
+              <p className="text-theme-secondary">
+                合成中...
+              </p>
+            </div>
+          ) : selectedSummon1 && selectedSummon2 ? (
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-theme-light rounded-lg flex items-center justify-center">
+                <img
+                  src={summonConfig[fusionResult.summonSourceId]?.icon}
+                  alt={fusionResult.name}
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
+              <div>
+                <h5 className="text-base font-medium text-theme-dark">
+                  {fusionResult.name}
+                </h5>
+                <p className="text-sm text-theme-secondary">
+                  等级: {fusionResult.level}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-theme-secondary">
+                选择两个召唤兽后显示融合结果
+              </p>
             </div>
           )}
         </div>
-        
-        <div className="bg-slate-700 px-4 py-3 flex justify-between">
+
+        {/* 操作按钮 */}
+        <div className="mt-6 flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-md transition-colors"
+            className="px-4 py-2 bg-theme-dark hover:bg-theme-primary text-theme-light rounded"
           >
             取消
           </button>
-          
           <button
             onClick={handleFusion}
             disabled={!selectedSummon1 || !selectedSummon2 || fusionInProgress}
-            className={`px-4 py-2 rounded-md transition-colors ${
+            className={`px-4 py-2 rounded ${
               selectedSummon1 && selectedSummon2 && !fusionInProgress
-                ? 'bg-green-600 hover:bg-green-500 text-white'
-                : 'bg-slate-600 text-gray-400 cursor-not-allowed'
+                ? "bg-theme-primary hover:bg-theme-primary-light text-white"
+                : "bg-theme-light text-theme-secondary cursor-not-allowed"
             }`}
           >
-            {fusionInProgress ? '合成中...' : '确认合成'}
+            {fusionInProgress ? '合成中...' : '确认融合'}
           </button>
         </div>
       </div>

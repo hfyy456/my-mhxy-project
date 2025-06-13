@@ -181,40 +181,40 @@ const FormationSetup = (props) => {
       gap: '10px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: '#555',
+      borderColor: 'var(--color-primary)',
       padding: '10px',
       marginRight: '30px',
-      backgroundColor: '#2c3e50',
+      backgroundColor: 'var(--color-dark)',
     },
     gridCell: {
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: '#777',
+      borderColor: 'var(--color-primary)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'grab',
-      backgroundColor: '#34495e',
+      backgroundColor: 'rgba(115, 92, 136, 0.2)', // dreamyPurple-300 with opacity
       minHeight: '100px',
       position: 'relative',
       transition: 'background-color 0.2s ease, border-color 0.2s ease, border-style 0.2s ease',
     },
     frontRowCell: { // Style for Front Row (Rightmost column, colIndex === 2 for 3 cols)
-        backgroundColor: '#4a5568', // Darker Slate
-        borderColor: '#a0aec0', // Lighter Slate for border
+        backgroundColor: 'rgba(217, 200, 178, 0.2)', // dreamyPurple-500 with opacity
+        borderColor: 'rgba(217, 200, 178, 0.5)', // dreamyPurple-500 with more opacity
     },
     midRowCell: { // Style for Mid Row (Middle column, colIndex === 1 for 3 cols)
-        backgroundColor: '#38a169', // Green
-        borderColor: '#9ae6b4', // Lighter Green
+        backgroundColor: 'rgba(115, 92, 136, 0.2)', // dreamyPurple-300 with opacity
+        borderColor: 'rgba(115, 92, 136, 0.5)', // dreamyPurple-300 with more opacity
     },
     backRowCell: { // Style for Back Row (Leftmost column, colIndex === 0 for 3 cols)
-        backgroundColor: '#3182ce', // Blue
-        borderColor: '#90cdf4', // Lighter Blue
+        backgroundColor: 'rgba(86, 62, 104, 0.2)', // dreamyPurple-400 with opacity
+        borderColor: 'rgba(86, 62, 104, 0.5)', // dreamyPurple-400 with more opacity
     },
     gridCellDraggingOver: {
-      backgroundColor: '#4a6e8a',
+      backgroundColor: 'rgba(115, 92, 136, 0.4)', // dreamyPurple-300 with more opacity
       borderStyle: 'dashed',
-      borderColor: '#00bcd4',
+      borderColor: 'var(--color-primary)',
     },
     gridCellContent: {
         padding: '5px',
@@ -229,67 +229,110 @@ const FormationSetup = (props) => {
         opacity: 0.5,
         borderWidth: '2px',
         borderStyle: 'dashed',
-        borderColor: '#00bcd4',
+        borderColor: 'var(--color-primary)',
     },
     summonListContainer: {
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: '#555',
+      borderColor: 'var(--color-primary)',
       padding: '10px',
       width: '200px',
       maxHeight: `${FORMATION_ROWS * 100 + (FORMATION_ROWS -1) * 10 + 20}px`,
       overflowY: 'auto',
-      backgroundColor: '#2c3e50',
+      backgroundColor: 'var(--color-dark)',
     },
     summonListItem: {
       padding: '8px',
       margin: '5px 0',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: '#777',
+      borderColor: 'var(--color-primary)',
       cursor: 'grab',
-      backgroundColor: '#34495e',
-      transition: 'background-color 0.2s ease, border-color 0.2s ease, border-style 0.2s ease',
+      backgroundColor: 'rgba(115, 92, 136, 0.2)', // dreamyPurple-300 with opacity
+      transition: 'background-color 0.2s ease',
     },
-    selectedSummonListItem: {
-      padding: '8px',
-      margin: '5px 0',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: '#00bcd4',
-      cursor: 'grab',
-      backgroundColor: '#00796b',
+    summonListItemSelected: {
+      backgroundColor: 'rgba(115, 92, 136, 0.5)', // dreamyPurple-300 with more opacity
+      borderColor: 'var(--color-secondary)',
+    },
+    summonListItemInUse: {
+      backgroundColor: 'rgba(217, 200, 178, 0.2)', // dreamyPurple-500 with opacity
+      borderColor: 'rgba(217, 200, 178, 0.5)', // dreamyPurple-500 with more opacity
+    },
+    summonName: {
       fontWeight: 'bold',
-      color: 'white',
+      fontSize: '14px',
+      marginBottom: '5px',
     },
-    summonListItemInFormation: { // Style for summon in list that is already in formation
-        backgroundColor: '#5A67D8', // Indigo-ish background
-        borderColor: '#7f9cf5', // Lighter indigo border
-        color: '#e0e0e0', // Lighter text for contrast
-        // You could add an icon or ::after pseudo-element with CSS if not using inline styles for everything
+    summonLevel: {
+      fontSize: '12px',
+      color: '#aaa',
     },
-    analysisPanel: {
+    analysisContainer: {
+      marginLeft: '20px',
+      padding: '10px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: '#555',
-      padding: '10px',
-      marginBottom: '20px',
-      backgroundColor: '#2c3e50',
+      borderColor: 'var(--color-primary)',
+      backgroundColor: 'var(--color-dark)',
+      width: '200px',
+    },
+    analysisTitle: {
+      fontSize: '16px',
+      fontWeight: 'bold',
+      marginBottom: '10px',
+      color: 'var(--color-secondary)',
+    },
+    analysisItem: {
+      marginBottom: '8px',
+      fontSize: '14px',
+    },
+    analysisLabel: {
+      fontWeight: 'bold',
+      marginRight: '5px',
+      color: 'var(--color-secondary)',
+    },
+    analysisValue: {
+      color: '#fff',
+    },
+    positionLabel: {
+      position: 'absolute',
+      top: '5px',
+      right: '5px',
+      fontSize: '10px',
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+    emptySlot: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      height: '100%',
+      color: 'rgba(255, 255, 255, 0.5)',
+      fontSize: '24px',
     },
   };
 
   return (
     <div style={styles.container}>
       {/* 添加阵型分析信息显示 */}
-      <div style={styles.analysisPanel}>
-        <h4 style={{color: '#fff', marginBottom: '10px'}}>阵型分析</h4>
-        <div style={{color: '#ccc', fontSize: '0.9em'}}>
-          <div>总战力: <span style={{color: '#ffd700'}}>{formationAnalysis.totalPower}</span></div>
-          <div>平均战力: <span style={{color: '#90EE90'}}>{formationAnalysis.averagePower}</span></div>
-          <div>召唤兽数量: {formationAnalysis.totalSummons}/{formationAnalysis.maxSummons}</div>
-          <div>前排: {formationAnalysis.positionAnalysis.front.length} | 
-               中排: {formationAnalysis.positionAnalysis.mid.length} | 
-               后排: {formationAnalysis.positionAnalysis.back.length}</div>
+      <div style={styles.analysisContainer}>
+        <h4 style={styles.analysisTitle}>阵型分析</h4>
+        <div style={styles.analysisItem}>
+          <span style={styles.analysisLabel}>总战力:</span>
+          <span style={styles.analysisValue}>{formationAnalysis.totalPower}</span>
+        </div>
+        <div style={styles.analysisItem}>
+          <span style={styles.analysisLabel}>平均战力:</span>
+          <span style={styles.analysisValue}>{formationAnalysis.averagePower}</span>
+        </div>
+        <div style={styles.analysisItem}>
+          <span style={styles.analysisLabel}>召唤兽数量:</span>
+          <span style={styles.analysisValue}>{formationAnalysis.totalSummons}/{formationAnalysis.maxSummons}</span>
+        </div>
+        <div style={styles.analysisItem}>
+          <span style={styles.analysisLabel}>前排:</span>
+          <span style={styles.analysisValue}>{formationAnalysis.positionAnalysis.front.length} | 中排: {formationAnalysis.positionAnalysis.mid.length} | 后排: {formationAnalysis.positionAnalysis.back.length}</span>
         </div>
       </div>
       
@@ -313,7 +356,7 @@ const FormationSetup = (props) => {
                   boxShadow: summonIdInCell ? '0 2px 8px rgba(0,0,0,0.18)' : '0 1px 2px rgba(0,0,0,0.08)',
                   borderRadius: '14px',
                   borderWidth: isBeingDraggedOver || currentCellItemIsDragged ? '2px' : '1px',
-                  borderColor: isBeingDraggedOver || currentCellItemIsDragged ? '#00bcd4' : (positionStyle.borderColor || '#777'),
+                  borderColor: isBeingDraggedOver || currentCellItemIsDragged ? 'var(--color-primary)' : (positionStyle.borderColor || 'var(--color-primary)'),
                   background: !summonIdInCell ? 'linear-gradient(135deg, #2d3748 60%, #4fd1c5 100%)' : positionStyle.backgroundColor,
                   transition: 'all 0.18s',
                 }}
@@ -335,9 +378,9 @@ const FormationSetup = (props) => {
                 >
                   <div style={{width:'100%',height:'100%',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
                     {!summonIdInCell && (
-                      <div style={{textAlign:'center', color:'#b2f5ea', fontSize:'2.2em', opacity:0.7}}>
+                      <div style={styles.emptySlot}>
                         <i className="fa fa-plus"></i>
-                        <div style={{fontSize:'0.9em', color:'#81e6d9'}}>空</div>
+                        <div style={styles.positionLabel}>空</div>
                       </div>
                     )}
                     {summonIdInCell && (
@@ -347,10 +390,10 @@ const FormationSetup = (props) => {
                           alt="icon" 
                           style={{width:48,height:48,borderRadius:8,marginBottom:4,boxShadow:'0 1px 4px #0004'}} 
                         />
-                        <div style={{fontWeight:'bold',fontSize:'1.1em',color:'#fff',textShadow:'0 1px 2px #0008'}}>
+                        <div style={styles.summonName}>
                           {summonInfo.name}
                         </div>
-                        <div style={{fontSize:'0.9em',color:'#c3e6fc'}}>
+                        <div style={styles.summonLevel}>
                           Lv.{summonInfo.level}
                         </div>
                         <div style={{fontSize:'0.8em',color:'#ffd700'}}>
@@ -397,10 +440,10 @@ const FormationSetup = (props) => {
             
             let listItemStyle = styles.summonListItem;
             if (isInFormation && !isBeingDragged) {
-              listItemStyle = { ...listItemStyle, ...styles.summonListItemInFormation };
+              listItemStyle = { ...listItemStyle, ...styles.summonListItemInUse };
             }
             if (isSelected && !isBeingDragged && !isInFormation) {
-              listItemStyle = styles.selectedSummonListItem;
+              listItemStyle = styles.summonListItemSelected;
             }
             if (isBeingDragged) {
               listItemStyle = {...styles.summonListItem, ...styles.draggingItem};
@@ -422,8 +465,8 @@ const FormationSetup = (props) => {
               >
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <div>
-                    <div>{displayName}</div>
-                    <div style={{fontSize: '0.9em', opacity: 0.8}}>
+                    <div style={styles.summonName}>{displayName}</div>
+                    <div style={styles.summonLevel}>
                       {uiText.labels.level || '等级:'} {displayLevel}
                     </div>
                   </div>
@@ -439,7 +482,7 @@ const FormationSetup = (props) => {
           <p>{uiText.notifications.noSummonData}</p>
         )}
         {selectedSummonId && !draggedItem && ( 
-          <p style={{ marginTop: '10px', color: '#00bcd4' }}>
+          <p style={{ marginTop: '10px', color: 'var(--color-primary)' }}>
             已选择: {getSummonDisplayInfo(selectedSummonId).name}. 点击格子放置或拖拽放置。
           </p>
         )}

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:06:55
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-12 07:17:25
+ * @LastEditTime: 2025-06-13 04:39:23
  */
 import React, { useEffect, useCallback, useState, useMemo, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -429,7 +429,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
         <div className="md:col-span-1 flex flex-col gap-1.5">
           <button 
             onClick={handleRefineMonster} 
-            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+            className="w-full bg-gradient-theme hover:bg-gradient-theme text-theme-light font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-theme-primary"
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
             <i className="fas fa-magic mr-1.5"></i>炼妖 (洗宠)
@@ -437,7 +437,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           
           <button 
             onClick={() => setIsEnhancedFusionOpen(true)}
-            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-theme hover:bg-gradient-theme text-theme-light font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-theme-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={summonsList.length < 2}
             title={summonsList.length < 2 ? "需要至少两个召唤兽才能合成" : "合成两个召唤兽"}
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
@@ -447,7 +447,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
 
           <button 
             onClick={() => setIsFusionHistoryModalOpen(true)}
-            className="w-full bg-gradient-to-b from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-purple-500/30"
+            className="w-full bg-gradient-theme hover:bg-gradient-theme text-theme-light font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-theme-primary/30"
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
             <i className="fas fa-history mr-1.5"></i>合成历史
@@ -456,7 +456,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           {currentSummon && (
             <button 
               onClick={() => setIsHistoryModalOpen(true)} 
-              className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+              className="w-full bg-gradient-theme hover:bg-gradient-theme text-theme-light font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-theme-primary/30"
               style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
             >
               <i className="fas fa-history mr-1.5"></i>培养历史
@@ -464,7 +464,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           )}
           <button 
             onClick={() => setIsSummonCatalogModalOpen(true)} 
-            className="w-full bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-amber-500/30"
+            className="w-full bg-gradient-theme hover:bg-gradient-theme text-theme-light font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150 ease-in-out text-sm border border-theme-primary/30"
             style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}
           >
             <i className="fas fa-book mr-1.5"></i>召唤兽图鉴
@@ -500,7 +500,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
           </div>
         </div>
 
-        <div className="md:col-span-5 bg-gradient-to-b from-slate-800/90 to-slate-700/90 p-3 rounded-lg shadow-inner overflow-y-auto min-h-[450px] hidden-scrollbar border border-amber-700/30" style={{ boxShadow: 'inset 0 0 15px rgba(0, 0, 0, 0.3)' }}>
+        <div className="md:col-span-5 bg-gradient-to-b from-theme-background-dark/90 to-theme-background/90 p-3 rounded-lg shadow-inner overflow-y-auto min-h-[450px] hidden-scrollbar border border-theme-primary/30" style={{ boxShadow: 'inset 0 0 15px rgba(0, 0, 0, 0.3)' }}>
           {currentSummon ? (
             <SummonInfo
               summon={currentSummon}
@@ -513,8 +513,8 @@ const SummonSystem = ({ toasts, setToasts }) => {
               onOpenNicknameModal={() => handleOpenNicknameModal(currentSummon)}
             />
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-10">
-              <i className="fas fa-dragon text-4xl mb-4 text-slate-500"></i>
+            <div className="h-full flex flex-col items-center justify-center text-center text-theme-secondary py-10">
+              <i className="fas fa-dragon text-4xl mb-4 text-theme-text-tertiary"></i>
               <p>请先选择或召唤一只召唤兽。</p>
               <p className="text-xs mt-2">您可以从左侧列表选择，或点击"炼妖"获取新的召唤兽。</p>
             </div>

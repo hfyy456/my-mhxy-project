@@ -1,4 +1,9 @@
-// src/features/battle/logic/summonUtils.js
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-02 03:53:16
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-13 09:38:03
+ */
 import { ATTRIBUTE_TYPES, PET_TYPES } from '@/config/enumConfig';
 import { derivedAttributeConfig } from '@/config/config';
 

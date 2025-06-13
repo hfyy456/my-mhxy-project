@@ -65,27 +65,27 @@ const FormationGrid = ({
       switch(col) {
         case 0: // 后排
           return {
-            bg: '#1e3a8a', // 蓝色
-            border: '#3b82f6',
-            hoverBg: '#1e40af'
+            bg: 'bg-dreamyPurple-400', // 深紫色
+            border: 'border-dreamyPurple-300',
+            hoverBg: 'hover:bg-dreamyPurple-400/80'
           };
         case 1: // 中排
           return {
-            bg: '#166534', // 绿色
-            border: '#22c55e',
-            hoverBg: '#15803d'
+            bg: 'bg-dreamyPurple-300', // 中紫色
+            border: 'border-dreamyPurple-200',
+            hoverBg: 'hover:bg-dreamyPurple-300/80'
           };
         case 2: // 前排
           return {
-            bg: '#7f1d1d', // 红色/灰色
-            border: '#6b7280',
-            hoverBg: '#991b1b'
+            bg: 'bg-dreamyPurple-500', // 米色
+            border: 'border-dreamyPurple-400',
+            hoverBg: 'hover:bg-dreamyPurple-500/80'
           };
         default:
           return {
-            bg: '#374151',
-            border: '#6b7280', 
-            hoverBg: '#4b5563'
+            bg: 'bg-gray-700',
+            border: 'border-gray-600', 
+            hoverBg: 'hover:bg-gray-700/80'
           };
       }
     };
@@ -100,15 +100,11 @@ const FormationGrid = ({
           flex flex-col items-center justify-center text-center
           ${isDragOver 
             ? 'border-yellow-400 bg-yellow-400/20 scale-105' 
-            : `hover:border-slate-400`
+            : `hover:border-slate-400 ${posColors.border}`
           }
-          ${hasSummon ? 'hover:scale-105 hover:bg-red-500/10 hover:border-red-400' : `hover:bg-opacity-80`}
+          ${hasSummon ? 'hover:scale-105 hover:bg-red-500/10 hover:border-red-400' : `hover:bg-opacity-80 ${posColors.hoverBg}`}
+          ${posColors.bg}
         `}
-        style={{
-          backgroundColor: isDragOver ? 'rgba(251, 191, 36, 0.2)' : posColors.bg,
-          borderColor: isDragOver ? '#fbbf24' : posColors.border,
-          ...positionStyle
-        }}
         onClick={() => handleSlotClick(row, col)}
         onDragOver={(e) => handleDragOver(e, row, col)}
         onDragLeave={handleDragLeave}
@@ -128,7 +124,7 @@ const FormationGrid = ({
           // 有召唤兽时的显示
           <div className="flex flex-col items-center justify-center h-full w-full p-1">
             {/* 召唤兽头像区域 */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center mb-1 shadow-lg">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-dreamyPurple-300 to-dreamyPurple-400 flex items-center justify-center mb-1 shadow-lg">
               <span className="text-white text-sm font-bold">
                 {summonInfo?.name ? summonInfo.name.charAt(0) : '?'}
               </span>
@@ -143,7 +139,7 @@ const FormationGrid = ({
             <div className="text-xs text-white/80 flex items-center gap-1">
               {summonInfo?.level && <span>Lv.{summonInfo.level}</span>}
               {summonInfo?.power > 0 && (
-                <span className="text-orange-400">{summonInfo.power}</span>
+                <span className="text-dreamyPurple-100">{summonInfo.power}</span>
               )}
             </div>
           </div>

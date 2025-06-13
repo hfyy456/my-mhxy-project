@@ -84,7 +84,7 @@ const SummonDetailModal = ({
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-slate-800 rounded-xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl"
+        className="bg-theme-modal rounded-xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl"
         onClick={handleContentClick}
       >
         <div className="flex justify-between items-center p-4 border-b border-slate-700">
@@ -455,7 +455,7 @@ const SummonCatalog = ({ isOpen, onClose }) => {
       onClick={handleMainBackdropClick}
     >
       <div 
-        className="bg-slate-800 rounded-xl w-full max-w-7xl max-h-[88vh] overflow-hidden shadow-2xl shadow-purple-500/30 flex flex-col"
+        className="bg-theme-modal rounded-xl w-full max-w-7xl max-h-[88vh] overflow-hidden shadow-2xl shadow-purple-500/30 flex flex-col"
         onClick={handleMainContentClick}
       >
         <div className="flex justify-between items-center p-5 border-b border-slate-700">

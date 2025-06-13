@@ -2,11 +2,12 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-11 05:54:32
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-12 07:09:10
+ * @LastEditTime: 2025-06-13 08:35:33
  */
 import { createCreatureFromTemplate } from '@/utils/summonUtils';
-import { SUMMON_NATURE_TYPES, SUMMON_SOURCES } from '@/config/enumConfig';
+import { SUMMON_NATURE_TYPES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
 import { arrangeFormationIntelligently } from '@/features/formation/formationLogic';
+import { difficultySettings, CURRENT_DIFFICULTY } from '@/config/config';
 
 /**
  * 将生成的敌人随机放置到3x3阵型中
@@ -98,7 +99,33 @@ export const generateEnemyGroup = async ({ enemyPool, level, count }) => {
     // 2. 直接在实例上设置等级并重算属性
     await enemyInstance.setLevel(finalLevel);
     
-    // 3. 将保持着"实例"身份的敌人添加到数组中
+    // 3. 应用难度系数
+    const difficultyConfig = difficultySettings[CURRENT_DIFFICULTY];
+    if (difficultyConfig) {
+      const { modifier, specificStatModifiers } = difficultyConfig;
+      const { HP, MP, PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED } = EQUIPMENT_EFFECT_TYPES;
+      
+      const statsToModify = [HP, MP, PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED];
+
+      statsToModify.forEach(stat => {
+        if (enemyInstance.derivedAttributes[stat]) {
+          enemyInstance.derivedAttributes[stat] = Math.floor(enemyInstance.derivedAttributes[stat] * modifier);
+        }
+      });
+      
+      // 应用特定属性的额外加成
+      if (specificStatModifiers) {
+        for (const stat in specificStatModifiers) {
+          if (enemyInstance.derivedAttributes[stat]) {
+            enemyInstance.derivedAttributes[stat] = Math.floor(enemyInstance.derivedAttributes[stat] * specificStatModifiers[stat]);
+          }
+        }
+      }
+      
+
+    }
+
+    // 4. 将保持着"实例"身份的敌人添加到数组中
     selectedEnemies.push(enemyInstance);
   }
 

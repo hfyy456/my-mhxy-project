@@ -70,7 +70,7 @@ const CommonModal = ({
     >
       <div 
         ref={modalRef} 
-        className={`bg-slate-800 rounded-xl transform transition-all duration-300 border border-slate-600 shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${fullScreen ? 'w-full h-full max-w-none m-0 rounded-none' : `mx-4 ${className || `w-full ${maxWidthClass}`}`}`}
+        className={`bg-theme-modal rounded-xl transform transition-all duration-300 border border-theme-dark shadow-2xl shadow-purple-500/30 flex flex-col overflow-hidden ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${fullScreen ? 'w-full h-full max-w-none m-0 rounded-none' : `mx-4 ${className || `w-full ${maxWidthClass}`}`}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

@@ -796,14 +796,15 @@ const BattleUnitSprite = ({
   const hpPercent = (displayHp / maxHp) * 100;
   const mpPercent = (currentMp / maxMp) * 100;
   
-  let hpBarColor = "#00ff66"; // 更亮的绿色代表高HP
-  if (hpPercent < 30) {
-    hpBarColor = "#ff3333"; // 更亮的红色代表低HP
-  } else if (hpPercent < 60) {
-    hpBarColor = "#ffaa00"; // 更亮的橙色代表中等HP
-  }
+  // 使用Tailwind颜色类对应的颜色值
+  const getHpBarColor = (percent) => {
+    if (percent < 30) return "rgb(239, 68, 68)"; // red-500
+    if (percent < 60) return "rgb(245, 158, 11)"; // amber-500
+    return "rgb(34, 197, 94)"; // green-500
+  };
   
-  const mpBarColor = "#0099ff"; // 更亮的蓝色代表MP
+  const hpBarColor = getHpBarColor(hpPercent);
+  const mpBarColor = "rgb(59, 130, 246)"; // blue-500
 
   // 单位基础样式
   const unitBaseClasses =
@@ -843,8 +844,8 @@ const BattleUnitSprite = ({
           <img 
             src={
               unit.spriteAssetKey &&
-              images[`/src/assets/summons/${unit.id}.png`]?.default
-                ? images[`/src/assets/summons/${unit.id}.png`]
+              images[`/src/assets/summons/${unit._source.summonSourceId}.png`]?.default
+                ? images[`/src/assets/summons/${unit._source.summonSourceId}.png`]
                     .default
                 : images["/src/assets/summons/default.png"].default
             }

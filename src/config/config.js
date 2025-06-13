@@ -6,7 +6,7 @@
  */
 import { summonConfig } from "@/config/summon/summonConfig";
 import { skillConfig } from "@/config/skill/skillConfig";
-import { SKILL_TYPES, EQUIPMENT_SLOT_TYPES } from "@/config/enumConfig";
+import { SKILL_TYPES, EQUIPMENT_SLOT_TYPES, EQUIPMENT_EFFECT_TYPES } from "@/config/enumConfig";
 import { HOMESTEAD_GENERAL_CONFIG, PLOT_TYPES } from "@/config/homestead/homesteadConfig";
 import { BUILDINGS, BUILDING_CATEGORIES } from "@/config/homestead/buildingConfig";
 // 此处可继续导入其他拆分的配置文件
@@ -142,3 +142,34 @@ export const INITIAL_GOLD = 0;
 // Formation Config
 export const FORMATION_ROWS = 3;
 export const FORMATION_COLS = 3;
+
+// Difficulty Settings
+export const difficultySettings = {
+  easy: {
+    modifier: 0.9,
+    description: "敌人属性降低20%",
+  },
+  normal: {
+    modifier: 1.1,
+    description: "标准游戏难度",
+  },
+  hard: {
+    modifier: 1.2,
+    description: "敌人属性提升20%",
+    specificStatModifiers: {
+      [EQUIPMENT_EFFECT_TYPES.PHYSICAL_ATTACK]: 1.1, //额外提升10%物理攻击
+      [EQUIPMENT_EFFECT_TYPES.MAGICAL_ATTACK]: 1.1, //额外提升10%魔法攻击
+    },
+  },
+  nightmare: {
+    modifier: 1.5,
+    description: "敌人属性大幅提升50%",
+    specificStatModifiers: {
+      [EQUIPMENT_EFFECT_TYPES.PHYSICAL_ATTACK]: 1.25, //额外提升25%物理攻击
+      [EQUIPMENT_EFFECT_TYPES.MAGICAL_ATTACK]: 1.25, //额外提升25%魔法攻击
+      [EQUIPMENT_EFFECT_TYPES.SPEED]: 1.1, //额外提升10%速度
+    },
+  },
+};
+
+export const CURRENT_DIFFICULTY = "normal"; // 可在游戏设置中更改

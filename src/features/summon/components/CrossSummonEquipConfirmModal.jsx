@@ -7,30 +7,53 @@ const CrossSummonEquipConfirmModal = ({ isOpen, onConfirm, onCancel, details }) 
   const { itemToEquip, originalSummon, targetSummon, slotType } = details;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-60 p-4">
-      <div className="bg-slate-800 border border-slate-700 p-6 rounded-lg shadow-xl w-full max-w-lg text-center">
-        <h3 className="text-xl font-semibold text-yellow-400 mb-4">装备冲突！</h3>
-        <p className="text-slate-300 mb-3">
-          物品 <span className="font-semibold text-purple-400">{itemToEquip.name}</span> 当前装备于：
-        </p>
-        <p className="text-slate-200 font-bold text-lg mb-4">
-          {originalSummon.name || originalSummon.nickname}
-        </p>
-        <p className="text-slate-300 mb-6">
-          是否从其身上卸下，并装备给 <span className="font-semibold text-green-400">{targetSummon.name || targetSummon.nickname}</span> 的 <span className="font-semibold text-cyan-400">{uiText.equipmentSlots[slotType] || slotType}</span> 槽位？
-        </p>
-        <div className="flex justify-around mt-8">
-          <button
-            onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-8 rounded-md transition-colors duration-150 shadow-md"
-          >
-            是，卸下并装备
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-theme-primary rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-theme-light">确认装备转移</h3>
           <button
             onClick={onCancel}
-            className="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-8 rounded-md transition-colors duration-150 shadow-md"
+            className="text-theme-secondary hover:text-theme-light"
           >
-            否，取消
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-theme-secondary mb-4">
+            确定要将 {originalSummon.nickname || originalSummon.name} 的装备转移给 {targetSummon.nickname || targetSummon.name} 吗？
+          </p>
+          <div className="bg-theme-secondary/70 rounded-lg p-4">
+            <h4 className="text-lg font-medium text-theme-light mb-2">转移详情</h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-theme-secondary">源召唤兽:</span>
+                <span className="text-theme-light">{originalSummon.nickname || originalSummon.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-theme-secondary">目标召唤兽:</span>
+                <span className="text-theme-light">{targetSummon.nickname || targetSummon.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-theme-secondary">装备数量:</span>
+                <span className="text-theme-light">{itemToEquip ? 1 : 0} 件</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-theme-secondary hover:bg-theme-light text-theme-light rounded"
+          >
+            取消
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-theme-primary hover:bg-theme-primary-light text-white rounded"
+          >
+            确认转移
           </button>
         </div>
       </div>

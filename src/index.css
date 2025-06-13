@@ -13,38 +13,45 @@ body {
   height: 100%;
 }
 
-@theme inline {
+/* 主题颜色变量 */
+:root {
+  /* 基础颜色 */
   --color-primary: #8a2be2;
   --color-secondary: #ffa500;
   --color-neutral: #f0f8ff; 
   --color-dark: #1a202c;
   --color-light: #ffffff;
+  
+  /* 品质颜色 */
   --color-quality-normal: #808080;
   --color-quality-rare: #3b82f6;
   --color-quality-epic: #a855f7;
   --color-quality-legendary: #ff8000;
   --color-quality-mythic: #ff1493;
-}
-@layer utilities {
-  .content-auto {
-    content-visibility: auto;
-  }
-  .text-shadow {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  }
-  .card-hover {
-    transition: all 0.3s ease;
-  }
-  .card-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
-      0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  }
-}
-:root {
+  
+  /* 字体大小 */
   --base-font-size: 10px; /* 初始基准值 */
+  --color-modal: #fff;
 }
 
+/* 低调梦幻紫主题颜色变量 */
+.theme-dreamy-purple {
+  --color-primary: #735c88;    /* 中紫色 */
+  --color-secondary: #d9c8b2;  /* 米色 */
+  --color-neutral: #fff0fc;    /* 浅粉紫色 */
+  --color-dark: #563e68;       /* 深紫色 */
+  --color-light: #fff0fc;      /* 浅粉紫色 */
+  
+  /* 品质颜色 */
+  --color-quality-normal: #a28fb1;  /* 淡紫色 */
+  --color-quality-rare: #3b82f6;    /* 保持原有的蓝色 */
+  --color-quality-epic: #735c88;    /* 中紫色 */
+  --color-quality-legendary: #563e68; /* 深紫色 */
+  --color-quality-mythic: #d9c8b2;  /* 米色 */
+  --color-modal: #fff0fc;
+}
+
+/* 响应式字体大小 */
 @media (min-width: 640px) {
   :root {
     --base-font-size: 12px;
@@ -59,6 +66,95 @@ body {
 
 html {
   font-size: var(--base-font-size);
+}
+
+/* 主题相关工具类 */
+@layer components {
+  /* 背景颜色 */
+  .bg-theme-primary {
+    background-color: var(--color-primary);
+  }
+  .bg-theme-secondary {
+    background-color: var(--color-secondary);
+  }
+  .bg-theme-neutral {
+    background-color: var(--color-neutral);
+  }
+  .bg-theme-dark {
+    background-color: var(--color-dark);
+  }
+  .bg-theme-light {
+    background-color: var(--color-light);
+  }
+  
+  /* 文本颜色 */
+  .text-theme-primary {
+    color: var(--color-primary);
+  }
+  .text-theme-secondary {
+    color: var(--color-secondary);
+  }
+  .text-theme-neutral {
+    color: var(--color-neutral);
+  }
+  .text-theme-dark {
+    color: var(--color-dark);
+  }
+  .text-theme-light {
+    color: var(--color-light);
+  }
+  
+  /* 边框颜色 */
+  .border-theme-primary {
+    border-color: var(--color-primary);
+  }
+  .border-theme-secondary {
+    border-color: var(--color-secondary);
+  }
+  .border-theme-neutral {
+    border-color: var(--color-neutral);
+  }
+  .border-theme-dark {
+    border-color: var(--color-dark);
+  }
+  .border-theme-light {
+    border-color: var(--color-light);
+  }
+  
+  /* 渐变背景 */
+  .bg-gradient-theme {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-dark));
+  }
+  
+  /* 半透明背景 */
+  .bg-theme-primary-50 {
+    background-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  }
+  .bg-theme-secondary-50 {
+    background-color: color-mix(in srgb, var(--color-secondary) 50%, transparent);
+  }
+  .bg-theme-dark-50 {
+    background-color: color-mix(in srgb, var(--color-dark) 50%, transparent);
+  }
+  
+  /* 低调梦幻紫主题专用渐变 */
+  .bg-gradient-dreamy {
+    background: linear-gradient(135deg, #735c88, #563e68);
+  }
+  
+  /* 低调梦幻紫主题专用按钮样式 */
+  .btn-dreamy {
+    @apply px-3 py-2 bg-dreamyPurple-300 text-white rounded hover:bg-dreamyPurple-400 transition-colors;
+  }
+  
+  /* 低调梦幻紫主题专用卡片样式 */
+  .card-dreamy {
+    @apply bg-dreamyPurple-400/10 border border-dreamyPurple-300/30 rounded-lg p-4 shadow-md;
+  }
+
+  .bg-theme-modal {
+    background-color: var(--color-modal);
+  }
 }
 
 /* 游戏视口样式 */
@@ -170,57 +266,57 @@ html {
   
   /* 普通品质 */
   .quality-normal {
-    @apply text-slate-400;
+    color: var(--color-quality-normal);
   }
   .quality-border-normal {
-    @apply border-quality-normal;
+    border-color: var(--color-quality-normal);
   }
   .quality-bg-normal {
-    @apply bg-slate-600;
+    background-color: var(--color-quality-normal);
   }
   
   /* 稀有品质 */
   .quality-rare {
-    @apply text-blue-400;
+    color: var(--color-quality-rare);
   }
   .quality-border-rare {
-    @apply border-quality-rare;
+    border-color: var(--color-quality-rare);
   }
   .quality-bg-rare {
-    @apply bg-blue-600;
+    background-color: var(--color-quality-rare);
   }
   
   /* 史诗品质 */
   .quality-epic {
-    @apply text-purple-400;
+    color: var(--color-quality-epic);
   }
   .quality-border-epic {
-    @apply border-quality-epic;
+    border-color: var(--color-quality-epic);
   }
   .quality-bg-epic {
-    @apply bg-purple-600;
+    background-color: var(--color-quality-epic);
   }
   
   /* 传说品质 */
   .quality-legendary {
-    @apply text-orange-400;
+    color: var(--color-quality-legendary);
   }
   .quality-border-legendary {
-    @apply border-quality-legendary;
+    border-color: var(--color-quality-legendary);
   }
   .quality-bg-legendary {
-    @apply bg-orange-600;
+    background-color: var(--color-quality-legendary);
   }
   
   /* 神话品质 */
   .quality-mythic {
-    @apply text-red-400;
+    color: var(--color-quality-mythic);
   }
   .quality-border-mythic {
-    @apply border-quality-mythic;
+    border-color: var(--color-quality-mythic);
   }
   .quality-bg-mythic {
-    @apply bg-red-600;
+    background-color: var(--color-quality-mythic);
   }
 }
 
@@ -253,48 +349,6 @@ html {
 
 .animate-spin-slower {
   animation: spin-slower 2.5s linear infinite;
-}
-
-/* 品质相关样式 */
-.quality-normal {
-  @apply text-slate-400;
-}
-
-.quality-rare {
-  @apply text-blue-400;
-}
-
-.quality-epic {
-  @apply text-purple-400;
-}
-
-.quality-legendary {
-  @apply text-orange-400;
-}
-
-.quality-mythic {
-  @apply text-red-400;
-}
-
-/* 品质背景样式 */
-.bg-quality-normal {
-  @apply bg-slate-600;
-}
-
-.bg-quality-rare {
-  @apply bg-blue-600;
-}
-
-.bg-quality-epic {
-  @apply bg-purple-600;
-}
-
-.bg-quality-legendary {
-  @apply bg-orange-600;
-}
-
-.bg-quality-mythic {
-  @apply bg-red-600;
 }
 
 /* 行裁剪工具类 */

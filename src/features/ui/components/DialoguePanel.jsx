@@ -27,65 +27,15 @@ const DialoguePanel = () => {
     dispatch(handleDialogueOptionSelectThunk(interactingNpcId, option));
   };
 
-  const panelStyle = {
-    position: 'fixed',
-    bottom: '50%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '80%',
-    maxWidth: '600px',
-    padding: '20px',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    color: 'white',
-    border: '1px solid #444',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-    zIndex: 1000, // Ensure it's on top
-    fontFamily: 'Arial, sans-serif',
-  };
-
-  const npcNameStyle = {
-    fontSize: '1.2em',
-    fontWeight: 'bold',
-    marginBottom: '10px',
-    color: '#61dafb', // Light blue for NPC name
-  };
-
-  const dialogueTextStyle = {
-    marginBottom: '20px',
-    lineHeight: '1.6',
-  };
-
-  const optionsListStyle = {
-    listStyleType: 'none',
-    padding: 0,
-  };
-
-  const optionButtonStyle = {
-    display: 'block',
-    width: '100%',
-    padding: '10px 15px',
-    marginBottom: '8px',
-    backgroundColor: '#333',
-    color: '#eee',
-    border: '1px solid #555',
-    borderRadius: '4px',
-    textAlign: 'left',
-    cursor: 'pointer',
-    fontSize: '0.9em',
-  };
-
   return (
-    <div style={panelStyle}>
-      <div style={npcNameStyle}>{interactingNpcData.name || 'NPC'}</div>
-      <div style={dialogueTextStyle}>{currentDialogueNode.text}</div>
-      <ul style={optionsListStyle}>
+    <div className="fixed bottom-1/2 left-1/2 transform -translate-x-1/2 w-4/5 max-w-[600px] p-5 bg-theme-dark/80 text-theme-light border border-theme-primary rounded-lg shadow-lg z-[1000] font-sans">
+      <div className="text-xl font-bold mb-2.5 text-theme-primary">{interactingNpcData.name || 'NPC'}</div>
+      <div className="mb-5 leading-relaxed">{currentDialogueNode.text}</div>
+      <ul className="list-none p-0">
         {currentDialogueNode.options && currentDialogueNode.options.map((option, index) => (
           <li key={index}>
             <button 
-              style={optionButtonStyle} 
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#555'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#333'}
+              className="block w-full py-2.5 px-4 mb-2 bg-theme-dark text-theme-light border border-theme-primary/50 rounded hover:bg-theme-primary/20 transition-colors text-left cursor-pointer text-sm"
               onClick={() => handleOptionClick(option)}
             >
               {option.text}

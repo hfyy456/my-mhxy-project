@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ThemeSelector from './ThemeSelector';
 
 /**
  * 全屏模式提示组件
@@ -215,224 +216,98 @@ const CustomTitleBar = () => {
   if (!isElectron) {
     return (
       <div 
-        className="custom-title-bar web-version"
+        className="custom-title-bar web-version bg-gradient-theme shadow-md"
         style={{
           position: 'relative',
           height: '40px',
           width: '100%',
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           padding: '0 20px',
-          borderBottom: '1px solid #334155',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+          borderBottom: '1px solid var(--color-primary)',
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-            <i className="fas fa-dragon text-white text-sm"></i>
+          <div className="w-8 h-8 bg-gradient-to-br from-dreamyPurple-300 to-dreamyPurple-400 rounded-lg flex items-center justify-center shadow-lg">
+            <i className="fas fa-dragon text-theme-light text-sm"></i>
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          <span className="text-lg font-bold bg-gradient-to-r from-dreamyPurple-200 to-dreamyPurple-100 bg-clip-text text-transparent">
             御灵录单机版
           </span>
         </div>
+        
+        {/* 主题选择器 */}
+        <ThemeSelector />
       </div>
     );
   }
 
   return (
     <div 
-      className="custom-title-bar electron-version"
+      className="custom-title-bar electron-version bg-gradient-theme shadow-md"
       style={{
         position: 'relative',
         height: '40px',
         width: '100%',
-        flexShrink: 0,
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 16px',
-        zIndex: 9999,
+        padding: '0 20px',
+        borderBottom: '1px solid var(--color-primary)',
         WebkitAppRegion: 'drag',
-        borderBottom: '1px solid #334155',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-        userSelect: 'none',
       }}
     >
-      {/* 左侧: 游戏标题和状态 */}
-      <div className="title-section" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* 左侧标题 */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-            <i className="fas fa-dragon text-white text-sm"></i>
+        <div className="w-8 h-8 bg-gradient-to-br from-dreamyPurple-300 to-dreamyPurple-400 rounded-lg flex items-center justify-center shadow-lg">
+          <i className="fas fa-dragon text-theme-light text-sm"></i>
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+        <span className="text-lg font-bold bg-gradient-to-r from-dreamyPurple-200 to-dreamyPurple-100 bg-clip-text text-transparent">
             御灵录单机版
         </span>
         </div>
         
-        {/* 连接状态指示器 */}
-        <div className="flex items-center gap-2 px-3 py-1 bg-slate-700/50 rounded-full border border-slate-600">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-xs text-slate-300 font-medium">本地模式</span>
-        </div>
-      </div>
-
-      {/* 右侧: 窗口控制按钮 */}
-      <div 
-        className="window-controls" 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: '4px',
-          WebkitAppRegion: 'no-drag'
-        }}
-      >
-        {/* 全屏切换按钮 */}
+      {/* 中间区域 - 可拖动 */}
+      <div className="flex-grow"></div>
+      
+      {/* 右侧控件 */}
+      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' }}>
+        {/* 主题选择器 */}
+        <ThemeSelector className="mr-4" />
+        
+        {/* 窗口控制按钮 */}
+        <div className="flex">
         <button
           onClick={handleFullscreen}
-          className="window-control-btn"
-          style={{
-            width: '32px',
-            height: '32px',
-            border: 'none',
-            background: 'none',
-            color: '#94a3b8',
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.1)';
-            e.currentTarget.style.color = '#e2e8f0';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#94a3b8';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-          title="切换全屏"
+            className="window-control-button text-theme-light w-10 h-10 flex justify-center items-center opacity-70 hover:opacity-100 transition-opacity bg-transparent border-none"
+            title={isFullscreen ? "退出全屏" : "全屏"}
         >
-          <i className="fas fa-expand"></i>
+            <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'}`}></i>
         </button>
-
-        {/* 最小化按钮 */}
         <button
           onClick={handleMinimize}
-          className="window-control-btn"
-          style={{
-            width: '32px',
-            height: '32px',
-            border: 'none',
-            background: 'none',
-            color: '#94a3b8',
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.1)';
-            e.currentTarget.style.color = '#e2e8f0';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#94a3b8';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+            className="window-control-button text-theme-light w-10 h-10 flex justify-center items-center opacity-70 hover:opacity-100 transition-opacity bg-transparent border-none"
           title="最小化"
         >
-          <i className="fas fa-minus"></i>
+            <i className="fas fa-window-minimize"></i>
         </button>
-
-        {/* 最大化/还原按钮 */}
         <button
           onClick={handleMaximize}
-          className="window-control-btn"
-          style={{
-            width: '32px',
-            height: '32px',
-            border: 'none',
-            background: 'none',
-            color: '#94a3b8',
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.1)';
-            e.currentTarget.style.color = '#e2e8f0';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#94a3b8';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-          title={isMaximized ? "还原窗口" : "最大化"}
+            className="window-control-button text-theme-light w-10 h-10 flex justify-center items-center opacity-70 hover:opacity-100 transition-opacity bg-transparent border-none"
+            title={isMaximized ? "还原" : "最大化"}
         >
           <i className={`fas ${isMaximized ? 'fa-window-restore' : 'fa-window-maximize'}`}></i>
         </button>
-
-        {/* 关闭按钮 */}
         <button
           onClick={handleClose}
-          className="window-control-btn close-btn"
-          style={{
-            width: '32px',
-            height: '32px',
-            border: 'none',
-            background: 'none',
-            color: '#94a3b8',
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#ef4444';
-            e.currentTarget.style.color = 'white';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#94a3b8';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+            className="window-control-button close text-theme-light w-10 h-10 flex justify-center items-center opacity-70 hover:opacity-100 hover:bg-red-500 transition-all bg-transparent border-none"
           title="关闭"
         >
           <i className="fas fa-times"></i>
         </button>
       </div>
-      
-      {/* 装饰性边框 */}
-      <div 
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%)'
-        }}
-      />
+      </div>
     </div>
   );
 };

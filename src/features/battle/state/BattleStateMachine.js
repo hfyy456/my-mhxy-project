@@ -2,33 +2,19 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-01-27
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-09 06:21:15
+ * @LastEditTime: 2025-06-13 09:21:25
  * @Description: 战斗系统状态机 - 使用分层状态机管理复杂战斗流程
  */
 
-import { generateUniqueId } from '@/utils/idUtils';
-import { BATTLE_PHASES, UNIQUE_ID_PREFIXES } from '@/config/enumConfig';
-import { 
-  calculateBattleDamage, 
-  applyDamageToTarget,
-  calculateHealing,
-  applyHealingToTarget 
-} from '../logic/damageCalculation';
-import { 
-  executeSkillEffect,
-  getSkillById,
-  processBuffEffects 
-} from '../logic/skillSystem';
+import { BATTLE_PHASES } from '@/config/enumConfig';
+
 import { 
   processBuffsOnTurnStart,
   processBuffsOnTurnEnd,
   isUnitAffectedByEffect 
 } from '../logic/buffManager';
-import { triggerPassiveSkillEffects } from '../logic/passiveSkillSystem';
-import { BattleUnit } from '../models/BattleUnit';
 import { determineActionOrder } from '../logic/turnOrder';
 // ActionPlayer已删除，现在使用BattleEngine的双队列系统
-import { setUnitFsmState } from '@/store/slices/battleSlice';
 
 // 战斗状态枚举
 export const BATTLE_STATES = {
@@ -636,7 +622,7 @@ export class BattleStateMachine {
     // ******* 紧急修复：移除对已删除playAction的调用 *******
 
     // 1. 更新单位FSM状态为EXECUTING
-    this.dispatch(setUnitFsmState({ unitId, fsmState: 'EXECUTING' }));
+    // this.dispatch(setUnitFsmState({ unitId, fsmState: 'EXECUTING' }));
 
     // 2. 暂时使用简单延迟模拟动作执行（等待后续BattleEngine集成）
     console.log(`⏳ [BattleStateMachine] 模拟执行动作: ${unitId} -> ${targetIds?.[0] || 'unknown'}`);
@@ -647,7 +633,7 @@ export class BattleStateMachine {
     console.log(`✅ [BattleStateMachine] 动作完成: ${unitId}`);
 
     // 3. 动作完成后，将单位状态恢复为IDLE
-    this.dispatch(setUnitFsmState({ unitId, fsmState: 'IDLE' }));
+    // this.dispatch(setUnitFsmState({ unitId, fsmState: 'IDLE' }));
 
     // ******* 结束紧急修复 *******
 

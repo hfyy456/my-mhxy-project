@@ -1,11 +1,10 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setBattleActive, selectBattleUnits, selectRewards } from '@/store/slices/battleSliceSimplified';
+import { setBattleActive, selectBattleUnits, } from '@/store/slices/battleSliceSimplified';
 
 const BattleResultsScreen = ({ result }) => {
   const dispatch = useDispatch();
   const battleUnits = useSelector(selectBattleUnits);
-  const rewards = useSelector(selectRewards);
   
   // 获取玩家单位和敌方单位
   const playerUnits = Object.values(battleUnits).filter(unit => unit.isPlayerUnit);

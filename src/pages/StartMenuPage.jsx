@@ -24,28 +24,12 @@ const StartMenuPage = ({ onStartGame, showToast }) => {
   const closeSettingsModal = () => setIsSettingsOpen(false);
 
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100vh",
-        overflow: "hidden",
-        backgroundColor: "#0f172a",
-        display: "flex",
-        flexDirection: "column"
-      }}
-    >
+    <div className="relative w-full h-screen overflow-hidden bg-gray-900 flex flex-col">
       {/* 自定义标题栏 */}
       <CustomTitleBar />
       
       {/* 开始菜单内容区 */}
-      <div 
-        style={{
-          flex: 1,
-          position: "relative",
-          overflow: "hidden"
-        }}
-      >
+      <div className="flex-1 relative overflow-hidden">
         <HomePage
           onStartGame={onStartGame}
           onOpenSettings={openSettingsModal}

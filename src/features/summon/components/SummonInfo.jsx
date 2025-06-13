@@ -523,18 +523,18 @@ const SummonInfo = ({
             )}
           </div>
 
-          <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
+          <div className="bg-theme-light border border-theme-dark rounded-lg p-2 shadow-sm">
             {/* Nickname Section */}
             <div className="flex justify-between items-center gap-2 mb-2">
               <div className="flex-1">
-                <span className="text-xs text-gray-400 block mb-0.5">昵称</span>
-                <span className="text-base font-bold text-purple-300">
+                <span className="text-xs text-theme-secondary block mb-0.5">昵称</span>
+                <span className="text-base font-bold text-theme-dark">
                   {nickname || "未设置"}
                 </span>
               </div>
               <button
                 onClick={() => onOpenNicknameModal(summon)}
-                className="p-1.5 bg-slate-600 hover:bg-slate-500 text-gray-200 rounded-lg transition-colors duration-200 hover:scale-105"
+                className="p-1.5 bg-theme-dark hover:bg-theme-primary text-theme-light rounded-lg transition-colors duration-200 hover:scale-105"
                 title="编辑昵称"
               >
                 <i className="fas fa-edit text-xs"></i>
@@ -904,22 +904,22 @@ const SummonInfo = ({
       {/* 释放确认对话框 */}
       {isReleaseConfirmOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-white mb-4">确认释放</h3>
-            <p className="text-gray-300 mb-6">
+          <div className="bg-theme-modal rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-theme-dark mb-4">确认释放</h3>
+            <p className="text-theme-secondary mb-6">
               确定要释放召唤兽 {summon.nickname || summon.name}{" "}
               吗？此操作不可撤销。
             </p>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setIsReleaseConfirmOpen(false)}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
+                className="px-4 py-2 bg-theme-dark hover:bg-theme-primary text-theme-light rounded"
               >
                 取消
               </button>
               <button
                 onClick={handleReleaseConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded"
+                className="px-4 py-2 bg-theme-error hover:bg-theme-error-light text-white rounded"
               >
                 确认释放
               </button>

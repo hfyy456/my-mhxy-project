@@ -31,34 +31,56 @@ const NicknameModal = ({ isOpen, onClose, onConfirm, summonName }) => {
       title="设置召唤兽昵称"
       className="w-[320px]"
     >
-      <div className="mb-4">
-        <p className="text-gray-300 mb-2">为你的{summonName}起一个昵称吧！</p>
-        <input
-          type="text"
-          value={nickname}
-          onChange={(e) => {
-            setNickname(e.target.value);
-            setError("");
-          }}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-          placeholder="请输入昵称（不超过12个字符）"
-          maxLength={12}
-        />
-        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-      </div>
-      <div className="flex justify-end space-x-2">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors"
-        >
-          取消
-        </button>
-        <button
-          onClick={handleSubmit}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
-        >
-          确定
-        </button>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-theme-primary rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-theme-light">设置昵称</h3>
+            <button
+              onClick={onClose}
+              className="text-theme-secondary hover:text-theme-light"
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="nickname" className="block text-sm font-medium text-theme-secondary mb-2">
+              请输入新的昵称
+            </label>
+            <input
+              type="text"
+              id="nickname"
+              value={nickname}
+              onChange={(e) => {
+                setNickname(e.target.value);
+                setError("");
+              }}
+              className="w-full px-3 py-2 bg-theme-secondary border border-theme-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent text-theme-light"
+              placeholder="请输入昵称"
+              maxLength={10}
+            />
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-theme-secondary hover:bg-theme-light text-theme-light rounded"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!nickname.trim()}
+              className={`px-4 py-2 rounded ${
+                nickname.trim()
+                  ? "bg-theme-primary hover:bg-theme-primary-light text-white"
+                  : "bg-theme-secondary text-theme-secondary cursor-not-allowed"
+              }`}
+            >
+              保存
+            </button>
+          </div>
+        </div>
       </div>
     </CommonModal>
   );

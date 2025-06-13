@@ -21,6 +21,9 @@ import {
 } from "@/store/reduxSetup";
 import { initializePlayerQuests } from "@/store/slices/questSlice";
 
+// 导入主题系统
+import { initTheme } from "@/config/themes";
+
 // 导入自定义样式
 import "./styles/customScrollbar.css";
 
@@ -52,6 +55,9 @@ const App = () => {
   // 组件挂载时的基础检查
   useEffect(() => {
     console.log("[App.jsx] 应用组件已挂载，等待用户启动游戏");
+    
+    // 初始化主题系统
+    initTheme();
   }, []);
 
   // 禁用右键菜单

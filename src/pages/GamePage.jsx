@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-11 08:33:01
+ * @LastEditTime: 2025-06-13 09:43:40
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,7 +17,6 @@ import { Incubator } from "@/features/incubator/components/Incubator";
 import { PlayerInfo } from "@/features/player/components/PlayerInfo";
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
 import QuestLogPanel from "@/features/quests/components/QuestLogPanel";
-import MinimapPanel from "@/features/minimap/components/MinimapPanel";
 import DialoguePanel from "@/features/ui/components/DialoguePanel";
 import NpcPanel from "@/features/npc/components/NpcPanel";
 import FormationSystemModal from "@/features/formation/components/FormationSystemModal";
@@ -32,6 +31,8 @@ import ElectronStoreNotification from "../components/ElectronStoreNotification";
 import WorldMapModal from "@/features/world-map/components/WorldMapModal";
 import NpcOOPDemo from "@/features/npc/components/NpcOOPDemo";
 import BattlePreparationModal from "@/features/formation/components/BattlePreparationModal";
+import ThemePreview from "@/features/ui/components/ThemePreview";
+import ThemeDemo from "@/features/ui/components/ThemeDemo";
 
 import { useAppModals } from "@/hooks/useAppModals";
 import { useInventoryManager } from "@/hooks/useInventoryManager";
@@ -39,13 +40,14 @@ import { useInventoryManager } from "@/hooks/useInventoryManager";
 import { useSummonManager } from "@/hooks/useSummonManager";
 import { uiText } from "@/config/ui/uiTextConfig";
 import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
-import { selectIsBattleActive } from "@/store/slices/battleSlice";
+import { selectIsBattleActive } from "@/store/slices/battleSliceSimplified";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
 import { useBattleStateMachine } from "@/features/battle/hooks/useBattleStateMachine";
 import { generateEnemyGroup } from '@/features/battle/utils/enemyGenerator';
 import worldMapConfig from '@/config/map/worldMapConfig.json';
 
 import CommonModal from "@/features/ui/components/CommonModal";
+
 
 
 
@@ -155,6 +157,9 @@ const GamePageContent = ({
   const [showBattlePrep, setShowBattlePrep] = useState(false);
   const [enemyGroup, setEnemyGroup] = useState(null);
 
+  // 主题演示模态框
+  const [isThemeDemoOpen, setIsThemeDemoOpen] = useState(false);
+
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
     if (!gameInitialized) return;
@@ -219,37 +224,19 @@ const GamePageContent = ({
       >
         <button
           onClick={openFormationModal}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#555",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-theme-dark hover:bg-theme-primary transition-colors rounded"
         >
           阵型
         </button>
         <button
           onClick={openTowerModal}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#6b46c1",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-theme-primary hover:bg-theme-primary/80 transition-colors rounded"
         >
           封妖塔
         </button>
         <button
           onClick={onStartDungeonDemo}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#c026d3",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-theme-secondary hover:bg-theme-secondary/80 transition-colors rounded"
         >
           副本
         </button>
@@ -257,50 +244,26 @@ const GamePageContent = ({
           onClick={() => {
             openHomesteadModal();
           }}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#069545",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-dreamyPurple-300 hover:bg-dreamyPurple-300/80 transition-colors rounded"
         >
           家园
         </button>
         <button
           onClick={openInventoryOOPModal}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#8B4513",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-dreamyPurple-500 hover:bg-dreamyPurple-500/80 transition-colors rounded"
         >
           背包OOP
         </button>
         <button
           onClick={openConfigManager}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#10b981",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-theme-primary hover:bg-theme-primary/80 transition-colors rounded"
         >
           配置管理
         </button>
         {/* 我们需要一个按钮来打开召唤兽界面，这里暂时添加到旧的操作栏中 */}
         <button
           onClick={openSummonModal}
-          style={{
-            padding: "8px 12px",
-            color: "white",
-            backgroundColor: "#A020F0",
-            border: "none",
-            borderRadius: "3px",
-          }}
+          className="px-3 py-2 text-white bg-dreamyPurple-400 hover:bg-dreamyPurple-400/80 transition-colors rounded"
         >
           召唤兽
         </button>
@@ -403,13 +366,13 @@ const GamePageContent = ({
               <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
                 <button
                   onClick={openNpcOOPDemo}
-                  className="px-3 py-2 text-white bg-red-700 rounded"
+                  className="px-3 py-2 text-white bg-theme-primary rounded"
                 >
                   NPC系统
                 </button>
                 <button
                   onClick={handleTestBattle}
-                  className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-md shadow-lg"
+                  className="px-3 py-2 text-white bg-theme-secondary hover:bg-theme-secondary/80 rounded shadow-lg"
                 >
                   测试战斗
                 </button>
@@ -417,14 +380,15 @@ const GamePageContent = ({
                 <div onClick={openTowerModal}>
                   <TowerEntry onOpenTower={openTowerModal} />
                 </div>
+                
+                {/* 添加主题演示按钮 */}
+                <button
+                  onClick={() => setIsThemeDemoOpen(true)}
+                  className="px-3 py-2 text-white bg-dreamyPurple-300 hover:bg-dreamyPurple-300/80 transition-colors rounded"
+                >
+                  主题演示
+                </button>
               </div>
-            )}
-            {/* Minimap */}
-            {isMinimapModalOpen && (
-              <MinimapPanel
-                onClose={closeMinimapModal}
-                onStartBattle={handleStartBattle}
-              />
             )}
             {/* Npc Panel */}
             {isNpcPanelOpen && (
@@ -517,10 +481,7 @@ const GamePageContent = ({
             )}
           </CommonModal>
 
-          <MinimapPanel
-            isOpen={isMinimapModalOpen}
-            onClose={closeMinimapModal}
-          />
+
 
    
 
@@ -608,6 +569,25 @@ const GamePageContent = ({
             }
             showToast={showToast}
           />
+
+          {/* 主题预览（可以通过按钮或设置面板打开） */}
+          <CommonModal
+            title="主题预览"
+            isOpen={isSettingsOpen}
+            onClose={closeSettingsModal}
+          >
+            <ThemePreview />
+          </CommonModal>
+
+          {/* 主题演示模态框 */}
+          <CommonModal
+            isOpen={isThemeDemoOpen}
+            onClose={() => setIsThemeDemoOpen(false)}
+            title="主题系统演示"
+            maxWidthClass="max-w-4xl"
+          >
+            <ThemeDemo />
+          </CommonModal>
         </>
         <ElectronStoreNotification
           isOpen={showElectronStoreNotification}

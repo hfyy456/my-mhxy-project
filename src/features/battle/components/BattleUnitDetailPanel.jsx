@@ -13,16 +13,12 @@ const BattleUnitDetailPanel = ({ unit }) => {
   const hpPercent = (currentHp / maxHp) * 100;
   const mpPercent = (currentMp / maxMp) * 100;
   
-  // 血条颜色
-  let hpBarColor = '#2ecc71'; // 绿色代表高HP
-  if (hpPercent < 30) {
-    hpBarColor = '#e74c3c'; // 红色代表低HP
-  } else if (hpPercent < 60) {
-    hpBarColor = '#f39c12'; // 橙色代表中等HP
-  }
-  
-  // 蓝条颜色
-  const mpBarColor = '#3498db'; // 蓝色代表MP
+  // 获取HP条颜色
+  const getHpBarColorClass = (percent) => {
+    if (percent < 30) return 'bg-red-500'; // 低血量
+    if (percent < 60) return 'bg-yellow-500'; // 中等血量
+    return 'bg-green-500'; // 高血量
+  };
 
   // 获取元素类型对应的颜色和图标
   const getElementInfo = (type) => {
@@ -43,6 +39,7 @@ const BattleUnitDetailPanel = ({ unit }) => {
   };
 
   const elementInfo = getElementInfo(elementType);
+  const hpBarColorClass = getHpBarColorClass(hpPercent);
 
   return (
     <div className="bg-gray-900 bg-opacity-80 backdrop-blur-sm rounded-lg p-2 border border-gray-700 shadow-lg w-[220px] text-white">
@@ -75,11 +72,8 @@ const BattleUnitDetailPanel = ({ unit }) => {
           {/* HP条 */}
           <div className="mt-1 w-full h-3 bg-gray-800 rounded-sm overflow-hidden relative border border-gray-600">
             <div 
-              className="h-full transition-all duration-300 ease-out"
-              style={{ 
-                width: `${hpPercent}%`,
-                backgroundColor: hpBarColor
-              }}
+              className={`h-full transition-all duration-300 ease-out ${hpBarColorClass}`}
+              style={{ width: `${hpPercent}%` }}
             ></div>
             <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
               <span className="text-[10px] font-bold text-white drop-shadow-lg">HP: {currentHp}/{maxHp}</span>
@@ -89,11 +83,8 @@ const BattleUnitDetailPanel = ({ unit }) => {
           {/* MP条 */}
           <div className="mt-1 w-full h-3 bg-gray-800 rounded-sm overflow-hidden relative border border-gray-600">
             <div 
-              className="h-full transition-all duration-300 ease-out"
-              style={{ 
-                width: `${mpPercent}%`,
-                backgroundColor: mpBarColor
-              }}
+              className="h-full transition-all duration-300 ease-out bg-blue-500"
+              style={{ width: `${mpPercent}%` }}
             ></div>
             <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
               <span className="text-[10px] font-bold text-white drop-shadow-lg">MP: {currentMp}/{maxMp}</span>

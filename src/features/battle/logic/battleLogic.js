@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-22 19:27:30
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-08 06:00:09
+ * @LastEditTime: 2025-06-13 08:34:06
  */
 import { generateUniqueId } from '@/utils/idUtils';
 import { BATTLE_UNIT_TYPES, BATTLE_PHASES, UNIQUE_ID_PREFIXES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
