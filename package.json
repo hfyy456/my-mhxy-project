@@ -13,9 +13,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@pixi/react": "^8.0.2",
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/vite": "^4.1.7",
+    "@xstate/react": "^5.0.5",
     "chart.js": "^4.3.0",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
@@ -34,7 +36,8 @@
     "react-window": "^1.8.11",
     "redux": "^5.0.1",
     "simplex-noise": "^4.0.3",
-    "vite-plugin-commonjs": "^0.10.4"
+    "vite-plugin-commonjs": "^0.10.4",
+    "xstate": "^5.19.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",

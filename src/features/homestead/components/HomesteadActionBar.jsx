@@ -10,7 +10,8 @@ const HomesteadActionBar = ({
   onOpenWorldMap,
   onOpenQuestLog,
   onStartDungeonDemo,
-  onOpenFormationSystem
+  onOpenFormationSystem,
+  onToggleV3Test
 }) => {
   const unlockedFeatures = useSelector(selectUnlockedFeatures);
 
@@ -94,6 +95,14 @@ const HomesteadActionBar = ({
       onClick: onStartDungeonDemo,
       isUnlocked: true,
       gradient: 'from-rose-500 to-fuchsia-600'
+    },
+    {
+      id: 'v3-test',
+      icon: '🧪',
+      label: 'V3测试',
+      onClick: () => onToggleV3Test(true),
+      isUnlocked: true,
+      gradient: 'from-yellow-500 to-amber-600'
     },
     {
       id: 'settings',

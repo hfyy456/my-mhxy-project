@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-13 09:43:40
+ * @LastEditTime: 2025-06-15 03:37:30
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -57,6 +57,8 @@ const GamePageContent = ({
   setToasts,
   gameInitialized,
   onStartDungeonDemo,
+  onExitDungeonDemo,
+  onToggleV3Test,
 }) => {
   const dispatch = useDispatch();
   const player = useSelector((state) => state.player);
@@ -324,6 +326,8 @@ const GamePageContent = ({
     setEnemyGroup(null);
   };
 
+
+
   // 如果游戏未初始化，显示加载提示
   if (!gameInitialized) {
     return (
@@ -335,7 +339,8 @@ const GamePageContent = ({
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-900 flex flex-col">
+    <div className="relative w-screen h-screen bg-gray-900 text-white overflow-hidden">
+ 
       <CustomTitleBar />
       <div className="flex-1 relative overflow-hidden">
         {!isBattleActive && (
@@ -357,7 +362,8 @@ const GamePageContent = ({
                 onOpenMinimap={openMinimapModal}
                 onOpenNpcPanel={openNpcPanelModal}
                 onStartDungeonDemo={onStartDungeonDemo}
-                onOpenFormationSystem={openFormationSystemModal}
+                onOpenFormationSystem={openFormationModal}
+                onToggleV3Test={onToggleV3Test}
                 player={player}
               />
             )}

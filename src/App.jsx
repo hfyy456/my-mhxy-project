@@ -2,10 +2,14 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-02 01:59:49
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-07 03:19:40
+ * @LastEditTime: 2025-06-15 06:08:26
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { BattleProviderV3 } from './features/battle/v3/providers/BattleProviderV3';
+import { BattleV3TestScreen } from './features/battle/v3/components/BattleV3TestScreen';
+import { SkillEditor } from './features/skill-editor/components/SkillEditor';
+import { BattleLifecycleContext } from './features/battle/v3/context/BattleLifecycleContext';
 
 // 导入页面组件
 import StartMenuPage from "./pages/StartMenuPage";
@@ -33,6 +37,8 @@ const App = () => {
   // 页面状态管理
   const [showHomePage, setShowHomePage] = useState(true);
   const [showDungeonDemo, setShowDungeonDemo] = useState(false);
+  const [showV3Test, setShowV3Test] = useState(false);
+  const [showSkillEditor, setShowSkillEditor] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState("正在加载游戏资源...");
@@ -44,6 +50,9 @@ const App = () => {
     completedRegions: 0,
     progress: 0
   });
+
+  // 新增：用于重置战斗测试状态机的 key
+  const [battleTestKey, setBattleTestKey] = useState(0);
 
   // Toast系统
   const [toasts, setToasts] = useState([]);
@@ -155,8 +164,40 @@ const App = () => {
     setShowDungeonDemo(false);
   }
 
+  // 新增切换函数
+  const handleToggleV3Test = (show) => {
+    setShowV3Test(show);
+  };
+
+  // Function to toggle between battle test and skill editor
+  const handleToggleEditor = () => {
+    setShowSkillEditor(prev => !prev);
+  };
+
+  // 新增：重置战斗测试状态机的函数
+  const restartBattleTest = () => {
+    setBattleTestKey(prevKey => prevKey + 1);
+  };
+
+  // For simplicity, let's focus on the Battle/Editor part
+  if (showV3Test) {
+    return (
+      <BattleLifecycleContext.Provider value={{ restartBattle: restartBattleTest }}>
+        <BattleProviderV3 key={battleTestKey}>
+          <div style={{ padding: '10px' }}>
+            <button onClick={handleToggleEditor} style={{ marginBottom: '10px', padding: '10px' }}>
+              {showSkillEditor ? '切换到战斗测试' : '切换到技能编辑器'}
+            </button>
+          </div>
+          {showSkillEditor ? <SkillEditor /> : <BattleV3TestScreen />}
+        </BattleProviderV3>
+      </BattleLifecycleContext.Provider>
+    );
+  }
+
+  // The rest of the original return logic for the main game
   return (
-    <>
+    <BattleProviderV3>
       {isLoading && (
         <LoadingScreen 
           progress={loadingProgress}
@@ -165,29 +206,30 @@ const App = () => {
         />
       )}
 
-      {!isLoading && showDungeonDemo && <DungeonDemo onExit={handleExitDungeonDemo}/>}
+      {!isLoading && !showV3Test && showDungeonDemo && <DungeonDemo onExit={handleExitDungeonDemo}/>}
 
-      {!isLoading && !showDungeonDemo && showHomePage && (
+      {!isLoading && !showV3Test && !showDungeonDemo && showHomePage && (
         <StartMenuPage 
           onStartGame={handleStartGame}
           showToast={showResult}
         />
       )}
       
-      {!isLoading && !showDungeonDemo && !showHomePage && (
+      {!isLoading && !showV3Test && !showDungeonDemo && !showHomePage && (
         <GamePage 
           showToast={showResult}
           toasts={toasts}
           setToasts={setToasts}
-          gameInitialized={gameInitialized} // 传递游戏初始化状态
+          gameInitialized={gameInitialized}
           onStartDungeonDemo={handleStartDungeonDemo}
           onExitDungeonDemo={handleExitDungeonDemo}
+          onToggleV3Test={handleToggleV3Test}
         />
       )}
       
       {/* 全局Toast容器 */}
       <ToastContainer toasts={toasts} setToasts={setToasts} />
-    </>
+    </BattleProviderV3>
   );
 };
 
