@@ -215,9 +215,9 @@ export const processBuffsOnTurnStart = (targetUnit) => {
       case BUFF_EFFECT_TYPES.HOT:
         // 持续治疗效果
         const healAmount = buff.healPerRound * buff.stacks;
-        targetUnit.stats.currentHp = Math.min(
-          targetUnit.stats.currentHp + healAmount,
-          targetUnit.stats.maxHp
+        targetUnit.derivedAttributes.currentHp = Math.min(
+          targetUnit.derivedAttributes.currentHp + healAmount,
+          targetUnit.derivedAttributes.maxHp
         );
         results.push({
           type: 'heal',
@@ -256,8 +256,8 @@ export const processBuffsOnTurnEnd = (targetUnit) => {
       case BUFF_EFFECT_TYPES.DOT:
         // 持续伤害效果
         const damageAmount = buff.damagePerRound * buff.stacks;
-        targetUnit.stats.currentHp = Math.max(
-          targetUnit.stats.currentHp - damageAmount,
+        targetUnit.derivedAttributes.currentHp = Math.max(
+          targetUnit.derivedAttributes.currentHp - damageAmount,
           0
         );
         results.push({
@@ -268,7 +268,7 @@ export const processBuffsOnTurnEnd = (targetUnit) => {
         });
         
         // 检查单位是否被击败
-        if (targetUnit.stats.currentHp <= 0) {
+        if (targetUnit.derivedAttributes.currentHp <= 0) {
           targetUnit.isDefeated = true;
           results.push({
             type: 'defeat',
@@ -516,11 +516,11 @@ export const getBuffModifiersForAttribute = (targetUnit, attributeName) => {
  * @returns {number} - 计算后的属性值
  */
 export const calculateModifiedAttribute = (targetUnit, attributeName) => {
-  if (!targetUnit || !targetUnit.stats || targetUnit.stats[attributeName] === undefined) {
+  if (!targetUnit || !targetUnit.derivedAttributes || targetUnit.derivedAttributes[attributeName] === undefined) {
     return 0;
   }
 
-  const baseValue = targetUnit.stats[attributeName];
+  const baseValue = targetUnit.derivedAttributes[attributeName];
   const { flatModifier, percentModifier } = getBuffModifiersForAttribute(targetUnit, attributeName);
 
   // 先应用固定值修改，再应用倍率修改
@@ -603,10 +603,10 @@ export const processReflectDamage = (sourceUnit, targetUnit, damage) => {
   
   if (reflectedDamage > 0) {
     // 对源单位造成反弹伤害
-    sourceUnit.stats.currentHp = Math.max(sourceUnit.stats.currentHp - reflectedDamage, 0);
+    sourceUnit.derivedAttributes.currentHp = Math.max(sourceUnit.derivedAttributes.currentHp - reflectedDamage, 0);
     
     // 检查源单位是否被击败
-    if (sourceUnit.stats.currentHp <= 0) {
+    if (sourceUnit.derivedAttributes.currentHp <= 0) {
       sourceUnit.isDefeated = true;
       return { 
         reflectedDamage, 

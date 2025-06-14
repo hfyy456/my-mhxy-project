@@ -41,7 +41,7 @@ export const getValidTargetsForUnit = (unit, allUnits, globalPetConfig, attackTy
         attackType,
     });
     // 简化逻辑：返回所有非己方且存活的单位
-    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.stats.currentHp > 0);
+    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.derivedAttributes.currentHp > 0);
     console.log(`[SKILL-DEBUG] getValidTargetsForUnit returning:`, { targets: JSON.parse(JSON.stringify(targets)) });
     return targets;
 };
@@ -59,7 +59,7 @@ export const getValidTargetsForSkill = (unit, skillId, allUnits, globalPetConfig
         skillConfig,
     });
     // 同样，返回所有非己方且存活的单位作为桩实现
-    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.stats.currentHp > 0);
+    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.derivedAttributes.currentHp > 0);
     console.log(`[SKILL-DEBUG] getValidTargetsForSkill returning:`, { targets: JSON.parse(JSON.stringify(targets)) });
     return targets;
 };
@@ -252,7 +252,7 @@ export const canUnitAttackTarget = (sourceUnit, targetUnit, globalSummonConfig, 
   }
   
   // 不能攻击已死亡的单位
-  if (targetUnit.stats && targetUnit.stats.currentHp <= 0) {
+  if (targetUnit.derivedAttributes && targetUnit.derivedAttributes.currentHp <= 0) {
     console.log(`攻击验证失败: 目标单位 ${targetUnit.name || targetUnit.id} 已死亡`);
     return false;
   }
@@ -502,7 +502,7 @@ export const executeSkillEffect = (caster, target, skillId, battleState) => {
   }
   
   // 检查MP消耗
-  if (skill.mpCost && caster.stats.currentMp < skill.mpCost) {
+  if (skill.mpCost && caster.derivedAttributes.currentMp < skill.mpCost) {
     return {
       success: false,
       error: '魔法值不足'
@@ -512,9 +512,9 @@ export const executeSkillEffect = (caster, target, skillId, battleState) => {
   // 消耗MP
   const updatedCaster = {
     ...caster,
-    stats: {
-      ...caster.stats,
-      currentMp: caster.stats.currentMp - (skill.mpCost || 0)
+    derivedAttributes: {
+      ...caster.derivedAttributes,
+      currentMp: caster.derivedAttributes.currentMp - (skill.mpCost || 0)
     }
   };
   
@@ -554,7 +554,7 @@ export const executeSkillEffect = (caster, target, skillId, battleState) => {
   
   // 处理治疗型技能
   if (skill.healing) {
-    const healPower = caster.stats.mAtk * skill.healing;
+    const healPower = caster.derivedAttributes.mAtk * skill.healing;
     const healingResult = calculateHealing(healPower);
     const healingApplied = applyHealingToTarget(target, healingResult.finalHealing);
     
@@ -690,7 +690,7 @@ export const processBuffEffect = (unit, effect) => {
   switch (effect.buffId) {
     case 'poison':
       // 处理中毒效果
-      const poisonDamage = Math.round(unit.stats.maxHp * (effect.effectData.damagePercent || 0.05));
+      const poisonDamage = Math.round(unit.derivedAttributes.maxHp * (effect.effectData.damagePercent || 0.05));
       const poisonResult = applyDamageToTarget(unit, poisonDamage);
       
       return {
@@ -703,7 +703,7 @@ export const processBuffEffect = (unit, effect) => {
       
     case 'regeneration':
       // 处理生命恢复效果
-      const regenAmount = Math.round(unit.stats.maxHp * (effect.effectData.healPercent || 0.05));
+      const regenAmount = Math.round(unit.derivedAttributes.maxHp * (effect.effectData.healPercent || 0.05));
       const regenResult = applyHealingToTarget(unit, regenAmount);
       
       return {

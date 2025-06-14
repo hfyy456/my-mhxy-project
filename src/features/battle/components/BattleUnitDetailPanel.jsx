@@ -6,8 +6,8 @@ import './BattleUnitSprite.css';
 const BattleUnitDetailPanel = ({ unit }) => {
   if (!unit) return null;
 
-  const { name, stats, level, elementType } = unit;
-  const { currentHp, maxHp, currentMp, maxMp, physicalAttack, physicalDefense, speed, magicalAttack, magicalDefense } = stats;
+  const { name, derivedAttributes, level, elementType } = unit;
+  const { currentHp, maxHp, currentMp, maxMp, physicalAttack, physicalDefense, speed, magicalAttack, magicalDefense } = derivedAttributes;
   
   // 计算百分比
   const hpPercent = (currentHp / maxHp) * 100;

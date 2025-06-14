@@ -27,8 +27,8 @@ export const determineActionOrder = (allUnits, actions) => {
         const unitA = unitMap[a.unitId];
         const unitB = unitMap[b.unitId];
 
-        const speedA = unitA?.stats?.speed || 0;
-        const speedB = unitB?.stats?.speed || 0;
+        const speedA = unitA?.derivedAttributes?.speed || 0;
+        const speedB = unitB?.derivedAttributes?.speed || 0;
 
         // Higher speed goes first
         const speedDiff = speedB - speedA;
@@ -49,6 +49,6 @@ export const determineInitialTurnOrder = (allUnits) => {
   if (!allUnits || allUnits.length === 0) return [];
   // Simple sort by speed (descending). Add tie-breaking if needed.
   return [...allUnits]
-    .sort((a, b) => b.stats.speed - a.stats.speed)
+    .sort((a, b) => b.derivedAttributes.speed - a.derivedAttributes.speed)
     .map(unit => unit.id);
 }; 

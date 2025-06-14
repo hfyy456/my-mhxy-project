@@ -189,7 +189,7 @@ export const useBattleStateMachineState = () => {
           
           const unitToUpdate = nextState.battleUnits[unitId];
           if (unitToUpdate) {
-            unitToUpdate.stats.currentHp = newHp;
+            unitToUpdate.derivedAttributes.currentHp = newHp;
             unitToUpdate.isDefeated = isDefeated;
           }
           

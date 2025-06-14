@@ -35,7 +35,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   const allUnits = [...playerUnits, ...enemyUnits];
 
   // 如果HP低于30%，有50%的概率选择防御
-  const hpPercent = (unit.stats.currentHp / unit.stats.maxHp) * 100;
+  const hpPercent = (unit.derivedAttributes.currentHp / unit.derivedAttributes.maxHp) * 100;
   if (hpPercent < 30 && Math.random() < 0.5) {
     return {
       actionType: 'defend',
@@ -46,7 +46,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
 
   // 如果有技能且MP足够，有30%的概率使用技能
   /*
-  if (unit.skillSet && unit.skillSet.length > 0 && unit.stats.currentMp >= 10 && Math.random() < 0.3) {
+  if (unit.skillSet && unit.skillSet.length > 0 && unit.derivedAttributes.currentMp >= 10 && Math.random() < 0.3) {
     // 随机选择一个技能
     const skillId = unit.skillSet[Math.floor(Math.random() * unit.skillSet.length)];
     
@@ -61,7 +61,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
     } else {
       // 按HP百分比排序，优先选择HP最低的单位
       validTargets.sort((a, b) => 
-        (a.stats.currentHp / a.stats.maxHp) - (b.stats.currentHp / b.stats.maxHp)
+        (a.derivedAttributes.currentHp / a.derivedAttributes.maxHp) - (b.derivedAttributes.currentHp / b.derivedAttributes.maxHp)
       );
       
       return {
@@ -91,7 +91,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   if (Math.random() < 0.7) {
     // 按HP百分比排序，选择HP最低的单位
     validAttackTargets.sort((a, b) => 
-      (a.stats.currentHp / a.stats.maxHp) - (b.stats.currentHp / b.stats.maxHp)
+      (a.derivedAttributes.currentHp / a.derivedAttributes.maxHp) - (b.derivedAttributes.currentHp / b.derivedAttributes.maxHp)
     );
     targetUnit = validAttackTargets[0];
   } else {

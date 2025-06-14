@@ -211,7 +211,7 @@ export const triggerPassiveSkillEffects = (unit, triggerType, context = {}) => {
       case 'divine_protection':
         // 神佑复生效果
         if (triggerType === PASSIVE_SKILL_TIMING.ON_DEATH) {
-          const reviveHp = Math.round(unit.stats.maxHp * passiveSkill.reviveHealthPercentage);
+          const reviveHp = Math.round(unit.derivedAttributes.maxHp * passiveSkill.reviveHealthPercentage);
           
           triggerResult.effects.push({
             type: 'revive',

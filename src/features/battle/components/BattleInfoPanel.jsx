@@ -21,8 +21,8 @@ const BattleInfoPanel = ({ unit }) => {
 
 const UnitInfoCard = ({ unit }) => {
   const [showDetailedStats, setShowDetailedStats] = useState(false);
-  const { name, stats, spriteAssetKey, isDefeated, isPlayerUnit } = unit;
-  const { currentHp, maxHp, currentMp, maxMp } = stats;
+  const { name, derivedAttributes, spriteAssetKey, isDefeated, isPlayerUnit } = unit;
+  const { currentHp, maxHp, currentMp, maxMp } = derivedAttributes;
   
   // 获取单位的详细属性
   const unitDetails = getUnitStatsDetails(unit);
@@ -192,15 +192,15 @@ const UnitInfoCard = ({ unit }) => {
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div className="bg-dreamyPurple-400/20 p-1 rounded flex justify-between">
           <span>攻击</span>
-          <span className="font-mono">{Math.max(stats.physicalAttack, stats.magicalAttack)}</span>
+          <span className="font-mono">{Math.max(derivedAttributes.physicalAttack, derivedAttributes.magicalAttack)}</span>
         </div>
         <div className="bg-dreamyPurple-400/20 p-1 rounded flex justify-between">
           <span>防御</span>
-          <span className="font-mono">{Math.max(stats.physicalDefense, stats.magicalDefense)}</span>
+          <span className="font-mono">{Math.max(derivedAttributes.physicalDefense, derivedAttributes.magicalDefense)}</span>
         </div>
         <div className="bg-dreamyPurple-400/20 p-1 rounded flex justify-between">
           <span>速度</span>
-          <span className="font-mono">{stats.speed}</span>
+          <span className="font-mono">{derivedAttributes.speed}</span>
         </div>
       </div>
       

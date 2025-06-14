@@ -240,7 +240,7 @@ const ActionContentSelector = ({
                         <span className={`font-black ${chanceColor}`}>{chancePercentage}%</span>
                       </div>
                       <div className="w-full bg-black/30 rounded-full h-1">
-                        <div className="bg-red-500 h-1 rounded-full" style={{ width: `${(target.stats.currentHp / target.stats.maxHp) * 100}%` }}></div>
+                        <div className="bg-red-500 h-1 rounded-full" style={{ width: `${(target.derivedAttributes.currentHp / target.derivedAttributes.maxHp) * 100}%` }}></div>
                       </div>
                     </button>
                   );

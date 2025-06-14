@@ -122,7 +122,7 @@ const ActionOrderTimeline = ({
               key={unit.id}
               className={`absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-7 h-7 ${bgColor} ${borderColor} ${currentUnitStyle} ${defeatedStyle} ${interactiveStyle} rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 shadow-md`}
               style={{ left: unit.timelinePosition || `${10 + (index * 70 / Math.max(1, displayUnits.length - 1))}%` }}
-              title={unit.tooltipText || `${unit.name} (速度: ${unit.stats?.speed || '未知'})`}
+              title={unit.tooltipText || `${unit.name} (速度: ${unit.derivedAttributes?.speed || '未知'})`}
               onClick={() => handleUnitClick(unit)}
               onMouseEnter={() => handleUnitHover(unit, true)}
               onMouseLeave={() => handleUnitHover(unit, false)}

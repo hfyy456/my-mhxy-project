@@ -610,10 +610,10 @@ export const useBattleComponentData = () => {
           const allUnits = Object.values(engineState.battleUnits).filter(unit => !unit.isDefeated);
           
           // 按速度排序单位，速度高的先行动
-          const sorted = [...allUnits].sort((a, b) => b.stats.speed - a.stats.speed);
+          const sorted = [...allUnits].sort((a, b) => b.derivedAttributes.speed - a.derivedAttributes.speed);
           
           // 计算位置和增强数据
-          const speeds = sorted.map(unit => unit.stats.speed);
+          const speeds = sorted.map(unit => unit.derivedAttributes.speed);
           const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 100;
           const minSpeed = speeds.length > 0 ? Math.min(...speeds) : 0;
           const speedRange = Math.max(1, maxSpeed - minSpeed);
@@ -621,7 +621,7 @@ export const useBattleComponentData = () => {
           return sorted.map((unit, index) => {
             // 计算时间轴位置
             const speedPercent = speedRange > 0 
-              ? ((unit.stats.speed - minSpeed) / speedRange) * 100 
+              ? ((unit.derivedAttributes.speed - minSpeed) / speedRange) * 100 
               : 50;
             const position = `calc(10% + ${speedPercent * 0.8}%)`;
             
@@ -629,7 +629,7 @@ export const useBattleComponentData = () => {
               ...unit,
               timelinePosition: position,
               displayIndex: index + 1,
-              tooltipText: `${unit.name} (速度: ${unit.stats.speed})`
+              tooltipText: `${unit.name} (速度: ${unit.derivedAttributes.speed})`
             };
           });
         } catch (err) {
@@ -647,7 +647,7 @@ export const useBattleComponentData = () => {
           const allUnits = Object.values(engineState.battleUnits).filter(unit => !unit.isDefeated);
           if (allUnits.length === 0) return [];
           
-          const speeds = allUnits.map(unit => unit.stats.speed);
+          const speeds = allUnits.map(unit => unit.derivedAttributes.speed);
           const maxSpeed = Math.max(...speeds);
           const minSpeed = Math.min(...speeds);
           const speedRange = Math.max(1, maxSpeed - minSpeed);

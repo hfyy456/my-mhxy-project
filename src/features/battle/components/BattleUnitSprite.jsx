@@ -88,14 +88,14 @@ const BattleUnitSprite = ({
   const defendEffectRef = useRef(null);
   if (!unit) return null;
 
-  const { name, stats, isPlayerUnit, isDefeated,isDefending } = unit;
+  const { name, derivedAttributes, isPlayerUnit, isDefeated,isDefending } = unit;
   console.log(unit.name,unit.isDefending,"重新渲染");
-  const { currentHp, maxHp, currentMp, maxMp } = stats;
+  const { currentHp, maxHp, currentMp, maxMp } = derivedAttributes;
   
   // 组件挂载时初始化HP值
   useEffect(() => {
-    if (unit?.stats?.currentHp !== undefined) {
-      previousHpRef.current = unit.stats.currentHp;
+    if (unit?.derivedAttributes?.currentHp !== undefined) {
+      previousHpRef.current = unit.derivedAttributes.currentHp;
     }
     
     return () => {
@@ -133,9 +133,9 @@ const BattleUnitSprite = ({
   // 🚨 监听HP变化但不直接触发受击动画，只用于数据同步
   // 受击动画现在完全由事件总线系统控制，避免双重触发
   useEffect(() => {
-    if (!unit?.stats) return;
+    if (!unit?.derivedAttributes) return;
 
-    const currentHp = unit.stats.currentHp;
+    const currentHp = unit.derivedAttributes.currentHp;
     const isCurrentlyDefeated = unit.isDefeated;
     
     // 如果HP比之前低，说明受到了伤害（包括致命伤害）
@@ -167,7 +167,7 @@ const BattleUnitSprite = ({
     
     // 更新上一次的HP值
     previousHpRef.current = currentHp;
-  }, [unit?.stats?.currentHp, unit?.isDefeated, unit?.isDefending]);
+  }, [unit?.derivedAttributes?.currentHp, unit?.isDefeated, unit?.isDefending]);
 
   // 监听单位死亡状态，但只在没有受击动画且没有等待死亡动画时才立即显示
   // 🚨 添加延迟检查，避免在BattleQueue动画序列执行期间提前触发

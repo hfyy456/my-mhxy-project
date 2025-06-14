@@ -2,10 +2,11 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-11 05:22:24
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-11 09:33:53
+ * @LastEditTime: 2025-06-15 06:46:09
  */
 import React, { useState, useCallback } from 'react';
 import BattleBriefing from './BattleBriefing';
+import { useSummonManager } from '@/hooks/useSummonManager';
 
 const BattlePreparationModal = ({ show, onConfirm, onCancel, enemyGroup }) => {
   const [playerFormationData, setPlayerFormationData] = useState({
@@ -14,15 +15,27 @@ const BattlePreparationModal = ({ show, onConfirm, onCancel, enemyGroup }) => {
     analysis: null,
     errors: [],
   });
+  const { allSummons } = useSummonManager();
 
   const handleFormationChange = useCallback((data) => {
     setPlayerFormationData(data);
   }, []);
   
   const handleConfirm = () => {
-    if (playerFormationData.errors.length === 0) {
+    if (playerFormationData.errors.length === 0 && playerFormationData.grid) {
+      // 从最终确认的 grid 中提取出单位列表
+      const deployedUnits = [];
+      for (const row of playerFormationData.grid) {
+        for (const unitId of row) {
+          if (unitId && allSummons[unitId]) {
+            deployedUnits.push(allSummons[unitId]);
+          }
+        }
+      }
+      console.log('deployedUnits', deployedUnits,playerFormationData);
       onConfirm({
-        playerFormation: playerFormationData.grid,
+        units: deployedUnits,
+        grid: playerFormationData.grid,
       });
     }
   };

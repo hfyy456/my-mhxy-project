@@ -402,10 +402,10 @@ export function useInventoryStats() {
     // 装备统计
     const equipmentStats = items
       .filter(item => item.type === 'equipment')
-      .reduce((stats, item) => {
-        stats[item.slotType] = (stats[item.slotType] || 0) + 1;
-        stats.equipped = (stats.equipped || 0) + (item.isEquipped ? 1 : 0);
-        return stats;
+      .reduce((derivedAttributes, item) => {
+        derivedAttributes[item.slotType] = (derivedAttributes[item.slotType] || 0) + 1;
+        derivedAttributes.equipped = (derivedAttributes.equipped || 0) + (item.isEquipped ? 1 : 0);
+        return derivedAttributes;
       }, {});
 
     return {

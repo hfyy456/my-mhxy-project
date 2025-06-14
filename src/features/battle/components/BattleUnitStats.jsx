@@ -60,8 +60,8 @@ const UnitStatsCard = ({ unit }) => {
   };
 
   // 计算HP和MP百分比
-  const hpPercent = (unit.stats.currentHp / unit.stats.maxHp) * 100;
-  const mpPercent = (unit.stats.currentMp / unit.stats.maxMp) * 100;
+  const hpPercent = (unit.derivedAttributes.currentHp / unit.derivedAttributes.maxHp) * 100;
+  const mpPercent = (unit.derivedAttributes.currentMp / unit.derivedAttributes.maxMp) * 100;
 
   // 根据HP百分比确定颜色
   const getHpColor = (percent) => {
@@ -88,7 +88,7 @@ const UnitStatsCard = ({ unit }) => {
               style={{ width: `${hpPercent}%` }}
             ></div>
           </div>
-          <span className="text-xs font-mono">{unit.stats.currentHp}/{unit.stats.maxHp}</span>
+          <span className="text-xs font-mono">{unit.derivedAttributes.currentHp}/{unit.derivedAttributes.maxHp}</span>
         </div>
         {/* MP条 */}
         <div className="flex items-center gap-1">
@@ -99,7 +99,7 @@ const UnitStatsCard = ({ unit }) => {
               style={{ width: `${mpPercent}%` }}
             ></div>
           </div>
-          <span className="text-xs font-mono">{unit.stats.currentMp}/{unit.stats.maxMp}</span>
+          <span className="text-xs font-mono">{unit.derivedAttributes.currentMp}/{unit.derivedAttributes.maxMp}</span>
         </div>
       </div>
       

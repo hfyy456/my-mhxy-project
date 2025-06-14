@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { BattleProviderV3 } from './features/battle/v3/providers/BattleProviderV3';
-import { BattleV3TestScreen } from './features/battle/v3/components/BattleV3TestScreen';
+import { BattleSceneV3 } from './features/battle/v3/components/BattleSceneV3';
 import { SkillEditor } from './features/skill-editor/components/SkillEditor';
 import { BattleLifecycleContext } from './features/battle/v3/context/BattleLifecycleContext';
 
@@ -53,6 +53,9 @@ const App = () => {
 
   // 新增：用于重置战斗测试状态机的 key
   const [battleTestKey, setBattleTestKey] = useState(0);
+
+  // 新增：V3战斗初始化数据和结果处理
+  const [battleInitData, setBattleInitData] = useState(null);
 
   // Toast系统
   const [toasts, setToasts] = useState([]);
@@ -179,6 +182,41 @@ const App = () => {
     setBattleTestKey(prevKey => prevKey + 1);
   };
 
+  // 新增：将单位数组转换为V3引擎所需的对象格式
+  const formatUnitsForV3 = (unitsArray) => {
+    if (!Array.isArray(unitsArray)) {
+      console.warn("formatUnitsForV3: input is not an array, returning it as is.", unitsArray);
+      return unitsArray; // 如果已经是对象格式，则直接返回
+    }
+    return unitsArray.reduce((acc, unit) => {
+      acc[unit.id] = unit;
+      return acc;
+    }, {});
+  };
+
+  // 新增：启动V3战斗的函数
+  const startV3Battle = (initData) => {
+    console.log('[App.jsx] 接收到战斗启动请求，原始数据:', initData);
+    
+    const formattedData = {
+      ...initData,
+      playerUnits: formatUnitsForV3(initData.playerUnits),
+      enemyUnits: formatUnitsForV3(initData.enemyUnits),
+    };
+    
+    console.log('[App.jsx] 格式化后，准备传递给战斗引擎的数据:', formattedData);
+    setBattleInitData(formattedData);
+    setShowV3Test(true);
+  };
+
+  // 新增：处理V3战斗结束的函数
+  const handleV3BattleComplete = (result) => {
+    console.log('[App.jsx] 战斗结束，结果:', result);
+    // 在这里可以根据 result 更新主游戏状态，例如分发 redux action
+    setShowV3Test(false);
+    setBattleInitData(null);
+  };
+
   // For simplicity, let's focus on the Battle/Editor part
   if (showV3Test) {
     return (
@@ -189,7 +227,7 @@ const App = () => {
               {showSkillEditor ? '切换到战斗测试' : '切换到技能编辑器'}
             </button>
           </div>
-          {showSkillEditor ? <SkillEditor /> : <BattleV3TestScreen />}
+          {showSkillEditor ? <SkillEditor /> : <BattleSceneV3 initialData={battleInitData} onComplete={handleV3BattleComplete} />}
         </BattleProviderV3>
       </BattleLifecycleContext.Provider>
     );
@@ -223,7 +261,7 @@ const App = () => {
           gameInitialized={gameInitialized}
           onStartDungeonDemo={handleStartDungeonDemo}
           onExitDungeonDemo={handleExitDungeonDemo}
-          onToggleV3Test={handleToggleV3Test}
+          onStartV3Battle={startV3Battle}
         />
       )}
       

@@ -241,9 +241,9 @@ export const towerEffectHandlers = {
     
     units.forEach(unit => {
       // 应用属性修改
-      if (unit.stats[stat]) {
-        const originalValue = unit.stats[stat];
-        unit.stats[stat] = originalValue * (1 + value);
+      if (unit.derivedAttributes[stat]) {
+        const originalValue = unit.derivedAttributes[stat];
+        unit.derivedAttributes[stat] = originalValue * (1 + value);
       }
     });
     

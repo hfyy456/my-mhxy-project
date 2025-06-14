@@ -237,7 +237,7 @@ export const useFormationManager = () => {
   }, [currentFormation]);
 
   // 统计信息
-  const stats = useMemo(() => {
+  const derivedAttributes = useMemo(() => {
     return formationManager.getStats();
   }, [updateCounter]);
 
@@ -274,7 +274,7 @@ export const useFormationManager = () => {
     currentFormationAnalysis,
     currentFormationGrid,
     currentFormationId: formationManager.currentFormationId,
-    stats,
+    derivedAttributes,
     
     // 状态标识
     isCurrentFormationValid,

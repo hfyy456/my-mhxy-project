@@ -98,10 +98,10 @@ const ActionTypeSelector = ({
               {selectedUnit.name}
             </div>
             <div className="text-xs text-gray-300">
-              HP: {selectedUnit.stats?.currentHp || 0}/
-              {selectedUnit.stats?.maxHp || 0} | MP:{" "}
-              {selectedUnit.stats?.currentMp || 0}/
-              {selectedUnit.stats?.maxMp || 0}
+              HP: {selectedUnit.derivedAttributes?.currentHp || 0}/
+              {selectedUnit.derivedAttributes?.maxHp || 0} | MP:{" "}
+              {selectedUnit.derivedAttributes?.currentMp || 0}/
+              {selectedUnit.derivedAttributes?.maxMp || 0}
             </div>
           </div>
         </div>

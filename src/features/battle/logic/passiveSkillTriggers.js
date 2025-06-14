@@ -189,7 +189,7 @@ export const canTriggerPassiveSkill = (skill, context) => {
   if (skill.conditions) {
     // HP百分比条件
     if (skill.conditions.hpPercentBelow && context.unit) {
-      const hpPercent = (context.unit.stats.currentHp / context.unit.stats.maxHp) * 100;
+      const hpPercent = (context.unit.derivedAttributes.currentHp / context.unit.derivedAttributes.maxHp) * 100;
       if (hpPercent > skill.conditions.hpPercentBelow) {
         return false;
       }
@@ -197,7 +197,7 @@ export const canTriggerPassiveSkill = (skill, context) => {
     
     // MP百分比条件
     if (skill.conditions.mpPercentAbove && context.unit) {
-      const mpPercent = (context.unit.stats.currentMp / context.unit.stats.maxMp) * 100;
+      const mpPercent = (context.unit.derivedAttributes.currentMp / context.unit.derivedAttributes.maxMp) * 100;
       if (mpPercent < skill.conditions.mpPercentAbove) {
         return false;
       }

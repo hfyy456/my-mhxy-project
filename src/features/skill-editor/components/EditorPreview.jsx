@@ -9,8 +9,8 @@ import { BattleProviderV3 } from '../../battle/v3/providers/BattleProviderV3';
 import { useBattleV3 } from '../../battle/v3/hooks/useBattleV3';
 
 const mockUnits = {
-    'player-1': { id: 'player-1', name: '玩家预览', isPlayerUnit: true, stats: { maxHp: 100, currentHp: 100, physicalAttack: 30 } },
-    'enemy-1': { id: 'enemy-1', name: '木桩', isPlayerUnit: false, stats: { maxHp: 999, currentHp: 999, physicalDefense: 10 } },
+    'player-1': { id: 'player-1', name: '玩家预览', isPlayerUnit: true, derivedAttributes: { maxHp: 100, currentHp: 100, physicalAttack: 30 } },
+    'enemy-1': { id: 'enemy-1', name: '木桩', isPlayerUnit: false, derivedAttributes: { maxHp: 999, currentHp: 999, physicalDefense: 10 } },
 };
 
 const styles = { /* ... all relevant styles from BattleV3TestScreen ... */ };

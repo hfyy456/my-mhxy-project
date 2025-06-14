@@ -106,7 +106,7 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         fiveElement: template.fiveElement,
         natureType: natureType,
         personalityId: getRandomPersonalityId(),
-        basicAttributes: basicAttributes, // Level 1 stats
+        basicAttributes: basicAttributes, // Level 1 derivedAttributes
         innateAttributes: innateAttributes,
         growthRates: template.growthRates || {},
         allocatedPoints: {},
@@ -283,9 +283,9 @@ export const calculateDerivedAttributes = (level, finalBasicAttributes, equipped
 };
 
 /**
- * Orchestrator function to fully update a summon's stats.
+ * Orchestrator function to fully update a summon's derivedAttributes.
  * @param {Summon} summonInstance The summon to update.
- * @returns {Promise<Object>} A promise that resolves to an object containing all calculated stats.
+ * @returns {Promise<Object>} A promise that resolves to an object containing all calculated derivedAttributes.
  */
 export const updateSummonStats = async (summonInstance) => {
     const { finalBasicAttributes, equippedItemsDataMap } = await calculateFinalBasicAttributes(summonInstance);

@@ -485,7 +485,7 @@ export const useSummon = (summonId) => {
 export const useSummonStats = () => {
   const { allSummons } = useSummonManager();
   
-  const stats = useMemo(() => {
+  const derivedAttributes = useMemo(() => {
     const summons = Object.values(allSummons);
     
     return {
@@ -510,7 +510,7 @@ export const useSummonStats = () => {
     };
   }, [allSummons]);
   
-  return stats;
+  return derivedAttributes;
 };
 
 /**

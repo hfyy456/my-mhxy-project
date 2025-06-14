@@ -33,12 +33,11 @@ const generateScriptAndResult = (action, allUnits, skillOverrides) => {
   let primaryTarget = allUnits[targetId];
 
   // --- Restored & Enhanced Smart Target Redirection ---
-  if (!primaryTarget || primaryTarget.stats.currentHp <= 0) {
+  if (!primaryTarget || primaryTarget.derivedAttributes.currentHp <= 0) {
     console.log(`[TARGET] Original target ${targetId} for ${source.id} is invalid. Finding new target...`);
     
     // Find the opposing team
-    const opponentTeamIds = Object.keys(allUnits).filter(id => allUnits[id].isPlayerUnit !== source.isPlayerUnit);
-    const livingOpponents = opponentTeamIds.filter(id => allUnits[id].stats.currentHp > 0).map(id => allUnits[id]);
+    const livingOpponents = Object.values(allUnits).filter(u => u.isPlayerUnit !== source.isPlayerUnit && u.derivedAttributes.currentHp > 0);
 
     if (livingOpponents.length > 0) {
       const newTarget = livingOpponents[Math.floor(Math.random() * livingOpponents.length)];
@@ -61,7 +60,7 @@ const generateScriptAndResult = (action, allUnits, skillOverrides) => {
   
     skill.effects.forEach(effect => {
       if (effect.type === 'DAMAGE') {
-        const pAtk = source.stats.physicalAttack || 0;
+        const pAtk = source.derivedAttributes.physicalAttack || 0;
         totalDamage = Math.round(pAtk * parseFloat(effect.value));
       }
     });
@@ -85,6 +84,8 @@ export const battleMachine = createMachine({
     battleId: null,
     playerUnits: {},
     enemyUnits: {},
+    playerGrid: null,
+    enemyGrid: null,
     allUnits: {},
     currentRound: 0,
     unitActions: {},
@@ -94,6 +95,8 @@ export const battleMachine = createMachine({
     error: null,
     logs: [],
     skillOverrides: null, // To hold temporary skill data for preview
+    aiActionsReady: false,
+    playerActionsReady: false,
   },
   states: {
     idle: {
@@ -104,6 +107,8 @@ export const battleMachine = createMachine({
             battleId: ({ event }) => event.payload.battleId,
             playerUnits_initial: ({ event }) => event.payload.playerUnits,
             enemyUnits_initial: ({ event }) => event.payload.enemyUnits,
+            playerGrid: ({ event }) => event.payload.playerGrid,
+            enemyGrid: ({ event }) => event.payload.enemyGrid,
           })
         },
         INITIALIZE_BATTLE_FOR_PREVIEW: {
@@ -149,7 +154,12 @@ export const battleMachine = createMachine({
     },
     roundStart: {
       entry: [
-        assign({ currentRound: ({ context }) => context.currentRound + 1 }),
+        assign({
+          currentRound: ({ context }) => context.currentRound + 1,
+          // Reset readiness flags for the new round
+          aiActionsReady: false,
+          playerActionsReady: false,
+        }),
         () => console.log('[DEBUG] Entering roundStart state')
       ],
       invoke: {
@@ -160,34 +170,33 @@ export const battleMachine = createMachine({
       },
     },
     preparation: {
+      entry: [
+        () => console.log('[DEBUG] Entering preparation state')
+      ],
       invoke: {
         id: 'generateAIActions',
         src: 'generateAIActionsService',
         input: ({ context }) => context,
         onDone: {
+          // AI actions are ready. Store them and set the flag.
           actions: assign({
-            unitActions: ({ context, event }) => ({
-              ...context.unitActions,
-              ...event.output,
-            }),
+            unitActions: ({ context, event }) => ({ ...context.unitActions, ...event.output }),
+            aiActionsReady: true
           }),
         },
         onError: { target: 'error', actions: 'logAndAssignError' },
       },
-      always: [
-        {
-          target: 'execution',
-          guard: 'areAllActionsSubmitted',
-        }
-      ],
       on: {
-        SUBMIT_ACTION: {
-          actions: 'storeUnitAction',
+        SUBMIT_PLAYER_ACTIONS: {
+          // Player actions submitted. Store them, set the flag. No immediate transition.
+          actions: 'storeAllPlayerActionsAndSetFlag',
         },
-        FORCE_EXECUTION: {
-          target: 'execution',
-        }
       },
+      // This transition will fire automatically once both AI and Player actions are ready.
+      always: {
+        target: 'execution',
+        guard: 'areAllActionsReady',
+      }
     },
     execution: {
       initial: 'calculatingQueue',
@@ -207,7 +216,7 @@ export const battleMachine = createMachine({
         processingQueue: {
           always: [
             { target: 'executionComplete', guard: ({ context }) => context.sortedActionQueue.length === 0 },
-            { target: 'processingQueue', guard: ({ context }) => context.allUnits[context.sortedActionQueue[0].unitId]?.stats.currentHp <= 0, actions: 'skipDeadUnitAction' },
+            { target: 'processingQueue', guard: ({ context }) => context.allUnits[context.sortedActionQueue[0].unitId]?.derivedAttributes.currentHp <= 0, actions: 'skipDeadUnitAction' },
             { target: 'animating', actions: 'calculateAndPrepareAnimation' }
           ]
         },
@@ -247,7 +256,7 @@ export const battleMachine = createMachine({
       type: 'final',
       entry: assign({
         battleResult: ({ context }) => {
-          const livingPlayers = Object.values(context.playerTeam).filter(u => context.allUnits[u.id]?.stats.currentHp > 0).length;
+          const livingPlayers = Object.values(context.playerTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
           return livingPlayers > 0 ? 'VICTORY' : 'DEFEAT';
         }
       })
@@ -284,6 +293,11 @@ export const battleMachine = createMachine({
         round: 1,
         playerUnits_initial: undefined,
         enemyUnits_initial: undefined,
+        unitActions: {}, // Reset actions at the start of battle
+        sortedActionQueue: [],
+        logs: [],
+        aiActionsReady: false,
+        playerActionsReady: false,
       };
     }),
     storeUnitAction: assign({
@@ -294,6 +308,16 @@ export const battleMachine = createMachine({
           unitId: event.payload.unitId,
         }
       }),
+    }),
+    storeAllPlayerActionsAndSetFlag: assign({
+      unitActions: ({ context, event }) => {
+        console.log('[ACTION] Storing all player actions:', event.payload.actions);
+        return {
+          ...context.unitActions,
+          ...event.payload.actions
+        };
+      },
+      playerActionsReady: true
     }),
     calculateAndPrepareAnimation: assign(({ context }) => {
       const { sortedActionQueue, allUnits, logs, skillOverrides } = context;
@@ -319,10 +343,11 @@ export const battleMachine = createMachine({
       
       hpChanges.forEach(({ targetId, change }) => {
         const target = updatedUnits[targetId];
-        if (target) {
-          const newHp = Math.max(0, target.stats.currentHp + change);
-          newLogs.push(`[APPLY] Applying ${change} HP to ${target.name}. New HP: ${newHp}`);
-          target.stats.currentHp = newHp;
+        if (target && target.derivedAttributes) {
+          const oldHp = target.derivedAttributes.currentHp;
+          const newHp = Math.max(0, oldHp + change);
+          newLogs.push(`[APPLY] Applying ${change} HP to ${target.name}. Old HP: ${oldHp}, New HP: ${newHp}`);
+          target.derivedAttributes.currentHp = newHp;
         }
       });
       
@@ -339,19 +364,32 @@ export const battleMachine = createMachine({
   },
   guards: {
     isBattleOver: ({ context }) => {
-      const playerUnitIds = Object.keys(context.playerTeam);
-      const enemyUnitIds = Object.keys(context.enemyTeam);
-      const livingPlayers = playerUnitIds.filter(id => context.allUnits[id]?.stats.currentHp > 0).length;
-      const livingEnemies = enemyUnitIds.filter(id => context.allUnits[id]?.stats.currentHp > 0).length;
+      const livingPlayers = Object.values(context.playerTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
+      const livingEnemies = Object.values(context.enemyTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
       return livingPlayers === 0 || livingEnemies === 0;
     },
     areAllActionsSubmitted: ({ context }) => {
-      const activeUnits = Object.values(context.allUnits).filter(u => u.stats.currentHp > 0);
-      return activeUnits.every(unit => context.unitActions[unit.id]);
+      // 只有玩家控制的、且存活的单位需要提交动作
+      const playerUnits = Object.values(context.playerTeam).map(u => context.allUnits[u.id]);
+      const activePlayerUnits = playerUnits.filter(u => u && u.derivedAttributes.currentHp > 0);
+      
+      // 如果没有存活的玩家单位，也认为所有动作都已提交
+      if (activePlayerUnits.length === 0) {
+        return true;
+      }
+
+      return activePlayerUnits.every(unit => context.unitActions[unit.id]);
     },
     // This guard is no longer used by a transition, but we'll keep it for potential debugging.
     isActionQueueEmpty: ({ context }) => {
       return context.sortedActionQueue.length === 0;
+    },
+    areAllActionsReady: ({ context }) => {
+      const ready = context.aiActionsReady && context.playerActionsReady;
+      if (ready) {
+        console.log('[GUARD] All actions are ready. Proceeding to execution.');
+      }
+      return ready;
     },
   },
   actors: {
@@ -363,7 +401,7 @@ export const battleMachine = createMachine({
       // Add team and other properties to each unit
       Object.values(allUnits).forEach(unit => {
           unit.team = unit.isPlayerUnit ? 'player' : 'enemy';
-          unit.stats = unit.stats || {};
+          unit.derivedAttributes = unit.derivedAttributes || {};
       });
 
       const initialBattleState = {
@@ -377,15 +415,11 @@ export const battleMachine = createMachine({
     }),
     processRoundStartEffectsService: fromPromise(async () => { console.log("Actor: Processing Round START Effects..."); return {}; }),
     processRoundEndEffectsService: fromPromise(async () => { console.log("Actor: Processing Round END Effects..."); return {}; }),
-    generateAIActionsService: fromPromise(async ({ input: context }) => {
-      console.log("Actor: Generating AI Actions...");
-      const { allUnits } = context;
-
-      // 这里的阵型信息暂时用空数组，未来可以从 context 中获取
-      const playerFormation = [];
-      const enemyFormation = [];
+    generateAIActionsService: fromPromise(async ({ input }) => {
+      const { allUnits, playerTeam, enemyTeam } = input;
       
-      const enemyActions = setEnemyUnitsActions(allUnits, playerFormation, enemyFormation, {}, {});
+      // 调用重构后的AI动作生成函数
+      const enemyActions = setEnemyUnitsActions(enemyTeam, playerTeam, allUnits, {}, {});
       
       console.log("Generated AI actions:", enemyActions);
       return enemyActions;

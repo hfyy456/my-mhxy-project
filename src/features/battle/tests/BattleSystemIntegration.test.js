@@ -23,7 +23,7 @@ const mockBattleData = {
       id: 'player_1',
       name: '测试召唤兽1',
       level: 10,
-      stats: {
+      derivedAttributes: {
         currentHp: 100,
         maxHp: 100,
         currentMp: 50,
@@ -40,7 +40,7 @@ const mockBattleData = {
       id: 'enemy_1',
       name: '测试敌人1',
       level: 8,
-      stats: {
+      derivedAttributes: {
         currentHp: 80,
         maxHp: 80,
         currentMp: 30,

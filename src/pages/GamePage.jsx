@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-15 03:37:30
+ * @LastEditTime: 2025-06-15 07:06:55
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -47,6 +47,7 @@ import { generateEnemyGroup } from '@/features/battle/utils/enemyGenerator';
 import worldMapConfig from '@/config/map/worldMapConfig.json';
 
 import CommonModal from "@/features/ui/components/CommonModal";
+import { current } from "@reduxjs/toolkit";
 
 
 
@@ -58,7 +59,7 @@ const GamePageContent = ({
   gameInitialized,
   onStartDungeonDemo,
   onExitDungeonDemo,
-  onToggleV3Test,
+  onStartV3Battle,
 }) => {
   const dispatch = useDispatch();
   const player = useSelector((state) => state.player);
@@ -313,14 +314,26 @@ const GamePageContent = ({
 
   // 确认进入战斗
   const handleConfirmBattle = (data) => {
-    console.log('战斗确认:', data);
+    console.log('战斗确认，已处理数据:', data);
     
+    // 来自Modal的数据已经是battle-ready的纯JSON
+    const enemyUnitsJSON = enemyGroup.enemies.map(unit => {
+    
+      return unit.toBattleJSON();
+    });
+    for (const item of data.units) {
+      item.derivedAttributes=       {...item.derivedAttributes,currentHp:item.derivedAttributes.hp,currentMp:item.derivedAttributes.mp,maxHp:item.derivedAttributes.hp,maxMp:item.derivedAttributes.mp }
+
+    }
+
     const battlePayload = {
-      playerFormation: data.playerFormation,
-      enemyGroup: enemyGroup,
+      playerUnits:data.units,
+      playerGrid: data.grid,
+      enemyUnits: enemyUnitsJSON,
+      enemyGrid: enemyGroup.enemyFormation.grid,
     };
     
-    handleStartBattle(battlePayload);
+    onStartV3Battle(battlePayload);
 
     setShowBattlePrep(false);
     setEnemyGroup(null);
@@ -363,7 +376,6 @@ const GamePageContent = ({
                 onOpenNpcPanel={openNpcPanelModal}
                 onStartDungeonDemo={onStartDungeonDemo}
                 onOpenFormationSystem={openFormationModal}
-                onToggleV3Test={onToggleV3Test}
                 player={player}
               />
             )}

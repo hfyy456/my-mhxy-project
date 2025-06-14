@@ -29,10 +29,10 @@ export const monsters = {
     id: 'monster_001',
     name: '野狼',
     sprite: 'wolf.png',
-    stats: { hp: 50, attack: 8, defense: 3, speed: 10 },
+    derivedAttributes: { hp: 50, attack: 8, defense: 3, speed: 10 },
     lootTable: [ { itemId: 'item_wolf_pelt', chance: 0.5, quantity: 1 } ]
   },
-  monster_002: { id: 'monster_002', name: '史莱姆', sprite: 'slime.png', stats: { hp: 20, attack: 3, defense: 1, speed: 5 } },
+  monster_002: { id: 'monster_002', name: '史莱姆', sprite: 'slime.png', derivedAttributes: { hp: 20, attack: 3, defense: 1, speed: 5 } },
 };
 
 export const resources = {

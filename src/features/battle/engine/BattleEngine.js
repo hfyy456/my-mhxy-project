@@ -524,7 +524,7 @@ export class BattleEngine {
     // 按速度排序，速度相同时随机
     return allUnits
       .sort((a, b) => {
-        const speedDiff = (b.stats?.speed || 0) - (a.stats?.speed || 0);
+        const speedDiff = (b.derivedAttributes?.speed || 0) - (a.derivedAttributes?.speed || 0);
         return speedDiff !== 0 ? speedDiff : Math.random() - 0.5;
       })
       .map((unit) => unit.id);
@@ -548,7 +548,7 @@ export class BattleEngine {
       //   unitId,
       //   unitName: unit.name,
       //   isDefeated: unit.isDefeated,
-      //   currentHp: unit.stats?.currentHp,
+      //   currentHp: unit.derivedAttributes?.currentHp,
       // });
       throw new Error(`单位已死亡，无法提交行动: ${unit.name} (${unitId})`);
     }
@@ -959,7 +959,7 @@ export class BattleEngine {
       
       // 获取目标是否处于防御状态
       const isDefending = targetUnit.isDefeated ? false : (targetUnit.isDefending || false);
-      const oldHp = targetUnit.stats.currentHp; // 记录旧HP
+      const oldHp = targetUnit.derivedAttributes.currentHp; // 记录旧HP
 
       // 1. 同步计算伤害
       const damageResult = calculateBattleDamage(
@@ -978,7 +978,7 @@ export class BattleEngine {
       // 发出精确的状态更新事件
       this.externalEventBus?.emit(BATTLE_ACTION_TYPES.UNIT_STATS_UPDATED, {
         unitId: targetId,
-        newHp: updatedTarget.stats.currentHp,
+        newHp: updatedTarget.derivedAttributes.currentHp,
         oldHp,
         damage: damageResult.finalDamage,
         isDefeated,
@@ -1001,7 +1001,7 @@ export class BattleEngine {
         damage: damageResult.finalDamage,
         isCrit: damageResult.details.isCritical,
         isDefending,
-        newHp: updatedTarget.stats.currentHp,
+        newHp: updatedTarget.derivedAttributes.currentHp,
         isDefeated, // 将死亡状态也通知给UI
         timestamp: Date.now(),
       });
@@ -1777,9 +1777,9 @@ export class BattleEngine {
     const capturableTargets = Object.values(this.battleData.enemyUnits)
       .filter(unit => {
         // 确保单位是可捕捉的（例如，基础捕捉率大于0且单位存活）
-        // console.log(unit.isCapturable,unit.stats.currentHp > 0,"unit.isCapturable");
+        // console.log(unit.isCapturable,unit.derivedAttributes.currentHp > 0,"unit.isCapturable");
 
-        return unit.isCapturable && unit.stats.currentHp > 0;
+        return unit.isCapturable && unit.derivedAttributes.currentHp > 0;
       })
       .map(unit => {
         const baseCaptureRate = 0.99;

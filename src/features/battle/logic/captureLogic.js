@@ -11,12 +11,12 @@
  * @returns {number} 捕捉成功率 (0 到 1 之间的数字)
  */
 export const getCaptureChance = (targetUnit, baseCaptureRate) => {
-  if (!targetUnit || !targetUnit.stats || typeof baseCaptureRate !== 'number') {
+  if (!targetUnit || !targetUnit.derivedAttributes || typeof baseCaptureRate !== 'number') {
     console.error("计算捕捉成功率失败：无效的参数", { targetUnit, baseCaptureRate });
     return 0;
   }
 
-  const { currentHp, maxHp } = targetUnit.stats;
+  const { currentHp, maxHp } = targetUnit.derivedAttributes;
   if (currentHp <= 0 || maxHp <= 0) {
     return 0; // 不能捕捉已死亡或无效的单位
   }

@@ -197,7 +197,7 @@ const questSlice = createSlice({
         return;
       }
 
-      // TODO: Logic to give rewards to player (dispatch actions to update player stats, inventory, etc.)
+      // TODO: Logic to give rewards to player (dispatch actions to update player derivedAttributes, inventory, etc.)
       // console.log(`Turning in quest: ${questDef.title}. Rewards:`, questDef.rewards);
       // Example: dispatch(addExperience(questDef.rewards.experience));
       //          dispatch(addGold(questDef.rewards.gold));
@@ -289,7 +289,7 @@ export const selectAvailableQuests = (state) => {
       }
     }
     // TODO: Check player level (needs access to player slice)
-    // const playerLevel = state.player.stats.level; 
+    // const playerLevel = state.player.derivedAttributes.level; 
     // if (questDef.requiredLevel && playerLevel < questDef.requiredLevel) return false;
 
     return true;

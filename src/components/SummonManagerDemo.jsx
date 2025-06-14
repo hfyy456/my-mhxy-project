@@ -53,7 +53,7 @@ const SummonManagerDemo = () => {
     sortOrder: 'desc'
   });
 
-  const stats = useSummonStats();
+  const derivedAttributes = useSummonStats();
   const { batchRecalculate } = useSummonOperations();
 
   // 获取当前选中的召唤兽（用于演示）
@@ -447,17 +447,17 @@ const SummonManagerDemo = () => {
       <div className="bg-white p-4 rounded-lg border">
         <h3 className="font-bold text-lg mb-3">总体统计</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>总数量: {stats.total}</div>
-          <div>平均等级: {stats.averageLevel.toFixed(1)}</div>
-          <div>总战力: {stats.totalPower}</div>
-          <div>平均战力: {stats.averagePower.toFixed(0)}</div>
+          <div>总数量: {derivedAttributes.total}</div>
+          <div>平均等级: {derivedAttributes.averageLevel.toFixed(1)}</div>
+          <div>总战力: {derivedAttributes.totalPower}</div>
+          <div>平均战力: {derivedAttributes.averagePower.toFixed(0)}</div>
         </div>
       </div>
 
       <div className="bg-white p-4 rounded-lg border">
         <h3 className="font-bold text-lg mb-3">品质分布</h3>
         <div className="space-y-2">
-          {Object.entries(stats.byQuality).map(([quality, count]) => (
+          {Object.entries(derivedAttributes.byQuality).map(([quality, count]) => (
             <div key={quality} className="flex justify-between">
               <span className="capitalize">{quality}:</span>
               <span className="font-medium">{count}</span>
@@ -561,7 +561,7 @@ const SummonManagerDemo = () => {
           {[
             { id: 'list', label: '召唤兽列表' },
             { id: 'details', label: '详细信息' },
-            { id: 'stats', label: '统计信息' }
+            { id: 'derivedAttributes', label: '统计信息' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -618,7 +618,7 @@ const SummonManagerDemo = () => {
             </div>
           )}
           {selectedTab === 'details' && renderCurrentSummonDetails()}
-          {selectedTab === 'stats' && renderStats()}
+          {selectedTab === 'derivedAttributes' && renderStats()}
         </div>
       </div>
     </div>

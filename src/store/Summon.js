@@ -294,7 +294,7 @@ class Summon {
       isCapturable: this.isCapturable,
       
       // 战斗核心统计数据
-      stats: {
+      derivedAttributes: {
         ...this.derivedAttributes,
         // 确保战斗开始时currentHp和currentMp是满的
         currentHp: this.derivedAttributes.hp, 

@@ -66,18 +66,18 @@ export {
  * @returns {Object} - 格式化后的属性详情
  */
 export const getUnitStatsDetails = (unit) => {
-  if (!unit || !unit.stats) {
+  if (!unit || !unit.derivedAttributes) {
     return { error: '无效的战斗单位' };
   }
   
-  const { stats } = unit;
+  const { derivedAttributes } = unit;
   
   // 使用 enumConfig.js 中定义的核心属性名
   const { PHYSICAL_ATTACK, MAGICAL_ATTACK, PHYSICAL_DEFENSE, MAGICAL_DEFENSE, SPEED, CRIT_RATE, CRIT_DAMAGE, DODGE_RATE } = EQUIPMENT_EFFECT_TYPES;
   
   // 优先使用标准属性名，如果不存在则使用兼容名称
   const getStatValue = (standardName, compatibleName) => {
-    return stats[standardName] !== undefined ? stats[standardName] : stats[compatibleName];
+    return derivedAttributes[standardName] !== undefined ? derivedAttributes[standardName] : derivedAttributes[compatibleName];
   };
   
   // 获取物理和法术攻击值
@@ -89,8 +89,8 @@ export const getUnitStatsDetails = (unit) => {
     level: unit.level,
     isPlayerUnit: unit.isPlayerUnit,
     // 生命和法力
-    hp: `${stats.currentHp}/${stats.maxHp}`,
-    mp: `${stats.currentMp}/${stats.maxMp}`,
+    hp: `${derivedAttributes.currentHp}/${derivedAttributes.maxHp}`,
+    mp: `${derivedAttributes.currentMp}/${derivedAttributes.maxMp}`,
     // 攻击属性
     physicalAttack: pAttack,
     magicalAttack: mAttack,
@@ -99,13 +99,13 @@ export const getUnitStatsDetails = (unit) => {
     magicalDefense: getStatValue(MAGICAL_DEFENSE, 'magicalDefense'),
     // 战斗相关属性
     speed: getStatValue(SPEED, 'speed'),
-    hitRate: `${(stats.hitRate * 100).toFixed(1)}%`,
+    hitRate: `${(derivedAttributes.hitRate * 100).toFixed(1)}%`,
     dodgeRate: `${(getStatValue(DODGE_RATE, 'dodgeRate') * 100).toFixed(1)}%`,
     critRate: `${(getStatValue(CRIT_RATE, 'critRate') * 100).toFixed(1)}%`,
     critDamage: `${(getStatValue(CRIT_DAMAGE, 'critDamage') * 100).toFixed(1)}%`,
     // 减伤属性
-    fixedDamageReduction: stats.fixedDamageReduction,
-    percentDamageReduction: `${(stats.percentDamageReduction * 100).toFixed(1)}%`,
+    fixedDamageReduction: derivedAttributes.fixedDamageReduction,
+    percentDamageReduction: `${(derivedAttributes.percentDamageReduction * 100).toFixed(1)}%`,
     // 技能和状态
     skillSet: unit.skillSet,
     statusEffects: unit.statusEffects && Array.isArray(unit.statusEffects) ? unit.statusEffects.map(effect => effect.type) : [],

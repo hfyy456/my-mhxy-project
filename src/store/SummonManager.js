@@ -56,7 +56,7 @@ class SummonManager extends EventEmitter {
 
   /**
    * Adds a new summon from captured battle data.
-   * This method ensures that the captured creature's unique stats are preserved.
+   * This method ensures that the captured creature's unique derivedAttributes are preserved.
    * @param {object} capturedData - The data snapshot from BattleEngine.
    * @returns {Summon|null} The newly created Summon instance, or null on failure.
    */
@@ -83,7 +83,7 @@ class SummonManager extends EventEmitter {
 
     if (!summon) return null;
 
-    // After creation, immediately recalculate stats to apply level/growth effects.
+    // After creation, immediately recalculate derivedAttributes to apply level/growth effects.
     // The constructor's recalculate might not be sufficient if level > 1.
     summon.recalculateStats();
 

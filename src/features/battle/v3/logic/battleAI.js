@@ -33,7 +33,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   }
 
   // 如果HP低于30%，有50%的概率选择防御
-  const hpPercent = (unit.stats.currentHp / unit.stats.maxHp) * 100;
+  const hpPercent = (unit.derivedAttributes.currentHp / unit.derivedAttributes.maxHp) * 100;
   if (hpPercent < 30 && Math.random() < 0.5) {
     return {
       type: 'defend',
@@ -43,7 +43,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
 
   // 如果有技能且MP足够，有30%的概率使用技能
   /*
-  if (unit.skillSet && unit.skillSet.length > 0 && unit.stats.currentMp >= 10 && Math.random() < 0.3) {
+  if (unit.skillSet && unit.skillSet.length > 0 && unit.derivedAttributes.currentMp >= 10 && Math.random() < 0.3) {
     // 随机选择一个技能
     const skillId = unit.skillSet[Math.floor(Math.random() * unit.skillSet.length)];
     
@@ -58,7 +58,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
     } else {
       // 按HP百分比排序，优先选择HP最低的单位
       validTargets.sort((a, b) => 
-        (a.stats.currentHp / a.stats.maxHp) - (b.stats.currentHp / b.stats.maxHp)
+        (a.derivedAttributes.currentHp / a.derivedAttributes.maxHp) - (b.derivedAttributes.currentHp / b.derivedAttributes.maxHp)
       );
       
       return {
@@ -89,7 +89,7 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
   if (Math.random() < 0.7) {
     // 按HP百分比排序，选择HP最低的单位
     validAttackTargets.sort((a, b) => 
-      (a.stats.currentHp / a.stats.maxHp) - (b.stats.currentHp / b.stats.maxHp)
+      (a.derivedAttributes.currentHp / a.derivedAttributes.maxHp) - (b.derivedAttributes.currentHp / b.derivedAttributes.maxHp)
     );
     targetUnit = validAttackTargets[0];
   } else {
@@ -107,44 +107,31 @@ export const decideEnemyAction = (unit, battleUnits, playerUnits, enemyUnits, gl
 
 /**
  * 为所有敌方单位设置AI行动
- * @param {Object} battleUnits - 所有战斗单位
- * @param {Array} playerFormation - 玩家阵型
- * @param {Array} enemyFormation - 敌方阵型
+ * @param {Object} enemyTeam - 敌方单位集合
+ * @param {Object} playerTeam - 玩家单位集合
+ * @param {Object} allUnits - 所有战斗单位
  * @param {Object} globalPetConfig - 全局宠物配置对象
  * @param {Object} skillConfig - 技能配置对象
  * @returns {Object} 敌方单位行动映射 { unitId: action }
  */
-export const setEnemyUnitsActions = (battleUnits, playerFormation, enemyFormation, globalPetConfig, skillConfig) => {
-  console.log("[AI-DEBUG] setEnemyUnitsActions: Called with battleUnits", { battleUnits: JSON.parse(JSON.stringify(battleUnits)) });
+export const setEnemyUnitsActions = (enemyTeam, playerTeam, allUnits, globalPetConfig, skillConfig) => {
+  console.log("[AI-DEBUG] setEnemyUnitsActions called with separated teams.");
   const enemyActions = {};
   
-  // 调试信息
-  console.log('setEnemyUnitsActions 被调用，设置敌方AI行动');
-  console.log('battleUnits:', Object.keys(battleUnits).length);
-  
-  // 获取所有玩家单位和敌方单位
-  const playerUnits = [];
-  const enemyUnits = [];
-  
-  Object.values(battleUnits).forEach(unit => {
-    if (unit.isPlayerUnit) {
-      playerUnits.push(unit);
-    } else {
-      enemyUnits.push(unit);
-    }
-  });
-  
+  const enemyUnits = Object.values(enemyTeam);
+  const playerUnits = Object.values(playerTeam);
+
   console.log('敌方单位数量:', enemyUnits.length);
-  console.log('玩家单位数量:', playerUnits.length);
   
   // 为每个敌方单位设置行动
   enemyUnits.forEach(unit => {
     if (!unit.isDefeated) {
-      const action = decideEnemyAction(unit, battleUnits, playerUnits, enemyUnits, globalPetConfig, skillConfig);
+      // decideEnemyAction 依然需要所有单位的信息来进行索敌
+      const action = decideEnemyAction(unit, allUnits, playerUnits, enemyUnits, globalPetConfig, skillConfig);
       if (action) {
         enemyActions[unit.id] = {
           ...action,
-          unitId: unit.id, // Ensure the unitId is part of the action object
+          unitId: unit.id,
         };
         console.log(`[AI-DEBUG] setEnemyUnitsActions: Action set for ${unit.name}`, { action: enemyActions[unit.id] });
       }

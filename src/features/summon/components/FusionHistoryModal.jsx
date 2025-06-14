@@ -53,7 +53,7 @@ const FusionHistoryModal = ({ isOpen, onClose }) => {
   }, [fusionHistory, filterType, sortBy]);
 
   // 统计信息
-  const stats = React.useMemo(() => {
+  const derivedAttributes = React.useMemo(() => {
     const total = fusionHistory.length;
     const successful = fusionHistory.filter(entry => entry.result.success).length;
     const failed = total - successful;
@@ -102,19 +102,19 @@ const FusionHistoryModal = ({ isOpen, onClose }) => {
         <div className="bg-slate-700/50 px-6 py-4 border-b border-slate-600">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{stats.total}</div>
+              <div className="text-2xl font-bold text-white">{derivedAttributes.total}</div>
               <div className="text-sm text-gray-400">总合成次数</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">{stats.successful}</div>
+              <div className="text-2xl font-bold text-green-400">{derivedAttributes.successful}</div>
               <div className="text-sm text-gray-400">成功次数</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
+              <div className="text-2xl font-bold text-red-400">{derivedAttributes.failed}</div>
               <div className="text-sm text-gray-400">失败次数</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-amber-400">{stats.successRate}%</div>
+              <div className="text-2xl font-bold text-amber-400">{derivedAttributes.successRate}%</div>
               <div className="text-sm text-gray-400">成功率</div>
             </div>
           </div>

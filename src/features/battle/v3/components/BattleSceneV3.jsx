@@ -3,42 +3,6 @@ import { useBattleV3 } from '../hooks/useBattleV3';
 import { AnimationProvider, useAnimation, AnimationPlayer } from './AnimationPlayer';
 import { BattleLifecycleContext } from '../context/BattleLifecycleContext';
 
-const mockBattleData = {
-  battleId: 'test-battle-001',
-  playerUnits: {
-    'player-1': {
-      id: 'player-1',
-      name: '玩家1',
-      hp: 100,
-      isPlayerUnit: true,
-      stats: { maxHp: 100, currentHp: 100, speed: 50, physicalAttack: 30, physicalDefense: 10, magicalAttack: 5, magicalDefense: 5, critRate: 0.1, critDamage: 1.5 },
-    },
-    'player-2': {
-      id: 'player-2',
-      name: '宠物A',
-      hp: 150,
-      isPlayerUnit: true,
-      stats: {maxHp: 150,currentHp: 150, speed: 40, physicalAttack: 45, physicalDefense: 20, magicalAttack: 10, magicalDefense: 10, critRate: 0.15, critDamage: 1.6 },
-    },
-  },
-  enemyUnits: {
-    'enemy-1': {
-      id: 'enemy-1',
-      name: '怪物A',
-      hp: 80,
-      isPlayerUnit: false,
-      stats: { maxHp: 80, currentHp: 80, speed: 30, physicalAttack: 25, physicalDefense: 5, magicalAttack: 0, magicalDefense: 0, critRate: 0.05, critDamage: 1.5 },
-    },
-    'enemy-2': {
-      id: 'enemy-2',
-      name: '怪物B',
-      hp: 80,
-      isPlayerUnit: false,
-      stats: { maxHp: 80, currentHp: 80, speed: 35, physicalAttack: 25, physicalDefense: 5, magicalAttack: 0, magicalDefense: 0, critRate: 0.05, critDamage: 1.5 },
-    },
-  },
-};
-
 const styles = {
   container: { padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: 'auto' },
   state: { color: 'blue', fontWeight: 'bold', marginBottom: '10px' },
@@ -178,12 +142,9 @@ const styles = {
   },
 };
 
-// --- NEW HELPER FUNCTION ---
-// This function converts a JSS-style keyframe object to a CSS string
 const keyframesToString = (kfObj) => {
   return Object.entries(kfObj).map(([key, value]) => {
     const props = Object.entries(value).map(([prop, val]) => {
-      // A simple camelCase to kebab-case converter
       const kebabProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
       return `${kebabProp}: ${val};`;
     }).join(' ');
@@ -191,10 +152,8 @@ const keyframesToString = (kfObj) => {
   }).join(' ');
 };
 
-// Inject keyframes into a style tag for animations
 const styleSheet = document.createElement("style");
 styleSheet.type = "text/css";
-// --- MODIFIED to use the new helper function ---
 styleSheet.innerText = `
   @keyframes shake { ${keyframesToString(styles['@keyframes shake'])} }
   @keyframes floatUp { ${keyframesToString(styles['@keyframes floatUp'])} }
@@ -203,13 +162,10 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-const FloatingDamage = ({ damage }) => {
-  return <div style={styles.floatingDamage}>{damage}</div>;
-};
-
 const UnitDisplay = ({ unit }) => {
-  const { name, stats } = unit;
-  const hpPercentage = (stats.currentHp / stats.maxHp) * 100;
+  if (!unit) return null; // 如果单位不存在，则不渲染
+  const { name, derivedAttributes } = unit;
+  const hpPercentage = (derivedAttributes.currentHp / derivedAttributes.maxHp) * 100;
   const { animationState } = useAnimation();
   const { floatingTexts, unitCssClasses } = animationState;
   
@@ -219,7 +175,7 @@ const UnitDisplay = ({ unit }) => {
     return '#f44336';
   };
   
-  const isDefeated = stats.currentHp <= 0;
+  const isDefeated = derivedAttributes.currentHp <= 0;
   
   const currentAnimClass = unitCssClasses[unit.id];
   const unitStyle = {
@@ -234,7 +190,7 @@ const UnitDisplay = ({ unit }) => {
         <div key={index} style={{...styles.floatingDamage, color: ft.color}}>{ft.text}</div>
       ))}
       <h4>{name} {isDefeated && '(已阵亡)'}</h4>
-      <p>HP: {stats.currentHp} / {stats.maxHp}</p>
+      <p>HP: {derivedAttributes.currentHp} / {derivedAttributes.maxHp}</p>
       <div style={styles.hpBarContainer}>
         <div style={{ ...styles.hpBar, width: `${hpPercentage}%`, backgroundColor: getHpColor(hpPercentage) }} />
       </div>
@@ -242,16 +198,31 @@ const UnitDisplay = ({ unit }) => {
   );
 };
 
-const BattleV3TestScreenInternal = () => {
+const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const [state, send] = useBattleV3();
   const { restartBattle } = useContext(BattleLifecycleContext);
 
-  const handleInitialize = () => {
-    send({ type: 'INITIALIZE_BATTLE', payload: mockBattleData });
-  };
+  // --- NEW: State for player turn interaction ---
+  const [playerActions, setPlayerActions] = useState({}); // Stores actions for player units, e.g., { 'unit-1': { type: 'attack', target: 'enemy-1' } }
+  const [selectedUnitId, setSelectedUnitId] = useState(null); // Which player unit is currently selected for action
+  const [targetingSkill, setTargetingSkill] = useState(null); // Are we currently selecting a target for a skill? { skillId: 'attack' }
+
+  useEffect(() => {
+    if (initialData && state.matches('idle')) {
+      send({ type: 'INITIALIZE_BATTLE', payload: initialData });
+    }
+  }, [initialData, state, send]);
   
+  const isCompleted = state.matches('completed');
+
+  useEffect(() => {
+    if (isCompleted && onComplete) {
+      onComplete(state.context.battleResult);
+    }
+  }, [isCompleted, onComplete, state.context.battleResult]);
+
   const handleSubmitAction = (unitId) => {
-    const livingEnemies = Object.values(state.context.enemyTeam).filter(u => state.context.allUnits[u.id]?.stats.currentHp > 0);
+    const livingEnemies = Object.values(state.context.enemyTeam).filter(u => state.context.allUnits[u.id]?.derivedAttributes.currentHp > 0);
     if (livingEnemies.length === 0) {
       console.warn("No living enemies to target!");
       return;
@@ -260,17 +231,64 @@ const BattleV3TestScreenInternal = () => {
     
     send({ type: 'SUBMIT_ACTION', payload: { unitId, action: { type: 'attack', target: targetId } } });
   };
-
-  const handleForceExecution = () => {
-    send({ type: 'FORCE_EXECUTION' });
-  };
   
-  const isIdle = state.matches('idle');
   const isPreparation = state.matches('preparation');
   const isAnimating = state.matches('execution.animating');
-  const isCompleted = state.matches('completed');
   
   const script = state.context.currentActionExecution?.animationScript;
+
+  // Reset local state when a new preparation phase begins
+  useEffect(() => {
+    if (isPreparation) {
+      setPlayerActions({});
+      setSelectedUnitId(null);
+      setTargetingSkill(null);
+    }
+  }, [isPreparation]);
+
+  const handlePlayerUnitClick = (unitId) => {
+    if (!isPreparation) return;
+    const unit = state.context.allUnits[unitId];
+    if (unit.derivedAttributes.currentHp <= 0) return; // Cannot select defeated units
+
+    setSelectedUnitId(unitId);
+    setTargetingSkill({ skillId: 'basic_attack' }); // Default to basic attack for now
+    console.log(`[UI] Selected unit ${unit.name}. Ready to target.`);
+  };
+
+  const handleEnemyUnitClick = (targetId) => {
+    if (!isPreparation || !targetingSkill || !selectedUnitId) return;
+    const targetUnit = state.context.allUnits[targetId];
+    if (targetUnit.derivedAttributes.currentHp <= 0) return; // Cannot target defeated units
+
+    console.log(`[UI] Player unit ${selectedUnitId} will target ${targetId} with ${targetingSkill.skillId}`);
+
+    setPlayerActions(prev => ({
+      ...prev,
+      [selectedUnitId]: { type: targetingSkill.skillId, target: targetId, unitId: selectedUnitId }
+    }));
+
+    // Reset selection state after action is set
+    setSelectedUnitId(null);
+    setTargetingSkill(null);
+  };
+
+  const handleSubmitTurn = () => {
+    if (!isPreparation) return;
+    console.log('[UI] Submitting turn with actions:', playerActions);
+    send({ type: 'SUBMIT_PLAYER_ACTIONS', payload: { actions: playerActions } });
+  };
+
+  // 如果没有初始化数据，或者状态机还未开始或正在初始化，显示加载中...
+  if (!initialData || state.matches('idle') || state.matches('initializing')) {
+    return <div>初始化战斗中...</div>;
+  }
+
+  const playerUnits = Object.values(state.context.playerTeam);
+  const enemyUnits = Object.values(state.context.enemyTeam);
+
+  const livingPlayerUnits = playerUnits.filter(u => state.context.allUnits[u.id]?.derivedAttributes.currentHp > 0);
+  const allPlayerUnitsHaveAction = livingPlayerUnits.every(u => playerActions[u.id]);
 
   return (
     <div style={styles.container}>
@@ -285,56 +303,66 @@ const BattleV3TestScreenInternal = () => {
         <div style={styles.overlay}>
           <div style={styles.resultBox}>
             <p style={styles.resultText}>{state.context.battleResult}</p>
-            <button style={styles.button} onClick={restartBattle}>重新开始</button>
+            {/* The restart button here would trigger a full component remount via App.jsx key */}
+            <button style={styles.button} onClick={restartBattle}>再战一场</button>
+            {/* This button just closes the battle screen */}
+            <button style={styles.button} onClick={() => onComplete(state.context.battleResult)}>返回主界面</button>
           </div>
         </div>
       )}
 
-      <h1>Battle V3 Test Screen</h1>
-      <p>当前状态: <span style={styles.state}>{typeof state.value === 'object' ? JSON.stringify(state.value) : state.value}</span></p>
-      
-      {!isIdle && (
-        <div style={styles.battlefield}>
-          <div style={styles.teamContainer}>
-            <h3>玩家队伍</h3>
-            {Object.values(state.context.playerTeam).map(unit => (
-              <div key={unit.id}>
-                <UnitDisplay unit={state.context.allUnits[unit.id]} />
-                <button
-                  style={{ ...styles.button, ...(!isPreparation || state.context.unitActions[unit.id] ? styles.buttonDisabled : {}) }}
-                  onClick={() => handleSubmitAction(unit.id)}
-                  disabled={!isPreparation || !!state.context.unitActions[unit.id] || state.context.allUnits[unit.id]?.stats.currentHp <= 0}
-                >
-                  {state.context.allUnits[unit.id].name} 攻击 {state.context.unitActions[unit.id] && '(已提交)'}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div style={styles.teamContainer}>
-            <h3>敌方队伍</h3>
-            {Object.values(state.context.enemyTeam).map(unit => (
-              <UnitDisplay key={unit.id} unit={state.context.allUnits[unit.id]} />
-            ))}
-          </div>
-        </div>
-      )}
-      
+      <h1>战斗开始</h1>
       <div style={styles.section}>
-        <h2>操作</h2>
-        <button 
-          style={{...styles.button, ...(!isIdle ? styles.buttonDisabled : {}) }} 
-          onClick={handleInitialize} 
-          disabled={!isIdle}
-        >
-          初始化战斗
-        </button>
+        <h2>战斗信息</h2>
+        <p>状态机状态: <span style={styles.state}>{typeof state.value === 'string' ? state.value : JSON.stringify(state.value)}</span></p>
+        <p>回合: {state.context.currentRound}</p>
         {isPreparation && (
-          <button style={styles.button} onClick={handleForceExecution}>
-            强制执行回合
-          </button>
+          <div>
+            <h3>玩家回合</h3>
+            <p>{targetingSkill ? `为 ${state.context.allUnits[selectedUnitId]?.name} 选择一个目标` : '请选择一个单位下达指令'}</p>
+            <button 
+              style={allPlayerUnitsHaveAction ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+              onClick={handleSubmitTurn}
+              disabled={!allPlayerUnitsHaveAction}
+            >
+              执行回合
+            </button>
+          </div>
         )}
       </div>
 
+      <div style={styles.battlefield}>
+        <div style={styles.teamContainer}>
+          <h3>我方队伍</h3>
+          {playerUnits.map(unit => {
+            const unitWithState = state.context.allUnits[unit.id];
+            const action = playerActions[unit.id];
+            const isSelected = selectedUnitId === unit.id;
+            return (
+              <div key={unit.id} onClick={() => handlePlayerUnitClick(unit.id)} style={{ cursor: isPreparation ? 'pointer' : 'default', border: isSelected ? '2px solid blue' : 'none' }}>
+                <UnitDisplay unit={unitWithState} />
+                {isPreparation && (
+                  <p>
+                    {action ? `行动: 攻击 ${state.context.allUnits[action.target]?.name}` : '等待指令...'}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div style={styles.teamContainer}>
+          <h3>敌方队伍</h3>
+          {enemyUnits.map(unit => {
+            const unitWithState = state.context.allUnits[unit.id];
+            return (
+              <div key={unit.id} onClick={() => handleEnemyUnitClick(unit.id)} style={{ cursor: targetingSkill ? 'crosshair' : 'default' }}>
+                <UnitDisplay unit={unitWithState} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
       <details>
         <summary>查看状态机上下文</summary>
         <pre style={styles.context}>
@@ -345,8 +373,8 @@ const BattleV3TestScreenInternal = () => {
   );
 }
 
-export const BattleV3TestScreen = () => (
+export const BattleSceneV3 = ({ initialData, onComplete }) => (
   <AnimationProvider>
-    <BattleV3TestScreenInternal />
+    <BattleSceneV3Internal initialData={initialData} onComplete={onComplete} />
   </AnimationProvider>
 ); 

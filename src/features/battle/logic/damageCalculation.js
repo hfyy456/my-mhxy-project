@@ -205,9 +205,9 @@ export const calculateBattleDamage = (
 ) => {
   // console.log(
   //   "[calcBattleDmg] Attacker:",
-  //   JSON.stringify(attacker.stats),
+  //   JSON.stringify(attacker.derivedAttributes),
   //   "Defender:",
-  //   JSON.stringify(defender.stats),
+  //   JSON.stringify(defender.derivedAttributes),
   //   "DamageType:",
   //   damageType,
   //   "SkillBonus:",
@@ -221,9 +221,9 @@ export const calculateBattleDamage = (
   if (damageType === "auto") {
     // 获取物理攻击和法术攻击值，支持简写和完整属性名
     const physicalAttack =
-      attacker.stats.physicalAttack || attacker.stats.pAtk || 0;
+      attacker.derivedAttributes.physicalAttack || attacker.derivedAttributes.pAtk || 0;
     const magicalAttack =
-      attacker.stats.magicalAttack || attacker.stats.mAtk || 0; // 假设法术攻击仍然按原方式获取，或者如果也合并到了 attack，则需要相应调整
+      attacker.derivedAttributes.magicalAttack || attacker.derivedAttributes.mAtk || 0; // 假设法术攻击仍然按原方式获取，或者如果也合并到了 attack，则需要相应调整
 
     const determinedDamageType =
       physicalAttack >= magicalAttack ? "physical" : "magical"; // Prefer physical if equal
@@ -237,8 +237,8 @@ export const calculateBattleDamage = (
   }
 
   // 获取攻击者和防御者的相关属性
-  const attackerStats = attacker.stats;
-  const defenderStats = defender.stats;
+  const attackerStats = attacker.derivedAttributes;
+  const defenderStats = defender.derivedAttributes;
 
   // 获取攻击者的暴击率和暴击伤害
   const critRate = attackerStats.critRate || COMBAT_CONSTANTS.DEFAULT_CRIT_RATE;
@@ -343,8 +343,8 @@ export const simulateBattleDamage = (attacker, defender) => {
   const autoDamage = calculateBattleDamage(attacker, defender, "auto");
 
   // 获取攻击者和防御者的详细属性
-  const attackerStats = attacker.stats;
-  const defenderStats = defender.stats;
+  const attackerStats = attacker.derivedAttributes;
+  const defenderStats = defender.derivedAttributes;
 
   // 统一属性名，支持简写和完整属性名
   const physicalAttack =
@@ -360,7 +360,7 @@ export const simulateBattleDamage = (attacker, defender) => {
     attacker: {
       id: attacker.id,
       name: attacker.name,
-      stats: {
+      derivedAttributes: {
         // 使用统一的属性名
         physicalAttack,
         magicalAttack,
@@ -374,7 +374,7 @@ export const simulateBattleDamage = (attacker, defender) => {
     defender: {
       id: defender.id,
       name: defender.name,
-      stats: {
+      derivedAttributes: {
         // 使用统一的属性名
         physicalDefense,
         magicalDefense,
@@ -440,25 +440,25 @@ export const applyDamageToTarget = (
       reflectDamage = reflectResult.reflectedDamage;
 
       // 应用反弹伤害到源单位
-      const sourceCurrentHp = updatedSource.stats.currentHp;
+      const sourceCurrentHp = updatedSource.derivedAttributes.currentHp;
       const sourceNewHp = Math.max(0, sourceCurrentHp - reflectDamage);
       const sourceisDefeated = sourceNewHp <= 0;
 
       // 更新源单位的生命值
-      updatedSource.stats.currentHp = sourceNewHp;
+      updatedSource.derivedAttributes.currentHp = sourceNewHp;
       updatedSource.isDefeated = sourceisDefeated;
     }
   }
 
   // 计算目标剩余生命值
-  const currentHp = updatedTarget.stats.currentHp;
+  const currentHp = updatedTarget.derivedAttributes.currentHp;
   const newHp = Math.max(0, currentHp - finalDamage);
 
   // 检查目标是否死亡
   const isDefeated = newHp <= 0;
 
   // 更新目标单位的生命值
-  updatedTarget.stats.currentHp = newHp;
+  updatedTarget.derivedAttributes.currentHp = newHp;
   updatedTarget.isDefeated = isDefeated;
 
   // 返回更新结果
@@ -513,8 +513,8 @@ export const applyHealingToTarget = (target, healing, options = {}) => {
   const finalHealing = Math.round(healing);
 
   // 计算目标新的生命值，不超过最大生命值
-  const currentHp = target.stats.currentHp;
-  const maxHp = target.stats.maxHp;
+  const currentHp = target.derivedAttributes.currentHp;
+  const maxHp = target.derivedAttributes.maxHp;
   const newHp = Math.min(maxHp, currentHp + finalHealing);
 
   // 计算实际恢复的生命值
@@ -523,8 +523,8 @@ export const applyHealingToTarget = (target, healing, options = {}) => {
   // 更新目标单位的生命值
   const updatedTarget = {
     ...target,
-    stats: {
-      ...target.stats,
+    derivedAttributes: {
+      ...target.derivedAttributes,
       currentHp: newHp,
     },
   };

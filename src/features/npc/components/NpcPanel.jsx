@@ -45,11 +45,11 @@ const NpcPanel = ({ npcId, onClose }) => {
          <p className="text-slate-400 italic mb-4">"{npc.dialogueGreeting}"</p>
       )}
 
-      {npc.stats && (
+      {npc.derivedAttributes && (
         <div className="mt-4 pt-4 border-t border-slate-700">
           <h3 className="text-lg font-semibold text-sky-500 mb-2 text-center">基本属性</h3>
           <ul className="space-y-1 text-sm">
-            {Object.entries(npc.stats).map(([key, value]) => (
+            {Object.entries(npc.derivedAttributes).map(([key, value]) => (
               <li key={key} className="flex justify-between">
                 <span className="text-slate-400">{npc.statNames?.[key] || key}:</span>
                 <span className="text-slate-200">{value}</span>

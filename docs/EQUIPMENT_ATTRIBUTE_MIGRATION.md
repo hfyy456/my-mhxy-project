@@ -26,8 +26,8 @@
   - 移除了兼容性属性名映射 (`attack: '攻击力'`, `defense: '防御力'`)
 
 - ✅ `src/features/battle/logic/damageCalculation.js`
-  - 移除了对 `attacker.stats.attack` 的兼容性支持
-  - 移除了对 `defender.stats.defense` 的兼容性支持
+  - 移除了对 `attacker.derivedAttributes.attack` 的兼容性支持
+  - 移除了对 `defender.derivedAttributes.defense` 的兼容性支持
   - 现在只支持 `physicalAttack/pAtk` 和 `physicalDefense/pDef`
 
 - ✅ `src/store/slices/battleSlice.js`
@@ -113,11 +113,11 @@ magicalDefense: 法术防御力
 ### 在代码中引用属性
 ```javascript
 // ✅ 推荐方式
-const physicalAttack = unit.stats.physicalAttack || 0;
-const magicalAttack = unit.stats.magicalAttack || 0;
+const physicalAttack = unit.derivedAttributes.physicalAttack || 0;
+const magicalAttack = unit.derivedAttributes.magicalAttack || 0;
 
 // ⚠️ 仅在需要兼容性时使用
-const physicalAttack = unit.stats.physicalAttack || unit.stats.pAtk || 0;
+const physicalAttack = unit.derivedAttributes.physicalAttack || unit.derivedAttributes.pAtk || 0;
 ```
 
 ## 🧪 测试建议

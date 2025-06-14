@@ -44,8 +44,8 @@ const BattleResultsScreen = () => {
   // 安全获取HP/MP值的辅助函数
   const getUnitHP = (unit) => {
     return {
-      current: unit.stats?.currentHp || 0,
-      max: unit.stats?.maxHp || 1
+      current: unit.derivedAttributes?.currentHp || 0,
+      max: unit.derivedAttributes?.maxHp || 1
     };
   };
   
