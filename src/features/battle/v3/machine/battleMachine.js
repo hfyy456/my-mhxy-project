@@ -4,6 +4,14 @@ import { calculateBattleDamage } from '../logic/damageCalculation';
 import { setEnemyUnitsActions } from '../logic/battleAI';
 import { skills as skillConfig } from '../logic/skillConfig';
 
+const calculateDisplayTurnOrder = (allUnits) => {
+  if (!allUnits || Object.keys(allUnits).length === 0) return [];
+  return Object.values(allUnits)
+      .filter(u => u && u.derivedAttributes && u.derivedAttributes.currentHp > 0)
+      .sort((a, b) => a.derivedAttributes.speed - b.derivedAttributes.speed)
+      .map(u => u.id);
+};
+
 const initializeBattleContext = assign({
   allUnits: ({ event }) => {
     console.log('[DEBUG] initializeBattleContext received event:', event);
@@ -14,6 +22,16 @@ const initializeBattleContext = assign({
   turnOrder: ({ event }) => [], // Turn order will be calculated later
   currentTurn: 0,
   round: 1,
+  sortedActionQueue: [],
+  currentActionExecution: null, // This will now store { animationScript, logicalResult }
+  battleResult: null,
+  error: null,
+  logs: [],
+  skillOverrides: null, // To hold temporary skill data for preview
+  aiActionsReady: false,
+  playerActionsReady: false,
+  displayTurnOrder: [],
+  completedUnitIdsThisRound: [],
 });
 
 // --- New Helper Function: Script & Result Generator ---
@@ -97,6 +115,8 @@ export const battleMachine = createMachine({
     skillOverrides: null, // To hold temporary skill data for preview
     aiActionsReady: false,
     playerActionsReady: false,
+    displayTurnOrder: [],
+    completedUnitIdsThisRound: [],
   },
   states: {
     idle: {
@@ -156,6 +176,8 @@ export const battleMachine = createMachine({
       entry: [
         assign({
           currentRound: ({ context }) => context.currentRound + 1,
+          displayTurnOrder: ({ context }) => calculateDisplayTurnOrder(context.allUnits),
+          completedUnitIdsThisRound: [],
           // Reset readiness flags for the new round
           aiActionsReady: false,
           playerActionsReady: false,
@@ -284,8 +306,9 @@ export const battleMachine = createMachine({
         );
         return {}; // Return empty object to prevent crash
       }
+      const allUnits = event.output.allUnits;
       return {
-        allUnits: event.output.allUnits,
+        allUnits,
         playerTeam: event.output.playerTeam,
         enemyTeam: event.output.enemyTeam,
         turnOrder: event.output.turnOrder,
@@ -298,6 +321,8 @@ export const battleMachine = createMachine({
         logs: [],
         aiActionsReady: false,
         playerActionsReady: false,
+        displayTurnOrder: calculateDisplayTurnOrder(allUnits),
+        completedUnitIdsThisRound: [],
       };
     }),
     storeUnitAction: assign({
@@ -329,7 +354,7 @@ export const battleMachine = createMachine({
 
       return {
         sortedActionQueue: context.sortedActionQueue.slice(1),
-        currentActionExecution: { animationScript, logicalResult },
+        currentActionExecution: { animationScript, logicalResult, unitId: actionToExecute.unitId },
         logs: newLogs,
       };
     }),
@@ -355,6 +380,7 @@ export const battleMachine = createMachine({
         allUnits: updatedUnits,
         logs: newLogs,
         currentActionExecution: null,
+        completedUnitIdsThisRound: [...context.completedUnitIdsThisRound, currentActionExecution.unitId],
       };
     }),
     skipDeadUnitAction: assign({

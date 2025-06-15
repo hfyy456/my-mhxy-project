@@ -120,7 +120,7 @@ export const setEnemyUnitsActions = (enemyTeam, playerTeam, allUnits, globalPetC
   
   const enemyUnits = Object.values(enemyTeam);
   const playerUnits = Object.values(playerTeam);
-
+  
   console.log('敌方单位数量:', enemyUnits.length);
   
   // 为每个敌方单位设置行动

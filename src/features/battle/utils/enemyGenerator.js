@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-11 05:54:32
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-13 08:35:33
+ * @LastEditTime: 2025-06-16 05:22:37
  */
 import { createCreatureFromTemplate } from '@/utils/summonUtils';
 import { SUMMON_NATURE_TYPES, SUMMON_SOURCES, EQUIPMENT_EFFECT_TYPES } from '@/config/enumConfig';
@@ -92,6 +92,7 @@ export const generateEnemyGroup = async ({ enemyPool, level, count }) => {
       templateId: randomTemplateId,
       level: 1, // Start at level 1
       natureType: natureType,
+
     });
 
     if (!enemyInstance) continue;
@@ -124,6 +125,7 @@ export const generateEnemyGroup = async ({ enemyPool, level, count }) => {
       
 
     }
+    enemyInstance.isPlayerUnit=false
 
     // 4. 将保持着"实例"身份的敌人添加到数组中
     selectedEnemies.push(enemyInstance);

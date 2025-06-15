@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useBattleV3 } from '../hooks/useBattleV3';
 import { AnimationProvider, useAnimation, AnimationPlayer } from './AnimationPlayer';
 import { BattleLifecycleContext } from '../context/BattleLifecycleContext';
+import { TurnOrderRuler } from './TurnOrderRuler.jsx';
 
 const styles = {
   container: { padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: 'auto' },
@@ -93,6 +94,11 @@ const styles = {
     '50%': { transform: 'translateX(8px)' },
     '75%': { transform: 'translateX(-8px)' },
   },
+  '@keyframes breathing': {
+    '0%': { transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 4px 1px rgba(255, 255, 100, 0.7)' },
+    '50%': { transform: 'translate(-50%, -50%) scale(1.15)', boxShadow: '0 0 12px 5px rgba(255, 255, 100, 0.9)' },
+    '100%': { transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 4px 1px rgba(255, 255, 100, 0.7)' },
+  },
   floatingDamage: {
     position: 'absolute',
     top: '-20px',
@@ -131,6 +137,58 @@ const styles = {
     fontWeight: 'bold',
     marginBottom: '20px',
   },
+  turnOrderContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '20px 10px',
+    marginBottom: '15px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    flexWrap: 'wrap', 
+    position: 'relative',
+    height: '60px',
+    border: '1px solid #dee2e6',
+  },
+  turnOrderTrack: {
+    position: 'absolute',
+    height: '4px',
+    width: 'calc(100% - 20px)',
+    backgroundColor: '#ced4da',
+    top: '50%',
+    left: '10px',
+    transform: 'translateY(-50%)',
+    zIndex: 1,
+  },
+  turnOrderMarker: {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    zIndex: 2,
+    cursor: 'pointer',
+    border: '2px solid white',
+  },
+  turnOrderMarkerLabel: {
+    position: 'absolute',
+    bottom: '140%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    color: 'white',
+    padding: '5px 10px',
+    borderRadius: '5px',
+    fontSize: '12px',
+    whiteSpace: 'nowrap',
+    zIndex: 3,
+  },
+  playerUnitTurn: {
+    backgroundColor: '#007bff',
+  },
+  enemyUnitTurn: {
+    backgroundColor: '#dc3545',
+  },
   'attack_lunge': {
     animation: 'lunge 0.5s ease-in-out',
   },
@@ -159,6 +217,7 @@ styleSheet.innerText = `
   @keyframes floatUp { ${keyframesToString(styles['@keyframes floatUp'])} }
   @keyframes lunge { ${keyframesToString(styles['@keyframes lunge'])} }
   @keyframes returnLunge { ${keyframesToString(styles['@keyframes returnLunge'])} }
+  @keyframes breathing { ${keyframesToString(styles['@keyframes breathing'])} }
 `;
 document.head.appendChild(styleSheet);
 
@@ -220,7 +279,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
       onComplete(state.context.battleResult);
     }
   }, [isCompleted, onComplete, state.context.battleResult]);
-
+  
   const handleSubmitAction = (unitId) => {
     const livingEnemies = Object.values(state.context.enemyTeam).filter(u => state.context.allUnits[u.id]?.derivedAttributes.currentHp > 0);
     if (livingEnemies.length === 0) {
@@ -231,7 +290,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     
     send({ type: 'SUBMIT_ACTION', payload: { unitId, action: { type: 'attack', target: targetId } } });
   };
-  
+
   const isPreparation = state.matches('preparation');
   const isAnimating = state.matches('execution.animating');
   
@@ -292,6 +351,13 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
 
   return (
     <div style={styles.container}>
+      <TurnOrderRuler
+        order={state.context.displayTurnOrder}
+        units={state.context.allUnits}
+        currentlyActingUnitId={state.context.currentActionExecution?.unitId}
+        completedUnitIds={state.context.completedUnitIdsThisRound}
+      />
+      
       {isAnimating && script && (
         <AnimationPlayer
           script={script}
@@ -331,8 +397,8 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
         )}
       </div>
 
-      <div style={styles.battlefield}>
-        <div style={styles.teamContainer}>
+        <div style={styles.battlefield}>
+          <div style={styles.teamContainer}>
           <h3>我方队伍</h3>
           {playerUnits.map(unit => {
             const unitWithState = state.context.allUnits[unit.id];
@@ -349,20 +415,20 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
               </div>
             );
           })}
-        </div>
-        <div style={styles.teamContainer}>
-          <h3>敌方队伍</h3>
+          </div>
+          <div style={styles.teamContainer}>
+            <h3>敌方队伍</h3>
           {enemyUnits.map(unit => {
             const unitWithState = state.context.allUnits[unit.id];
             return (
               <div key={unit.id} onClick={() => handleEnemyUnitClick(unit.id)} style={{ cursor: targetingSkill ? 'crosshair' : 'default' }}>
                 <UnitDisplay unit={unitWithState} />
-              </div>
+          </div>
             );
           })}
         </div>
       </div>
-      
+
       <details>
         <summary>查看状态机上下文</summary>
         <pre style={styles.context}>
