@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-15 07:06:55
+ * @LastEditTime: 2025-06-16 07:24:00
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -323,7 +323,8 @@ const GamePageContent = ({
     });
     for (const item of data.units) {
       item.derivedAttributes=       {...item.derivedAttributes,currentHp:item.derivedAttributes.hp,currentMp:item.derivedAttributes.mp,maxHp:item.derivedAttributes.hp,maxMp:item.derivedAttributes.mp }
-
+      item.name=item.nickname
+      
     }
 
     const battlePayload = {

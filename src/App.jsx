@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-02 01:59:49
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-15 06:08:26
+ * @LastEditTime: 2025-06-16 07:40:56
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -222,12 +222,7 @@ const App = () => {
     return (
       <BattleLifecycleContext.Provider value={{ restartBattle: restartBattleTest }}>
         <BattleProviderV3 key={battleTestKey}>
-          <div style={{ padding: '10px' }}>
-            <button onClick={handleToggleEditor} style={{ marginBottom: '10px', padding: '10px' }}>
-              {showSkillEditor ? '切换到战斗测试' : '切换到技能编辑器'}
-            </button>
-          </div>
-          {showSkillEditor ? <SkillEditor /> : <BattleSceneV3 initialData={battleInitData} onComplete={handleV3BattleComplete} />}
+          <BattleSceneV3 initialData={battleInitData} onComplete={handleV3BattleComplete} />
         </BattleProviderV3>
       </BattleLifecycleContext.Provider>
     );

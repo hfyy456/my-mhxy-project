@@ -1,11 +1,22 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, memo, useRef } from 'react';
 import { useBattleV3 } from '../hooks/useBattleV3';
 import { AnimationProvider, useAnimation, AnimationPlayer } from './AnimationPlayer';
 import { BattleLifecycleContext } from '../context/BattleLifecycleContext';
 import { TurnOrderRuler } from './TurnOrderRuler.jsx';
+import { UnitDisplay, unitDisplayStyles } from './UnitDisplay.jsx';
+import { ActionSelector } from './ActionSelector.jsx';
+import { skills as allSkills } from '../logic/skillConfig.js';
 
 const styles = {
-  container: { padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: 'auto' },
+  container: { 
+    padding: '20px', 
+    fontFamily: 'Arial, sans-serif', 
+    maxWidth: '1800px', 
+    margin: 'auto',
+    backgroundColor: '#0a0f14',
+    backgroundImage: 'radial-gradient(circle at top, #1a2430, #0a0f14 70%)',
+    minHeight: '100vh',
+  },
   state: { color: 'blue', fontWeight: 'bold', marginBottom: '10px' },
   context: {
     backgroundColor: '#f0f0f0',
@@ -39,25 +50,45 @@ const styles = {
   },
   battlefield: {
     display: 'flex',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: '20px',
   },
   teamContainer: {
-    width: '45%',
-    border: '1px solid #ddd',
+    width: '750px',
+    border: '1px solid #2c3e50',
     padding: '10px',
-    borderRadius: '5px',
-    backgroundColor: '#fafafa'
+    borderRadius: '8px',
+    backgroundColor: '#1f2b38',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateRows: 'repeat(3, 1fr)',
+    gap: '20px',
+  },
+  gridCell: {
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'rgba(135, 206, 235, 0.2)',
+    borderRadius: '8px',
+    minHeight: '200px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
+    backgroundColor: 'rgba(135, 206, 235, 0.05)',
+    backgroundImage: 'radial-gradient(circle, rgba(135, 206, 235, 0.1) 10%, transparent 70%)',
+    position: 'relative',
   },
   unitBox: {
     border: '1px solid #ccc',
     padding: '10px',
-    margin: '10px 0',
     borderRadius: '8px',
     backgroundColor: '#fff',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     transition: 'all 0.3s ease-in-out',
     position: 'relative',
+    width: '100%', // Ensure unitBox fills the cell
   },
   unitBoxAttacking: {
     transform: 'scale(1.08)',
@@ -198,6 +229,124 @@ const styles = {
   'return_to_idle': {
     animation: 'returnLunge 0.3s ease-in-out',
   },
+  targetableUnit: {
+    borderColor: '#ffc107',
+    boxShadow: '0 0 12px rgba(255, 193, 7, 0.6)',
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+  },
+  targetableUnitHover: {
+    borderColor: '#dc3545',
+    boxShadow: '0 0 16px rgba(220, 53, 69, 1)',
+    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+  },
+  infoPanel: {
+    width: '220px',
+    backgroundColor: 'rgba(20, 30, 40, 0.85)',
+    border: '1px solid rgba(135, 206, 235, 0.3)',
+    borderRadius: '12px',
+    padding: '25px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    alignSelf: 'stretch',
+  },
+  infoPanelGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  infoText: {
+    fontSize: '16px',
+    margin: 0,
+    color: '#e0e0e0',
+    textAlign: 'center',
+  },
+  roundText: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    margin: 0,
+    color: '#a0c8e0',
+  },
+  vsText: {
+    fontFamily: '"Impact", "Arial Black", sans-serif',
+    fontSize: '48px',
+    fontWeight: 'bold',
+    margin: 0,
+    background: 'linear-gradient(180deg, #ff8c00, #ff4500)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 5px rgba(255,140,0,0.5), 0 0 15px rgba(255,69,0,0.5)',
+    letterSpacing: '-2px',
+  },
+  statusText: {
+    fontStyle: 'italic',
+    color: '#8cb0c4',
+    margin: 0,
+  },
+  logPanel: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '450px',
+    height: '250px',
+    backgroundColor: 'rgba(20, 30, 40, 0.85)',
+    border: '1px solid rgba(135, 206, 235, 0.3)',
+    borderRadius: '12px',
+    padding: '15px',
+    display: 'flex',
+    flexDirection: 'column',
+    color: 'white',
+    zIndex: 100,
+    backdropFilter: 'blur(8px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    fontSize: '13px',
+    transition: 'height 0.3s ease-in-out',
+  },
+  logPanelTitle: {
+    margin: '0 0 10px 0',
+    paddingBottom: '10px',
+    borderBottom: '1px solid rgba(135, 206, 235, 0.2)',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    flexShrink: 0,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    cursor: 'pointer',
+  },
+  logToggleButton: {
+    background: 'transparent',
+    border: 'none',
+    color: 'white',
+    fontSize: '20px',
+    cursor: 'pointer',
+    padding: '0 10px',
+  },
+  logEntriesContainer: {
+    flexGrow: 1,
+    overflowY: 'auto',
+    paddingRight: '10px',
+    fontFamily: 'monospace',
+  },
+  logEntry: {
+    color: '#c0c0c0',
+    marginBottom: '5px',
+    paddingBottom: '5px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+  },
+  logEntry_action: { color: '#87ceeb' },
+  logEntry_damage: { color: '#ff7f7f', fontWeight: 'bold' },
+  logEntry_heal: { color: '#90ee90' },
+  logEntry_death: { color: '#ff4500', fontStyle: 'italic', fontWeight: 'bold' },
+  logEntry_info: { color: '#aaaaaa', fontStyle: 'italic' },
+  ...unitDisplayStyles,
 };
 
 const keyframesToString = (kfObj) => {
@@ -221,56 +370,101 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-const UnitDisplay = ({ unit }) => {
-  if (!unit) return null; // 如果单位不存在，则不渲染
-  const { name, derivedAttributes } = unit;
-  const hpPercentage = (derivedAttributes.currentHp / derivedAttributes.maxHp) * 100;
-  const { animationState } = useAnimation();
-  const { floatingTexts, unitCssClasses } = animationState;
-  
-  const getHpColor = (percentage) => {
-    if (percentage > 50) return '#4caf50';
-    if (percentage > 20) return '#ff9800';
-    return '#f44336';
-  };
-  
-  const isDefeated = derivedAttributes.currentHp <= 0;
-  
-  const currentAnimClass = unitCssClasses[unit.id];
-  const unitStyle = {
-    ...styles.unitBox,
-    ...(currentAnimClass ? styles[currentAnimClass] : {}),
-    opacity: isDefeated ? 0.5 : 1,
-  };
+const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions }) => {
+  const { selectedUnitId, skillForTargeting } = selectionState;
+  const [hoveredTargetId, setHoveredTargetId] = useState(null);
+
+  if (!grid) {
+    return <div>Loading grid...</div>;
+  }
+
+  // Create a flat list of cells with their row/col for rendering
+  const cells = grid.flatMap((row, rowIndex) => 
+    row.map((unitId, colIndex) => ({
+      unitId,
+      rowIndex,
+      colIndex,
+      key: `${rowIndex}-${colIndex}`
+    }))
+  );
 
   return (
-    <div style={unitStyle}>
-      {floatingTexts[unit.id]?.map((ft, index) => (
-        <div key={index} style={{...styles.floatingDamage, color: ft.color}}>{ft.text}</div>
-      ))}
-      <h4>{name} {isDefeated && '(已阵亡)'}</h4>
-      <p>HP: {derivedAttributes.currentHp} / {derivedAttributes.maxHp}</p>
-      <div style={styles.hpBarContainer}>
-        <div style={{ ...styles.hpBar, width: `${hpPercentage}%`, backgroundColor: getHpColor(hpPercentage) }} />
-      </div>
+    <div style={styles.teamContainer}>
+      {cells.map(cell => {
+        const { unitId, colIndex } = cell;
+        const unit = unitId ? allUnits[unitId] : null;
+
+        // For enemy team, render column 0 as 2, 1 as 1, 2 as 0 to mirror
+        const finalStyle = {
+          ...styles.gridCell,
+          gridColumn: isPlayerTeam ? colIndex + 1 : 3 - colIndex,
+          gridRow: cell.rowIndex + 1,
+        };
+
+        const isSelected = unit && unit.id === selectedUnitId;
+        if (isSelected) {
+          finalStyle.borderWidth = '2px';
+          finalStyle.borderColor = '#007bff';
+          finalStyle.boxShadow = '0 0 12px rgba(0, 123, 255, 0.8)';
+          finalStyle.backgroundColor = 'rgba(0, 123, 255, 0.15)';
+        }
+        
+        const canBeTargeted = unit && skillForTargeting && !isPlayerTeam && unit.derivedAttributes.currentHp > 0;
+        if (canBeTargeted) {
+          finalStyle.cursor = 'crosshair';
+          Object.assign(finalStyle, styles.targetableUnit);
+        }
+
+        if (canBeTargeted && unit.id === hoveredTargetId) {
+          Object.assign(finalStyle, styles.targetableUnitHover);
+        }
+
+        const canBeSelected = unit && isPlayerTeam && !skillForTargeting;
+        if (canBeSelected) {
+          finalStyle.cursor = 'pointer';
+        }
+
+        const hasActionSet = isPlayerTeam && playerActions[unitId];
+
+        return (
+          <div 
+            key={cell.key} 
+            style={finalStyle} 
+            onClick={() => unit && onUnitClick(unit.id)}
+            onMouseEnter={() => canBeTargeted && setHoveredTargetId(unit.id)}
+            onMouseLeave={() => canBeTargeted && setHoveredTargetId(null)}
+          >
+            {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} /> : null}
+          </div>
+        );
+      })}
     </div>
   );
-};
+});
 
 const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const [state, send] = useBattleV3();
   const { restartBattle } = useContext(BattleLifecycleContext);
+  const logContainerRef = useRef(null);
+  const [isLogPanelExpanded, setIsLogPanelExpanded] = useState(true);
 
   // --- NEW: State for player turn interaction ---
   const [playerActions, setPlayerActions] = useState({}); // Stores actions for player units, e.g., { 'unit-1': { type: 'attack', target: 'enemy-1' } }
   const [selectedUnitId, setSelectedUnitId] = useState(null); // Which player unit is currently selected for action
-  const [targetingSkill, setTargetingSkill] = useState(null); // Are we currently selecting a target for a skill? { skillId: 'attack' }
+  const [skillForTargeting, setSkillForTargeting] = useState(null); // Stores the skill that is waiting for a target, e.g., { skillId: 'fire_slash' }
 
   useEffect(() => {
     if (initialData && state.matches('idle')) {
       send({ type: 'INITIALIZE_BATTLE', payload: initialData });
     }
   }, [initialData, state, send]);
+  
+  // Auto-scroll for log panel
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [state.context.logs]);
   
   const isCompleted = state.matches('completed');
 
@@ -301,35 +495,72 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     if (isPreparation) {
       setPlayerActions({});
       setSelectedUnitId(null);
-      setTargetingSkill(null);
+      setSkillForTargeting(null);
     }
   }, [isPreparation]);
 
   const handlePlayerUnitClick = (unitId) => {
     if (!isPreparation) return;
     const unit = state.context.allUnits[unitId];
-    if (unit.derivedAttributes.currentHp <= 0) return; // Cannot select defeated units
+    if (unit.derivedAttributes.currentHp <= 0) return;
 
+    // If we click the already selected unit, or another unit, close the selector and reset.
+    if (selectedUnitId === unitId || selectedUnitId) {
+        setSelectedUnitId(null);
+    }
+    
+    // Select the new unit
     setSelectedUnitId(unitId);
-    setTargetingSkill({ skillId: 'basic_attack' }); // Default to basic attack for now
-    console.log(`[UI] Selected unit ${unit.name}. Ready to target.`);
+    setSkillForTargeting(null); // Ensure we are not in targeting mode
+  };
+  
+  const handleSkillSelect = (skillId, targetType) => {
+    if (!selectedUnitId) return;
+
+    const unit = state.context.allUnits[selectedUnitId];
+
+    if (targetType === 'self') {
+      setPlayerActions(prev => ({
+        ...prev,
+        [selectedUnitId]: { type: skillId, target: selectedUnitId, unitId: selectedUnitId }
+      }));
+      setSelectedUnitId(null); // Reset selection
+      setSkillForTargeting(null);
+    } else if (targetType === 'enemy_single') {
+      setSkillForTargeting({ skillId });
+    }
   };
 
   const handleEnemyUnitClick = (targetId) => {
-    if (!isPreparation || !targetingSkill || !selectedUnitId) return;
+    if (!isPreparation || !skillForTargeting || !selectedUnitId) return;
     const targetUnit = state.context.allUnits[targetId];
-    if (targetUnit.derivedAttributes.currentHp <= 0) return; // Cannot target defeated units
-
-    console.log(`[UI] Player unit ${selectedUnitId} will target ${targetId} with ${targetingSkill.skillId}`);
+    if (targetUnit.derivedAttributes.currentHp <= 0) return;
 
     setPlayerActions(prev => ({
       ...prev,
-      [selectedUnitId]: { type: targetingSkill.skillId, target: targetId, unitId: selectedUnitId }
+      [selectedUnitId]: { type: skillForTargeting.skillId, target: targetId, unitId: selectedUnitId }
     }));
 
     // Reset selection state after action is set
     setSelectedUnitId(null);
-    setTargetingSkill(null);
+    setSkillForTargeting(null);
+  };
+
+  const handleCancel = () => {
+    // If we are in targeting mode, cancel that first, returning to skill selection.
+    if (skillForTargeting) {
+      setSkillForTargeting(null);
+      return;
+    }
+    // If a unit is selected, cancel the selection entirely.
+    if (selectedUnitId) {
+      setSelectedUnitId(null);
+    }
+  };
+
+  const handleContextMenu = (event) => {
+    event.preventDefault();
+    handleCancel();
   };
 
   const handleSubmitTurn = () => {
@@ -350,14 +581,23 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const allPlayerUnitsHaveAction = livingPlayerUnits.every(u => playerActions[u.id]);
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} onContextMenu={handleContextMenu}>
       <TurnOrderRuler
         order={state.context.displayTurnOrder}
-        units={state.context.allUnits}
-        currentlyActingUnitId={state.context.currentActionExecution?.unitId}
+        allUnits={state.context.allUnits}
+        currentUnitId={state.context.currentActionExecution?.unitId}
         completedUnitIds={state.context.completedUnitIdsThisRound}
       />
       
+      {selectedUnitId && !skillForTargeting && (
+        <ActionSelector
+          unit={state.context.allUnits[selectedUnitId]}
+          skills={allSkills}
+          onSkillSelect={handleSkillSelect}
+          onClose={handleCancel}
+        />
+      )}
+
       {isAnimating && script && (
         <AnimationPlayer
           script={script}
@@ -377,64 +617,63 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
         </div>
       )}
 
-      <h1>战斗开始</h1>
-      <div style={styles.section}>
-        <h2>战斗信息</h2>
-        <p>状态机状态: <span style={styles.state}>{typeof state.value === 'string' ? state.value : JSON.stringify(state.value)}</span></p>
-        <p>回合: {state.context.currentRound}</p>
-        {isPreparation && (
-          <div>
-            <h3>玩家回合</h3>
-            <p>{targetingSkill ? `为 ${state.context.allUnits[selectedUnitId]?.name} 选择一个目标` : '请选择一个单位下达指令'}</p>
-            <button 
-              style={allPlayerUnitsHaveAction ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+      <div style={styles.battlefield}>
+        <TeamGrid
+          grid={state.context.playerGrid}
+          allUnits={state.context.allUnits}
+          onUnitClick={handlePlayerUnitClick}
+          isPlayerTeam={true}
+          selectionState={{ selectedUnitId, skillForTargeting }}
+          playerActions={playerActions}
+        />
+        <div style={styles.infoPanel}>
+          <div style={styles.infoPanelGroup}>
+            <p style={styles.roundText}>第 {state.context.currentRound} 回合</p>
+            <p style={styles.statusText}>{isPreparation ? '准备阶段' : isAnimating ? '行动中' : '等待中...'}</p>
+          </div>
+          <p style={styles.vsText}>VS</p>
+          <p style={styles.infoText}>
+            {isPreparation
+              ? (selectedUnitId && !skillForTargeting
+                ? `为 ${state.context.allUnits[selectedUnitId]?.name} 选择技能`
+                : skillForTargeting
+                ? `为技能 ${allSkills[skillForTargeting.skillId]?.name} 选择目标`
+                : '选择单位下达指令')
+              : '正在执行行动...'}
+          </p>
+          <div style={styles.infoPanelGroup}>
+            <button
+              style={(isPreparation && allPlayerUnitsHaveAction) ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
               onClick={handleSubmitTurn}
-              disabled={!allPlayerUnitsHaveAction}
+              disabled={!isPreparation || !allPlayerUnitsHaveAction}
             >
               执行回合
             </button>
           </div>
+        </div>
+        <TeamGrid
+          grid={state.context.enemyGrid}
+          allUnits={state.context.allUnits}
+          onUnitClick={handleEnemyUnitClick}
+          isPlayerTeam={false}
+          selectionState={{ selectedUnitId, skillForTargeting }}
+          playerActions={playerActions}
+        />
+      </div>
+
+      <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
+        <div style={styles.logPanelTitle} onClick={() => setIsLogPanelExpanded(!isLogPanelExpanded)}>
+          <span>战斗日志</span>
+          <button style={styles.logToggleButton}>{isLogPanelExpanded ? '−' : '+'}</button>
+        </div>
+        {isLogPanelExpanded && (
+          <div style={styles.logEntriesContainer} ref={logContainerRef}>
+            {state.context.logs.map((log, index) => (
+              <p key={index} style={{...styles.logEntry, ...styles[`logEntry_${log.type}`]}}>{log.message}</p>
+            ))}
+          </div>
         )}
       </div>
-
-        <div style={styles.battlefield}>
-          <div style={styles.teamContainer}>
-          <h3>我方队伍</h3>
-          {playerUnits.map(unit => {
-            const unitWithState = state.context.allUnits[unit.id];
-            const action = playerActions[unit.id];
-            const isSelected = selectedUnitId === unit.id;
-            return (
-              <div key={unit.id} onClick={() => handlePlayerUnitClick(unit.id)} style={{ cursor: isPreparation ? 'pointer' : 'default', border: isSelected ? '2px solid blue' : 'none' }}>
-                <UnitDisplay unit={unitWithState} />
-                {isPreparation && (
-                  <p>
-                    {action ? `行动: 攻击 ${state.context.allUnits[action.target]?.name}` : '等待指令...'}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-          </div>
-          <div style={styles.teamContainer}>
-            <h3>敌方队伍</h3>
-          {enemyUnits.map(unit => {
-            const unitWithState = state.context.allUnits[unit.id];
-            return (
-              <div key={unit.id} onClick={() => handleEnemyUnitClick(unit.id)} style={{ cursor: targetingSkill ? 'crosshair' : 'default' }}>
-                <UnitDisplay unit={unitWithState} />
-          </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <details>
-        <summary>查看状态机上下文</summary>
-        <pre style={styles.context}>
-          {JSON.stringify(state.context, null, 2)}
-        </pre>
-      </details>
     </div>
   );
 }

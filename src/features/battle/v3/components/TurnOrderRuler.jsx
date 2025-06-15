@@ -2,26 +2,26 @@ import React, { useState } from 'react';
 
 const styles = {
   turnOrderContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '20px 10px',
+    padding: '10px 20px',
     marginBottom: '15px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    flexWrap: 'wrap',
+    backgroundColor: 'rgba(20, 30, 40, 0.75)',
+    border: '1px solid rgba(135, 206, 235, 0.2)',
+    borderRadius: '12px',
     position: 'relative',
-    height: '60px',
-    border: '1px solid #dee2e6',
+    height: '80px',
+    backdropFilter: 'blur(8px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
   },
   turnOrderTrack: {
     position: 'absolute',
-    height: '4px',
-    width: 'calc(100% - 20px)',
-    backgroundColor: '#ced4da',
+    height: '2px',
+    width: 'calc(100% - 40px)',
+    backgroundColor: 'rgba(135, 206, 235, 0.3)',
     top: '50%',
-    left: '10px',
+    left: '20px',
     transform: 'translateY(-50%)',
     zIndex: 1,
+    boxShadow: '0 0 4px rgba(135, 206, 235, 0.5)',
   },
   rulerMarkContainer: {
     position: 'absolute',
@@ -35,47 +35,27 @@ const styles = {
     zIndex: 1,
   },
   rulerMark: {
-    height: '12px',
-    width: '2px',
-    backgroundColor: '#adb5bd',
+    height: '8px',
+    width: '1px',
+    backgroundColor: 'rgba(135, 206, 235, 0.4)',
   },
   rulerMarkLabel: {
     fontSize: '10px',
-    color: '#6c757d',
-    marginTop: '4px',
+    color: '#8cb0c4',
+    marginTop: '6px',
   },
   turnOrderMarker: {
     position: 'absolute',
     top: '50%',
     transform: 'translate(-50%, -50%)',
-    width: '18px',
-    height: '18px',
+    width: '24px',
+    height: '24px',
     borderRadius: '50%',
     zIndex: 2,
     cursor: 'pointer',
-    border: '2px solid white',
-    transition: 'background-color 0.3s ease, filter 0.3s ease',
-  },
-  markerActive: {
-    animation: 'breathing 1.5s infinite ease-in-out',
-    boxShadow: '0 0 8px 3px rgba(255, 255, 100, 0.9)',
-  },
-  markerCompleted: {
-    backgroundColor: '#6c757d',
-    filter: 'saturate(0)',
-  },
-  turnOrderMarkerLabel: {
-    position: 'absolute',
-    bottom: '140%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    padding: '5px 10px',
-    borderRadius: '5px',
-    fontSize: '12px',
-    whiteSpace: 'nowrap',
-    zIndex: 3,
+    border: '2px solid rgba(255, 255, 255, 0.5)',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
   },
   playerUnitTurn: {
     backgroundColor: '#007bff',
@@ -83,16 +63,41 @@ const styles = {
   enemyUnitTurn: {
     backgroundColor: '#dc3545',
   },
+  markerActive: {
+    borderColor: 'rgba(255, 255, 100, 0.9)',
+    animation: 'breathing 1.5s infinite ease-in-out',
+    boxShadow: '0 0 12px 4px rgba(255, 255, 100, 0.7)',
+    transform: 'translate(-50%, -50%) scale(1.2)',
+  },
+  markerCompleted: {
+    filter: 'saturate(0.5) brightness(0.6)',
+    borderColor: 'rgba(120, 120, 120, 0.5)',
+  },
+  turnOrderMarkerLabel: {
+    position: 'absolute',
+    bottom: '120%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(10, 20, 30, 0.9)',
+    color: 'white',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    whiteSpace: 'nowrap',
+    zIndex: 3,
+    border: '1px solid rgba(135, 206, 235, 0.3)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+  },
 };
 
-export const TurnOrderRuler = ({ order, units, currentlyActingUnitId, completedUnitIds }) => {
+export const TurnOrderRuler = ({ order, allUnits, currentUnitId, completedUnitIds }) => {
   const [hoveredUnitId, setHoveredUnitId] = useState(null);
 
   if (!order || order.length === 0) {
     return null;
   }
 
-  const orderedUnits = order.map(id => units[id]).filter(Boolean);
+  const orderedUnits = order.map(id => allUnits[id]).filter(Boolean);
 
   if (orderedUnits.length === 0) {
     return null;
@@ -129,22 +134,25 @@ export const TurnOrderRuler = ({ order, units, currentlyActingUnitId, completedU
         const positionPercent = speedRange === 0 ? 50 : (((speed - minSpeed) / speedRange) * 90) + 5;
 
         const isPlayer = unit.isPlayerUnit;
-        const isActing = unit.id === currentlyActingUnitId;
+        const isActing = unit.id === currentUnitId;
         const isCompleted = completedUnitIds?.includes(unit.id);
 
-        let markerStyle = isPlayer ? styles.playerUnitTurn : styles.enemyUnitTurn;
+        let markerStyle = { 
+          ...styles.turnOrderMarker,
+          ...(isPlayer ? styles.playerUnitTurn : styles.enemyUnitTurn)
+        };
+        
         if (isCompleted) {
-          markerStyle = { ...markerStyle, ...styles.markerCompleted };
+          Object.assign(markerStyle, styles.markerCompleted);
         }
         if (isActing) {
-          markerStyle = { ...markerStyle, ...styles.markerActive };
+          Object.assign(markerStyle, styles.markerActive);
         }
 
         return (
           <div
             key={unit.id}
             style={{
-              ...styles.turnOrderMarker,
               ...markerStyle,
               left: `${positionPercent}%`
             }}

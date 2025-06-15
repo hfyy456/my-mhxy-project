@@ -347,10 +347,15 @@ export const battleMachine = createMachine({
     calculateAndPrepareAnimation: assign(({ context }) => {
       const { sortedActionQueue, allUnits, logs, skillOverrides } = context;
       const actionToExecute = sortedActionQueue[0];
-      
+      const sourceUnit = allUnits[actionToExecute.unitId];
+      const targetUnit = allUnits[actionToExecute.target];
+
       const { animationScript, logicalResult } = generateScriptAndResult(actionToExecute, allUnits, skillOverrides);
 
-      const newLogs = [...logs, `[SCRIPT] Generated script for action:`, actionToExecute];
+      const newLogs = [...logs, { 
+        type: 'action', 
+        message: `${sourceUnit?.name} 对 ${targetUnit?.name} 施放了技能 【${skillConfig[actionToExecute.type]?.name}】。`
+      }];
 
       return {
         sortedActionQueue: context.sortedActionQueue.slice(1),
@@ -371,7 +376,17 @@ export const battleMachine = createMachine({
         if (target && target.derivedAttributes) {
           const oldHp = target.derivedAttributes.currentHp;
           const newHp = Math.max(0, oldHp + change);
-          newLogs.push(`[APPLY] Applying ${change} HP to ${target.name}. Old HP: ${oldHp}, New HP: ${newHp}`);
+          
+          if (change < 0) {
+            newLogs.push({ type: 'damage', message: `${target.name} 受到了 ${-change} 点伤害。`});
+          } else if (change > 0) {
+            newLogs.push({ type: 'heal', message: `${target.name} 恢复了 ${change} 点生命。`});
+          }
+
+          if (oldHp > 0 && newHp === 0) {
+            newLogs.push({ type: 'death', message: `${target.name} 已被击败！`});
+          }
+          
           target.derivedAttributes.currentHp = newHp;
         }
       });
@@ -384,7 +399,10 @@ export const battleMachine = createMachine({
       };
     }),
     skipDeadUnitAction: assign({
-      logs: ({ context }) => [...context.logs, `[SKIP] Skipping action for defeated unit ${context.sortedActionQueue[0].unitId}`],
+      logs: ({ context }) => {
+        const unitName = context.allUnits[context.sortedActionQueue[0].unitId]?.name || '未知单位';
+        return [...context.logs, { type: 'info', message: `${unitName} 已经阵亡，跳过其行动。` }];
+      },
       sortedActionQueue: ({ context }) => context.sortedActionQueue.slice(1),
     })
   },
@@ -392,6 +410,13 @@ export const battleMachine = createMachine({
     isBattleOver: ({ context }) => {
       const livingPlayers = Object.values(context.playerTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
       const livingEnemies = Object.values(context.enemyTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
+      
+      if (livingPlayers === 0 || livingEnemies === 0) {
+        // 在这里添加战斗结束的日志
+        const result = livingPlayers > 0 ? '胜利' : '失败';
+        // This is tricky because we can't modify context directly in a guard.
+        // A better place would be in the 'completed' state's entry action.
+      }
       return livingPlayers === 0 || livingEnemies === 0;
     },
     areAllActionsSubmitted: ({ context }) => {
