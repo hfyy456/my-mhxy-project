@@ -19,7 +19,7 @@ export const determineActionOrder = (allUnits, actions) => {
     // Filter actions for units that still exist and are not defeated
     const validActions = actions.filter(action => {
         const unit = unitMap[action.unitId];
-        return unit && !unit.isDefeated;
+        return unit && unit.derivedAttributes.currentHp > 0;
     });
 
     // Sort actions based on the speed of the acting unit

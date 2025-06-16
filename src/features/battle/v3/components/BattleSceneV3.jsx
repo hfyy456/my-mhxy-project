@@ -5,10 +5,13 @@ import { BattleLifecycleContext } from '../context/BattleLifecycleContext';
 import { TurnOrderRuler } from './TurnOrderRuler.jsx';
 import { UnitDisplay, unitDisplayStyles } from './UnitDisplay.jsx';
 import { ActionSelector } from './ActionSelector.jsx';
-import { skills as allSkills } from '../logic/skillConfig.js';
+import { skills as allSkills } from '../logic/skillConfig';
+import { getAffectedCellCoords } from '../logic/targetLogic.js';
+import { PhaseAnnouncer } from './PhaseAnnouncer.jsx';
 
 const styles = {
   container: { 
+    position: 'relative',
     padding: '20px', 
     fontFamily: 'Arial, sans-serif', 
     maxWidth: '1800px', 
@@ -239,6 +242,10 @@ const styles = {
     boxShadow: '0 0 16px rgba(220, 53, 69, 1)',
     backgroundColor: 'rgba(220, 53, 69, 0.2)',
   },
+  aoeHighlight: {
+    backgroundColor: 'rgba(255, 193, 7, 0.25)',
+    boxShadow: 'inset 0 0 10px rgba(255, 193, 7, 0.5)',
+  },
   infoPanel: {
     width: '220px',
     backgroundColor: 'rgba(20, 30, 40, 0.85)',
@@ -370,13 +377,46 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions }) => {
+const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell }) => {
   const { selectedUnitId, skillForTargeting } = selectionState;
   const [hoveredTargetId, setHoveredTargetId] = useState(null);
 
   if (!grid) {
     return <div>Loading grid...</div>;
   }
+
+  // --- AOE Preview Logic ---
+  const skillForPreview = skillForTargeting ? allSkills[skillForTargeting.skillId] : null;
+
+  const isCellHighlighted = (rowIndex, colIndex) => {
+    if (!skillForPreview || isPlayerTeam) {
+      return false;
+    }
+    const areaType = skillForPreview.areaType || 'single';
+
+    // For 'group', all cells on the target grid are highlighted.
+    if (areaType === 'group') {
+      return true;
+    }
+
+    // For area-based skills, highlight based on hovered cell coordinates.
+    if (areaType === 'cross' || areaType === 'square') {
+      if (hoveredCell) {
+        const affectedCoords = getAffectedCellCoords(skillForPreview, hoveredCell);
+        return affectedCoords.some(coord => coord.row === rowIndex && coord.col === colIndex);
+      }
+      return false;
+    }
+
+    // For single-target skills, highlight the cell if it has a living unit.
+    if (areaType === 'single') {
+        const unitId = grid[rowIndex][colIndex];
+        return unitId && allUnits[unitId]?.derivedAttributes.currentHp > 0;
+    }
+    
+    return false;
+  };
+  // --- End AOE Preview Logic ---
 
   // Create a flat list of cells with their row/col for rendering
   const cells = grid.flatMap((row, rowIndex) => 
@@ -391,14 +431,14 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
   return (
     <div style={styles.teamContainer}>
       {cells.map(cell => {
-        const { unitId, colIndex } = cell;
+        const { unitId, rowIndex, colIndex } = cell;
         const unit = unitId ? allUnits[unitId] : null;
 
         // For enemy team, render column 0 as 2, 1 as 1, 2 as 0 to mirror
         const finalStyle = {
           ...styles.gridCell,
-          gridColumn: isPlayerTeam ? colIndex + 1 : 3 - colIndex,
-          gridRow: cell.rowIndex + 1,
+          gridColumn: isPlayerTeam ? colIndex + 1 :  colIndex + 1,
+          gridRow: rowIndex + 1,
         };
 
         const isSelected = unit && unit.id === selectedUnitId;
@@ -419,6 +459,12 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
           Object.assign(finalStyle, styles.targetableUnitHover);
         }
 
+        // --- Apply AOE Highlight ---
+        if (isCellHighlighted(rowIndex, colIndex)) {
+            Object.assign(finalStyle, styles.aoeHighlight);
+        }
+        // --- End Apply AOE Highlight ---
+
         const canBeSelected = unit && isPlayerTeam && !skillForTargeting;
         if (canBeSelected) {
           finalStyle.cursor = 'pointer';
@@ -430,9 +476,57 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
           <div 
             key={cell.key} 
             style={finalStyle} 
-            onClick={() => unit && onUnitClick(unit.id)}
-            onMouseEnter={() => canBeTargeted && setHoveredTargetId(unit.id)}
-            onMouseLeave={() => canBeTargeted && setHoveredTargetId(null)}
+            onClick={() => {
+              // If not in targeting mode, only clicks on units matter to select them.
+              if (!skillForTargeting) {
+                  if (unit && onUnitClick) onUnitClick(unit.id);
+                  return;
+              }
+
+              // --- In Targeting Mode ---
+              if (!onUnitClick) return;
+              
+              const skill = allSkills[skillForTargeting.skillId];
+              if (!skill) return;
+              const areaType = skill.areaType || 'single';
+
+              if (areaType === 'single') {
+                  // For single target skills, must click on a valid unit.
+                  if (unit) onUnitClick(unit.id);
+              } else if (areaType === 'group') {
+                  // For group skills, any click on an enemy confirms. Find a nominal target to send.
+                  const nominalTarget = Object.values(allUnits).find(u => !u.isPlayerUnit && u.derivedAttributes.currentHp > 0);
+                  if (nominalTarget) onUnitClick(nominalTarget.id);
+              } else if (areaType === 'cross' || areaType === 'square') {
+                  // For area skills, the click confirms the area centered on the hovered cell.
+                  if (hoveredCell) {
+                      // We need a primary target to send to the state machine.
+                      // It can be the unit in the center of the AoE, or the first living unit found in the area.
+                      const centerUnitId = grid[hoveredCell.row]?.[hoveredCell.col];
+                      if (centerUnitId && allUnits[centerUnitId]?.derivedAttributes.currentHp > 0) {
+                          onUnitClick(centerUnitId);
+                          return;
+                      }
+
+                      const affectedCoords = getAffectedCellCoords(skill, hoveredCell);
+                      const firstValidTarget = affectedCoords
+                          .map(coords => grid[coords.r]?.[coords.c])
+                          .find(targetUnitId => targetUnitId && allUnits[targetUnitId]?.derivedAttributes.currentHp > 0);
+                      
+                      if (firstValidTarget) {
+                          onUnitClick(firstValidTarget);
+                      }
+                  }
+              }
+            }}
+            onMouseEnter={() => {
+              if (canBeTargeted) setHoveredTargetId(unit?.id);
+              if (!isPlayerTeam) setHoveredCell({ row: rowIndex, col: colIndex });
+            }}
+            onMouseLeave={() => {
+                if (canBeTargeted) setHoveredTargetId(null);
+                if (!isPlayerTeam) setHoveredCell(null);
+            }}
           >
             {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} /> : null}
           </div>
@@ -448,10 +542,14 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const logContainerRef = useRef(null);
   const [isLogPanelExpanded, setIsLogPanelExpanded] = useState(true);
 
+  // --- NEW: State for announcements ---
+  const [announcement, setAnnouncement] = useState({ text: '', trigger: 0 });
+
   // --- NEW: State for player turn interaction ---
   const [playerActions, setPlayerActions] = useState({}); // Stores actions for player units, e.g., { 'unit-1': { type: 'attack', target: 'enemy-1' } }
   const [selectedUnitId, setSelectedUnitId] = useState(null); // Which player unit is currently selected for action
   const [skillForTargeting, setSkillForTargeting] = useState(null); // Stores the skill that is waiting for a target, e.g., { skillId: 'fire_slash' }
+  const [hoveredCell, setHoveredCell] = useState(null); // { row, col } of the hovered grid cell
 
   useEffect(() => {
     if (initialData && state.matches('idle')) {
@@ -467,6 +565,41 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   }, [state.context.logs]);
   
   const isCompleted = state.matches('completed');
+
+  // Effect for announcements
+  const prevRoundRef = useRef(state.context.currentRound);
+  const prevStateValueRef = useRef(state.value);
+
+  useEffect(() => {
+    let newText = '';
+    const prevValue = prevStateValueRef.current;
+    
+    // Announce new round first, as it's the most significant change.
+    if (state.context.currentRound !== prevRoundRef.current && state.context.currentRound > 0) {
+        newText = `第 ${state.context.currentRound} 回合`;
+    } 
+    // If no round change, check for phase change. A simple stringify is a reliable way to check for value changes.
+    else if (JSON.stringify(state.value) !== JSON.stringify(prevValue)) {
+        // Announce "Action Phase" when moving from preparation to execution.
+        if (state.matches('execution') && prevValue === 'preparation') {
+            newText = '行动阶段';
+        } 
+        // Announce result when battle is completed.
+        else if (state.matches('completed')) {
+            if (state.context.battleResult === 'victory') newText = '战斗胜利';
+            else if (state.context.battleResult === 'defeat') newText = '战斗失败';
+        }
+    }
+
+    if (newText) {
+      setAnnouncement(a => ({ text: newText, trigger: a.trigger + 1 }));
+    }
+    
+    // Update refs for the next render
+    prevRoundRef.current = state.context.currentRound;
+    prevStateValueRef.current = state.value;
+
+  }, [state]); // Depend on the whole state object for accurate change detection
 
   useEffect(() => {
     if (isCompleted && onComplete) {
@@ -496,6 +629,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
       setPlayerActions({});
       setSelectedUnitId(null);
       setSkillForTargeting(null);
+      setHoveredCell(null);
     }
   }, [isPreparation]);
 
@@ -514,19 +648,23 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     setSkillForTargeting(null); // Ensure we are not in targeting mode
   };
   
-  const handleSkillSelect = (skillId, targetType) => {
+  const handleSkillSelect = (skillId) => {
     if (!selectedUnitId) return;
+    
+    const skill = allSkills[skillId];
+    if (!skill) return;
 
-    const unit = state.context.allUnits[selectedUnitId];
-
-    if (targetType === 'self') {
+    // Self-targeted skills are confirmed immediately.
+    if (skill.targetType === 'self') {
       setPlayerActions(prev => ({
         ...prev,
         [selectedUnitId]: { type: skillId, target: selectedUnitId, unitId: selectedUnitId }
       }));
-      setSelectedUnitId(null); // Reset selection
+      setSelectedUnitId(null);
       setSkillForTargeting(null);
-    } else if (targetType === 'enemy_single') {
+    } 
+    // ALL other skills that require a target will enter targeting mode.
+    else {
       setSkillForTargeting({ skillId });
     }
   };
@@ -582,6 +720,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
 
   return (
     <div style={styles.container} onContextMenu={handleContextMenu}>
+      <PhaseAnnouncer text={announcement.text} trigger={announcement.trigger} />
       <TurnOrderRuler
         order={state.context.displayTurnOrder}
         allUnits={state.context.allUnits}
@@ -625,6 +764,8 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           isPlayerTeam={true}
           selectionState={{ selectedUnitId, skillForTargeting }}
           playerActions={playerActions}
+          hoveredCell={hoveredCell}
+          setHoveredCell={setHoveredCell}
         />
         <div style={styles.infoPanel}>
           <div style={styles.infoPanelGroup}>
@@ -658,6 +799,8 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           isPlayerTeam={false}
           selectionState={{ selectedUnitId, skillForTargeting }}
           playerActions={playerActions}
+          hoveredCell={hoveredCell}
+          setHoveredCell={setHoveredCell}
         />
       </div>
 

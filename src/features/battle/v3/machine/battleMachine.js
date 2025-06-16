@@ -3,6 +3,7 @@ import { determineActionOrder } from '../logic/turnOrder';
 import { calculateBattleDamage } from '../logic/damageCalculation';
 import { setEnemyUnitsActions } from '../logic/battleAI';
 import { skills as skillConfig } from '../logic/skillConfig';
+import { getSkillTargets } from '../logic/targetLogic';
 
 const calculateDisplayTurnOrder = (allUnits) => {
   if (!allUnits || Object.keys(allUnits).length === 0) return [];
@@ -35,12 +36,11 @@ const initializeBattleContext = assign({
 });
 
 // --- New Helper Function: Script & Result Generator ---
-const generateScriptAndResult = (action, allUnits, skillOverrides) => {
-  const { type, unitId } = action;
-  let { target: targetId } = action; // Use let since it might change
+const generateScriptAndResult = (action, allUnits, context) => {
+  const { type, unitId, target: primaryTargetId } = action;
 
   const skillId = type === 'attack' ? 'basic_attack' : type;
-  const skill = skillOverrides?.[skillId] ?? skillConfig[skillId];
+  const skill = skillConfig[skillId];
   
   if (!skill) {
     console.error(`Skill "${skillId}" not found.`);
@@ -48,49 +48,55 @@ const generateScriptAndResult = (action, allUnits, skillOverrides) => {
   }
   
   const source = allUnits[unitId];
-  let primaryTarget = allUnits[targetId];
+  const allTargets = getSkillTargets(skill, unitId, primaryTargetId, context);
 
-  // --- Restored & Enhanced Smart Target Redirection ---
-  if (!primaryTarget || primaryTarget.derivedAttributes.currentHp <= 0) {
-    console.log(`[TARGET] Original target ${targetId} for ${source.id} is invalid. Finding new target...`);
-    
-    // Find the opposing team
-    const livingOpponents = Object.values(allUnits).filter(u => u.isPlayerUnit !== source.isPlayerUnit && u.derivedAttributes.currentHp > 0);
-
-    if (livingOpponents.length > 0) {
-      const newTarget = livingOpponents[Math.floor(Math.random() * livingOpponents.length)];
-      targetId = newTarget.id; // Update targetId
-      primaryTarget = newTarget; // Update the full target object
-      console.log(`[TARGET] New target for ${source.name}: ${primaryTarget.name}`);
-    } else {
-      console.log(`[TARGET] No valid new targets found for ${source.name}.`);
-      primaryTarget = null; // Action will be effectively skipped
-    }
-  }
-  // --- End of Smart Target Redirection ---
-  
   let animationScript = [];
   let logicalResult = { hpChanges: [], buffChanges: [] };
 
-  if (primaryTarget) { // Only proceed if we have a valid target
-    let totalDamage = 0;
-    animationScript = JSON.parse(JSON.stringify(skill.animationScriptTemplate));
+  // Handle Defend action specifically
+  if (skillId === 'defend') {
+    animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'defend_aura', delay: 100 });
+    animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '防御', color: '#87ceeb', delay: 200 });
+    logicalResult.buffChanges.push({ targetId: unitId, buff: { id: 'defending', duration: 1 }});
+    return { animationScript, logicalResult };
+  }
+
+  if (allTargets.length > 0) {
+    // Base animation for the attacker
+    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'attack_lunge', delay: 0 });
+
+    allTargets.forEach((targetId, index) => {
+      const targetUnit = allUnits[targetId];
+      if (!targetUnit) return;
+
+      let totalDamage = 0;
+      skill.effects?.forEach(effect => {
+        if (effect.type === 'DAMAGE') {
+          const pAtk = source.derivedAttributes.physicalAttack || 0;
+          totalDamage = Math.round(pAtk * (skill.damage || 1.0)); // Use skill.damage if available
   
-    skill.effects.forEach(effect => {
-      if (effect.type === 'DAMAGE') {
-        const pAtk = source.derivedAttributes.physicalAttack || 0;
-        totalDamage = Math.round(pAtk * parseFloat(effect.value));
+          const targetHasDefendBuff = targetUnit.statusEffects?.some(buff => buff.id === 'defending');
+          if (targetHasDefendBuff) {
+            totalDamage = Math.round(totalDamage * 0.85);
+          }
+        }
+      });
+      
+      const delay = 300 + (index * 150); // Stagger effect application for multiple targets
+      animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_shake', delay });
+      animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${totalDamage}`, color: '#ff4d4d', delay: delay + 100 });
+      
+      if (totalDamage > 0) {
+        logicalResult.hpChanges.push({ targetId, change: -totalDamage });
       }
     });
-    
-    animationScript.forEach(step => {
-      if (step.text) step.text = step.text.replace('{{damage}}', totalDamage);
-      if (step.target === 'source') step.targetIds = [unitId];
-      if (step.target === 'primaryTarget') step.targetIds = [targetId];
-    });
-    
-    logicalResult.hpChanges.push({ targetId, change: -totalDamage });
+
+    // Return-to-idle animation for the attacker
+    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'return_to_idle', delay: 600 + (allTargets.length * 150) });
   }
+  
+  // This part needs a big refactor to work with the new structure.
+  // For now, let's simplify and focus on damage.
   
   return { animationScript, logicalResult };
 };
@@ -178,6 +184,19 @@ export const battleMachine = createMachine({
           currentRound: ({ context }) => context.currentRound + 1,
           displayTurnOrder: ({ context }) => calculateDisplayTurnOrder(context.allUnits),
           completedUnitIdsThisRound: [],
+          // --- NEW: Process Buff Durations ---
+          allUnits: ({ context }) => {
+            const newAllUnits = JSON.parse(JSON.stringify(context.allUnits));
+            Object.values(newAllUnits).forEach(unit => {
+              if (unit.statusEffects && unit.statusEffects.length > 0) {
+                unit.statusEffects = unit.statusEffects
+                  .map(buff => ({ ...buff, duration: buff.duration - 1 }))
+                  .filter(buff => buff.duration > 0);
+              }
+            });
+            return newAllUnits;
+          },
+          // --- END: Process Buff Durations ---
           // Reset readiness flags for the new round
           aiActionsReady: false,
           playerActionsReady: false,
@@ -200,7 +219,7 @@ export const battleMachine = createMachine({
         src: 'generateAIActionsService',
         input: ({ context }) => context,
         onDone: {
-          // AI actions are ready. Store them and set the flag.
+          // AI actions are ready. Just store them.
           actions: assign({
             unitActions: ({ context, event }) => ({ ...context.unitActions, ...event.output }),
             aiActionsReady: true
@@ -210,8 +229,14 @@ export const battleMachine = createMachine({
       },
       on: {
         SUBMIT_PLAYER_ACTIONS: {
-          // Player actions submitted. Store them, set the flag. No immediate transition.
-          actions: 'storeAllPlayerActionsAndSetFlag',
+          // Player actions submitted. Just store them.
+          actions: assign({
+            unitActions: ({ context, event }) => ({
+                ...context.unitActions,
+                ...event.payload.actions
+            }),
+            playerActionsReady: true
+          }),
         },
       },
       // This transition will fire automatically once both AI and Player actions are ready.
@@ -221,8 +246,40 @@ export const battleMachine = createMachine({
       }
     },
     execution: {
-      initial: 'calculatingQueue',
+      initial: 'applyingPreemptiveActions',
       states: {
+        applyingPreemptiveActions: {
+            entry: assign(({ context }) => {
+                const { unitActions, allUnits, logs } = context;
+                const nextUnitActions = {};
+                const newLogs = [...logs];
+                const newAllUnits = JSON.parse(JSON.stringify(allUnits));
+
+                for (const unitId in unitActions) {
+                    const action = unitActions[unitId];
+                    if (action.type === 'defend') {
+                        const unit = newAllUnits[unitId];
+                        if (unit) {
+                            if (!unit.statusEffects) unit.statusEffects = [];
+                            // Ensure no duplicates and unit is alive
+                            if (unit.derivedAttributes.currentHp > 0 && !unit.statusEffects.some(b => b.id === 'defending')) {
+                                unit.statusEffects.push({ id: 'defending', duration: 1 });
+                                newLogs.push({ type: 'info', message: `${unit.name} 摆好了防御架势。` });
+                            }
+                        }
+                    } else {
+                        nextUnitActions[unitId] = action;
+                    }
+                }
+
+                return {
+                    unitActions: nextUnitActions,
+                    allUnits: newAllUnits,
+                    logs: newLogs
+                };
+            }),
+            always: { target: 'calculatingQueue' }
+        },
         calculatingQueue: {
           entry: assign({
             sortedActionQueue: ({ context }) => {
@@ -350,11 +407,25 @@ export const battleMachine = createMachine({
       const sourceUnit = allUnits[actionToExecute.unitId];
       const targetUnit = allUnits[actionToExecute.target];
 
-      const { animationScript, logicalResult } = generateScriptAndResult(actionToExecute, allUnits, skillOverrides);
+      const { animationScript, logicalResult } = generateScriptAndResult(actionToExecute, allUnits, context);
+
+      const skillUsed = skillConfig[actionToExecute.type];
+      let logMessage;
+
+      if (skillUsed) {
+        if (skillUsed.targetType === 'self') {
+          logMessage = `${sourceUnit?.name} 使用了技能 【${skillUsed.name}】。`;
+        } else {
+          logMessage = `${sourceUnit?.name} 对 ${targetUnit?.name} 施放了技能 【${skillUsed.name}】。`;
+        }
+      } else {
+        // Fallback for actions that might not be in skillConfig, like a basic attack.
+        logMessage = `${sourceUnit?.name} 对 ${targetUnit?.name} 进行了攻击。`;
+      }
 
       const newLogs = [...logs, { 
         type: 'action', 
-        message: `${sourceUnit?.name} 对 ${targetUnit?.name} 施放了技能 【${skillConfig[actionToExecute.type]?.name}】。`
+        message: logMessage
       }];
 
       return {
@@ -367,7 +438,7 @@ export const battleMachine = createMachine({
       const { currentActionExecution, allUnits, logs } = context;
       if (!currentActionExecution) return {};
 
-      const { hpChanges } = currentActionExecution.logicalResult;
+      const { hpChanges, buffChanges } = currentActionExecution.logicalResult;
       let updatedUnits = JSON.parse(JSON.stringify(allUnits)); // Deep copy for safety
       let newLogs = [...logs];
       
@@ -391,6 +462,24 @@ export const battleMachine = createMachine({
         }
       });
       
+      // --- RE-ADD: Apply Buffs ---
+      if (buffChanges) {
+        buffChanges.forEach(({ targetId, buff }) => {
+          const target = updatedUnits[targetId];
+          if (target) {
+            if (!target.statusEffects) {
+              target.statusEffects = [];
+            }
+            // Avoid duplicate buffs if logic somehow allows it
+            if (!target.statusEffects.some(b => b.id === buff.id)) {
+                target.statusEffects.push(buff);
+                newLogs.push({ type: 'info', message: `${target.name} 获得了 [${buff.id}] 效果。` });
+            }
+          }
+        });
+      }
+      // --- END: Apply Buffs ---
+
       return {
         allUnits: updatedUnits,
         logs: newLogs,
@@ -451,8 +540,20 @@ export const battleMachine = createMachine({
 
       // Add team and other properties to each unit
       Object.values(allUnits).forEach(unit => {
+        console.log("Unit:", unit);
           unit.team = unit.isPlayerUnit ? 'player' : 'enemy';
           unit.derivedAttributes = unit.derivedAttributes || {};
+          unit.statusEffects = [];
+          
+          // --- NEW: Add all available skills for testing ---
+          if (unit.isPlayerUnit) {
+            // Assign all skills except for basic attack and defend for testing
+            unit.skills = Object.keys(skillConfig).filter(
+              id => id !== 'basic_attack' && id !== 'defend'
+            );
+          } else {
+            unit.skills = []; // Enemies will use AI logic, not selectable skills for now
+          }
       });
 
       const initialBattleState = {

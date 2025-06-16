@@ -67,6 +67,27 @@ export const unitDisplayStyles = {
     boxShadow: '0 0 8px rgba(30, 200, 30, 0.7)',
     zIndex: 5,
   },
+  statusEffectContainer: {
+    position: 'absolute',
+    top: '0px',
+    left: '0px',
+    display: 'flex',
+    gap: '4px',
+    zIndex: 5,
+  },
+  statusEffectIcon: {
+    width: '24px',
+    height: '24px',
+    backgroundColor: 'rgba(0, 123, 255, 0.8)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    boxShadow: '0 0 6px rgba(0, 123, 255, 0.6)',
+  },
 };
 
 const getSpriteSrc = (summonSourceId) => {
@@ -90,6 +111,8 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
   const isDefeated = unit.derivedAttributes.currentHp <= 0;
   const currentAnimClass = unitCssClasses[unit.id];
 
+  const isDefending = unit.statusEffects?.some(effect => effect.id === 'defending');
+
   const unitStyle = {
     ...unitDisplayStyles.unitBox,
     ...(currentAnimClass ? unitDisplayStyles[currentAnimClass] : {}),
@@ -104,6 +127,13 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
   return (
     <div style={unitStyle}>
       {hasActionSet && <div style={unitDisplayStyles.actionSetIndicator}>✔</div>}
+      
+      <div style={unitDisplayStyles.statusEffectContainer}>
+        {isDefending && (
+          <div style={unitDisplayStyles.statusEffectIcon} title="防御中">🛡️</div>
+        )}
+      </div>
+
       {floatingTexts[unit.id]?.map((ft, index) => (
         <div key={index} style={{...unitDisplayStyles.floatingDamage, color: ft.color}}>{ft.text}</div>
       ))}

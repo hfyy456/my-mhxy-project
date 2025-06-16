@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // 1. Create the context
 const AnimationContext = createContext(null);
@@ -6,9 +6,9 @@ const AnimationContext = createContext(null);
 // 2. Create a provider component
 export const AnimationProvider = ({ children }) => {
   const [animationState, setAnimationState] = useState({
-    unitCssClasses: {}, // e.g., { 'player-1': 'attack-lunge', 'enemy-1': 'take-hit-shake' }
     floatingTexts: {},
-    vfx: {},
+    unitCssClasses: {},
+    vfx: [],
   });
 
   const value = { animationState, setAnimationState };
@@ -21,81 +21,59 @@ export const AnimationProvider = ({ children }) => {
 };
 
 // 3. Create a hook for easy consumption
-export const useAnimation = () => {
-  const context = useContext(AnimationContext);
-  if (!context) {
-    throw new Error('useAnimation must be used within an AnimationProvider');
-  }
-  return context;
-};
+export const useAnimation = () => useContext(AnimationContext);
 
 // 4. The AnimationPlayer component
 export const AnimationPlayer = ({ script, onComplete }) => {
   const { setAnimationState } = useAnimation();
 
   useEffect(() => {
-    if (!script || script.length === 0) {
-      if (onComplete) onComplete();
-      return;
-    }
+    const timers = [];
 
-    console.log('[AnimationPlayer] Received script:', script);
-
-    const timeouts = [];
-    let maxDelay = 0;
-
-    // Reset animation state at the beginning of a new script
-    setAnimationState({ unitCssClasses: {}, floatingTexts: {}, vfx: {} });
+    // Reset state at the beginning of a new script
+    setAnimationState({ floatingTexts: {}, unitCssClasses: {}, vfx: [] });
     
     script.forEach(step => {
-      const timeoutId = setTimeout(() => {
-        console.log(`[AnimationPlayer] Executing step at ${step.delay}ms:`, step);
-        setAnimationState(currentState => {
-          const newState = { ...currentState };
+      const timer = setTimeout(() => {
+        setAnimationState(prevState => {
+          const newState = { ...prevState };
+
+          if (step.type === 'SHOW_FLOATING_TEXT') {
+            const newFloatingTexts = { ...newState.floatingTexts };
+            step.targetIds.forEach(targetId => {
+              if (!newFloatingTexts[targetId]) newFloatingTexts[targetId] = [];
+              newFloatingTexts[targetId].push({ text: step.text, color: step.color });
+            });
+            newState.floatingTexts = newFloatingTexts;
+          }
           
           if (step.type === 'ENTITY_ANIMATION') {
-            const newClasses = { ...newState.unitCssClasses };
-            step.targetIds.forEach(id => {
-              newClasses[id] = step.animationName;
+            const newUnitCssClasses = { ...newState.unitCssClasses };
+            step.targetIds.forEach(targetId => {
+              newUnitCssClasses[targetId] = step.animationName;
             });
-            newState.unitCssClasses = newClasses;
+            newState.unitCssClasses = newUnitCssClasses;
           }
           
-          if (step.type === 'SHOW_FLOATING_TEXT') {
-            const newTexts = { ...newState.floatingTexts };
-            step.targetIds.forEach(id => {
-              newTexts[id] = [...(newTexts[id] || []), { text: step.text, color: step.color }];
-            });
-            newState.floatingTexts = newTexts;
+          if (step.type === 'SHOW_VFX') {
+            // This part might need more info, like which unit to attach the VFX to.
+            // Assuming targetIds contains one unit for VFX for now.
+            const newVfx = [...newState.vfx, { vfxName: step.vfxName, targetId: step.targetIds[0] }];
+            newState.vfx = newVfx;
           }
-
-          // You would add VFX handling here as well
-          // if (step.type === 'SHOW_VFX') { ... }
 
           return newState;
         });
       }, step.delay);
-
-      timeouts.push(timeoutId);
-
-      if (step.delay > maxDelay) {
-        maxDelay = step.delay;
-      }
+      timers.push(timer);
     });
 
-    // A final timeout to signal completion
-    const completionTimeout = setTimeout(() => {
-      console.log('[AnimationPlayer] Script finished.');
-      setAnimationState({ unitCssClasses: {}, floatingTexts: {}, vfx: {} }); // Clear animations
-      if (onComplete) {
-        onComplete();
-      }
-    }, maxDelay + 1000); // Add a buffer (e.g., 1s) for animations to visually finish
-
-    timeouts.push(completionTimeout);
+    const totalDuration = Math.max(...script.map(s => s.delay)) + 1000; // Add buffer for animation to finish
+    const completionTimer = setTimeout(onComplete, totalDuration);
+    timers.push(completionTimer);
 
     return () => {
-      timeouts.forEach(clearTimeout);
+      timers.forEach(clearTimeout);
     };
   }, [script, onComplete, setAnimationState]);
 

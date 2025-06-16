@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-15 03:33:50
+ * @LastEditTime: 2025-06-17 07:35:27
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
@@ -41,7 +41,9 @@ export const getValidTargetsForUnit = (unit, allUnits, globalPetConfig, attackTy
         attackType,
     });
     // 简化逻辑：返回所有非己方且存活的单位
-    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.derivedAttributes.currentHp > 0);
+    
+    const targets = Object.values(allUnits).filter(u => u.isPlayerUnit !== unit.isPlayerUnit && u.derivedAttributes.currentHp > 0);
+   
     console.log(`[SKILL-DEBUG] getValidTargetsForUnit returning:`, { targets: JSON.parse(JSON.stringify(targets)) });
     return targets;
 };
@@ -59,7 +61,7 @@ export const getValidTargetsForSkill = (unit, skillId, allUnits, globalPetConfig
         skillConfig,
     });
     // 同样，返回所有非己方且存活的单位作为桩实现
-    const targets = Object.values(allUnits).filter(u => u.team !== unit.team && u.derivedAttributes.currentHp > 0);
+    const targets = Object.values(allUnits).filter(u => u.isPlayerUnit !== unit.isPlayerUnit && u.derivedAttributes.currentHp > 0);
     console.log(`[SKILL-DEBUG] getValidTargetsForSkill returning:`, { targets: JSON.parse(JSON.stringify(targets)) });
     return targets;
 };

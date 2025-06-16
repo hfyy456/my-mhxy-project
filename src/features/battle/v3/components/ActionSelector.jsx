@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 
 const styles = {
   container: {
@@ -19,6 +19,7 @@ const styles = {
     flexDirection: 'column',
     gap: '10px',
     color: 'white',
+    textAlign: 'center',
   },
   title: {
     margin: '0 0 10px 0',
@@ -29,17 +30,21 @@ const styles = {
     textAlign: 'center',
   },
   skillButton: {
-    padding: '10px 15px',
+    padding: '12px 18px',
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: 'rgba(135, 206, 235, 0.3)',
     borderRadius: '5px',
     cursor: 'pointer',
     backgroundColor: 'rgba(135, 206, 235, 0.1)',
-    textAlign: 'left',
-    fontSize: '14px',
+    textAlign: 'center',
+    fontSize: '15px',
     color: 'white',
     transition: 'background-color 0.2s ease, border-color 0.2s ease',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '8px',
   },
   skillButtonHover: {
     backgroundColor: 'rgba(0, 123, 255, 0.5)',
@@ -97,20 +102,62 @@ const CloseButton = ({ onClick }) => {
     );
   };
 
-export const ActionSelector = memo(({ unit, skills, onSkillSelect, onClose }) => {
+export const ActionSelector = memo(({ unit, skills: allSkills, onSkillSelect, onClose }) => {
   if (!unit) return null;
+
+  const [view, setView] = useState('main'); // 'main' or 'skills'
+
+  const handleActionClick = (skillId) => {
+    onSkillSelect(skillId);
+  };
+  
+  const unitSkills = unit.skills?.map(id => {
+    const skill = allSkills[id];
+    if (!skill) return null;
+    return { ...skill, id }; // Add the id to the skill object
+  }).filter(Boolean) || [];
 
   return (
     <div style={styles.container}>
       <CloseButton onClick={onClose} />
       <h4 style={styles.title}>{unit.name}的行动</h4>
-      {Object.entries(skills).map(([skillId, skill]) => (
-        <SkillButton
-          key={skillId}
-          skill={skill}
-          onClick={() => onSkillSelect(skillId, skill.targetType)}
-        />
-      ))}
+      
+      {view === 'main' && (
+        <>
+          <SkillButton 
+            skill={{ name: '攻击' }} 
+            onClick={() => handleActionClick('basic_attack')} 
+          />
+          <SkillButton 
+            skill={{ name: '防御' }} 
+            onClick={() => handleActionClick('defend')} 
+          />
+          
+            <SkillButton 
+              skill={{ name: '技能' }} 
+              onClick={() => setView('skills')} 
+            />
+         
+        </>
+      )}
+
+      {view === 'skills' && (
+        <>
+          {unitSkills.map(skill => (
+             <SkillButton
+                key={skill.id}
+                skill={skill}
+                onClick={() => handleActionClick(skill.id)}
+              />
+          ))}
+          <hr style={{border: 'none', borderTop: '1px solid rgba(135, 206, 235, 0.2)', margin: '10px 0'}} />
+          <SkillButton 
+            skill={{ name: '返回' }} 
+            onClick={() => setView('main')} 
+          />
+        </>
+      )}
+
     </div>
   );
 }); 

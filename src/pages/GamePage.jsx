@@ -2,12 +2,11 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-16 07:24:00
+ * @LastEditTime: 2025-06-17 07:17:46
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { BattleSystemProvider } from "@/features/battle/providers/BattleSystemProvider";
-
 
 import BeautifulHomesteadView from "@/features/homestead/components/BeautifulHomesteadView";
 import HomesteadActionBar from "@/features/homestead/components/HomesteadActionBar";
@@ -43,14 +42,11 @@ import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import { selectIsBattleActive } from "@/store/slices/battleSliceSimplified";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
 import { useBattleStateMachine } from "@/features/battle/hooks/useBattleStateMachine";
-import { generateEnemyGroup } from '@/features/battle/utils/enemyGenerator';
-import worldMapConfig from '@/config/map/worldMapConfig.json';
+import { generateEnemyGroup } from "@/features/battle/utils/enemyGenerator";
+import worldMapConfig from "@/config/map/worldMapConfig.json";
 
 import CommonModal from "@/features/ui/components/CommonModal";
 import { current } from "@reduxjs/toolkit";
-
-
-
 
 const GamePageContent = ({
   showToast,
@@ -152,7 +148,8 @@ const GamePageContent = ({
   const closeNpcOOPDemo = () => setIsNpcOOPDemoOpen(false);
 
   // 添加新的阵型系统状态管理
-  const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] = useState(false);
+  const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] =
+    useState(false);
   const openFormationSystemModal = () => setIsFormationSystemModalOpen(true);
   const closeFormationSystemModal = () => setIsFormationSystemModalOpen(false);
 
@@ -292,7 +289,7 @@ const GamePageContent = ({
 
   // 测试战斗
   const handleTestBattle = async () => {
-    const regionId = 'dongsheng_region';
+    const regionId = "dongsheng_region";
     const regionConfig = worldMapConfig[regionId];
     if (!regionConfig || !regionConfig.randomEncounters) {
       console.error(`区域 '${regionId}' 没有有效的随机遭遇配置`);
@@ -314,33 +311,36 @@ const GamePageContent = ({
 
   // 确认进入战斗
   const handleConfirmBattle = (data) => {
-    console.log('战斗确认，已处理数据:', data);
-    
+    console.log("战斗确认，已处理数据:", data);
+
     // 来自Modal的数据已经是battle-ready的纯JSON
-    const enemyUnitsJSON = enemyGroup.enemies.map(unit => {
-    
+    const enemyUnitsJSON = enemyGroup.enemies.map((unit) => {
       return unit.toBattleJSON();
     });
     for (const item of data.units) {
-      item.derivedAttributes=       {...item.derivedAttributes,currentHp:item.derivedAttributes.hp,currentMp:item.derivedAttributes.mp,maxHp:item.derivedAttributes.hp,maxMp:item.derivedAttributes.mp }
-      item.name=item.nickname
-      
+      item.derivedAttributes = {
+        ...item.derivedAttributes,
+        currentHp: item.derivedAttributes.hp,
+        currentMp: item.derivedAttributes.mp,
+        maxHp: item.derivedAttributes.hp,
+        maxMp: item.derivedAttributes.mp,
+      };
+      item.name = item.nickname;
+      item.isPlayerUnit = true;
     }
 
     const battlePayload = {
-      playerUnits:data.units,
+      playerUnits: data.units,
       playerGrid: data.grid,
       enemyUnits: enemyUnitsJSON,
       enemyGrid: enemyGroup.enemyFormation.grid,
     };
-    
+
     onStartV3Battle(battlePayload);
 
     setShowBattlePrep(false);
     setEnemyGroup(null);
   };
-
-
 
   // 如果游戏未初始化，显示加载提示
   if (!gameInitialized) {
@@ -354,7 +354,6 @@ const GamePageContent = ({
 
   return (
     <div className="relative w-screen h-screen bg-gray-900 text-white overflow-hidden">
- 
       <CustomTitleBar />
       <div className="flex-1 relative overflow-hidden">
         {!isBattleActive && (
@@ -399,7 +398,7 @@ const GamePageContent = ({
                 <div onClick={openTowerModal}>
                   <TowerEntry onOpenTower={openTowerModal} />
                 </div>
-                
+
                 {/* 添加主题演示按钮 */}
                 <button
                   onClick={() => setIsThemeDemoOpen(true)}
@@ -499,10 +498,6 @@ const GamePageContent = ({
               <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanelModal} />
             )}
           </CommonModal>
-
-
-
-   
 
           {isBattleActive && (
             <CommonModal
