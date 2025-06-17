@@ -129,15 +129,17 @@ export const ActionSelector = memo(({ unit, skills: allSkills, onSkillSelect, on
             onClick={() => handleActionClick('basic_attack')} 
           />
           <SkillButton 
+            skill={{ name: '捕捉' }} 
+            onClick={() => handleActionClick('capture')} 
+          />
+          <SkillButton 
             skill={{ name: '防御' }} 
             onClick={() => handleActionClick('defend')} 
           />
-          
-            <SkillButton 
-              skill={{ name: '技能' }} 
-              onClick={() => setView('skills')} 
-            />
-         
+          <SkillButton 
+            skill={{ name: '技能' }} 
+            onClick={() => setView('skills')} 
+          />
         </>
       )}
 

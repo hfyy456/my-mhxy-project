@@ -9,6 +9,14 @@ import { skills as allSkills } from '../logic/skillConfig';
 import { getAffectedCellCoords } from '../logic/targetLogic.js';
 import { PhaseAnnouncer } from './PhaseAnnouncer.jsx';
 
+const calculateCaptureChance = (targetUnit) => {
+  if (!targetUnit || targetUnit.isCapturable === false) return 0;
+  const { maxHp, currentHp } = targetUnit.derivedAttributes;
+  if (maxHp <= 0) return 0;
+  const chance = 0.3 + 0.7 * (1 - currentHp / maxHp); // Using your updated base chance
+  return Math.round(chance * 100);
+};
+
 const styles = {
   container: { 
     position: 'relative',
@@ -354,6 +362,18 @@ const styles = {
   logEntry_death: { color: '#ff4500', fontStyle: 'italic', fontWeight: 'bold' },
   logEntry_info: { color: '#aaaaaa', fontStyle: 'italic' },
   ...unitDisplayStyles,
+  captureChanceTooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(20, 30, 40, 0.85)',
+    borderRadius: '5px',
+    padding: '5px 10px',
+    color: 'white',
+    fontSize: '12px',
+    zIndex: 100,
+  },
 };
 
 const keyframesToString = (kfObj) => {
@@ -377,7 +397,7 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell }) => {
+const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell, onUnitHover }) => {
   const { selectedUnitId, skillForTargeting } = selectionState;
   const [hoveredTargetId, setHoveredTargetId] = useState(null);
 
@@ -449,14 +469,25 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
           finalStyle.backgroundColor = 'rgba(0, 123, 255, 0.15)';
         }
         
-        const canBeTargeted = unit && skillForTargeting && !isPlayerTeam && unit.derivedAttributes.currentHp > 0;
+        let canBeTargeted = unit && skillForTargeting && !isPlayerTeam && unit.derivedAttributes.currentHp > 0;
+        let isUncapturable = false;
+
+        // Special handling for the 'capture' skill
+        if (canBeTargeted && skillForTargeting.skillId === 'capture') {
+          if (unit.isCapturable === false) {
+            canBeTargeted = false; // Cannot be targeted
+            isUncapturable = true; // Mark for special styling
+          }
+        }
+        
+        if (isUncapturable) {
+          finalStyle.cursor = 'not-allowed';
+          finalStyle.opacity = 0.5;
+        }
+
         if (canBeTargeted) {
           finalStyle.cursor = 'crosshair';
           Object.assign(finalStyle, styles.targetableUnit);
-        }
-
-        if (canBeTargeted && unit.id === hoveredTargetId) {
-          Object.assign(finalStyle, styles.targetableUnitHover);
         }
 
         // --- Apply AOE Highlight ---
@@ -485,6 +516,9 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
 
               // --- In Targeting Mode ---
               if (!onUnitClick) return;
+
+              // Prevent action if target is not valid (e.g., uncapturable)
+              if (!canBeTargeted) return;
               
               const skill = allSkills[skillForTargeting.skillId];
               if (!skill) return;
@@ -520,14 +554,25 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
               }
             }}
             onMouseEnter={() => {
-              if (canBeTargeted) setHoveredTargetId(unit?.id);
+              if (canBeTargeted) {
+                setHoveredTargetId(unit?.id);
+                onUnitHover(unit);
+              }
               if (!isPlayerTeam) setHoveredCell({ row: rowIndex, col: colIndex });
             }}
             onMouseLeave={() => {
-                if (canBeTargeted) setHoveredTargetId(null);
+                if (canBeTargeted) {
+                  setHoveredTargetId(null);
+                  onUnitHover(null);
+                }
                 if (!isPlayerTeam) setHoveredCell(null);
             }}
           >
+            {unit && hoveredTargetId === unit.id && selectionState.hoveredUnitCaptureChance > 0 && (
+              <div style={styles.captureChanceTooltip}>
+                捕捉概率: {selectionState.hoveredUnitCaptureChance}%
+              </div>
+            )}
             {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} /> : null}
           </div>
         );
@@ -550,6 +595,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const [selectedUnitId, setSelectedUnitId] = useState(null); // Which player unit is currently selected for action
   const [skillForTargeting, setSkillForTargeting] = useState(null); // Stores the skill that is waiting for a target, e.g., { skillId: 'fire_slash' }
   const [hoveredCell, setHoveredCell] = useState(null); // { row, col } of the hovered grid cell
+  const [hoveredUnitCaptureChance, setHoveredUnitCaptureChance] = useState(0);
 
   useEffect(() => {
     if (initialData && state.matches('idle')) {
@@ -588,6 +634,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
         else if (state.matches('completed')) {
             if (state.context.battleResult === 'victory') newText = '战斗胜利';
             else if (state.context.battleResult === 'defeat') newText = '战斗失败';
+            else if (state.context.battleResult === 'escaped') newText = '成功逃跑';
         }
     }
 
@@ -603,9 +650,9 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
 
   useEffect(() => {
     if (isCompleted && onComplete) {
-      onComplete(state.context.battleResult);
+      onComplete(state.data);
     }
-  }, [isCompleted, onComplete, state.context.battleResult]);
+  }, [isCompleted, onComplete, state.data]);
   
   const handleSubmitAction = (unitId) => {
     const livingEnemies = Object.values(state.context.enemyTeam).filter(u => state.context.allUnits[u.id]?.derivedAttributes.currentHp > 0);
@@ -630,6 +677,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
       setSelectedUnitId(null);
       setSkillForTargeting(null);
       setHoveredCell(null);
+      setHoveredUnitCaptureChance(0);
     }
   }, [isPreparation]);
 
@@ -684,6 +732,15 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     setSkillForTargeting(null);
   };
 
+  const handleUnitHover = (unit) => {
+    if (skillForTargeting?.skillId === 'capture' && unit) {
+      const chance = calculateCaptureChance(unit);
+      setHoveredUnitCaptureChance(chance);
+    } else {
+      setHoveredUnitCaptureChance(0);
+    }
+  };
+
   const handleCancel = () => {
     // If we are in targeting mode, cancel that first, returning to skill selection.
     if (skillForTargeting) {
@@ -705,6 +762,11 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     if (!isPreparation) return;
     console.log('[UI] Submitting turn with actions:', playerActions);
     send({ type: 'SUBMIT_PLAYER_ACTIONS', payload: { actions: playerActions } });
+  };
+
+  const handleFlee = () => {
+    if (!isPreparation) return;
+    send({ type: 'FLEE' });
   };
 
   // 如果没有初始化数据，或者状态机还未开始或正在初始化，显示加载中...
@@ -747,11 +809,14 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
       {isCompleted && (
         <div style={styles.overlay}>
           <div style={styles.resultBox}>
-            <p style={styles.resultText}>{state.context.battleResult}</p>
+            <p style={styles.resultText}>{
+              state.context.battleResult === 'victory' ? '战斗胜利' : 
+              state.context.battleResult === 'defeat' ? '战斗失败' : '成功逃跑'
+            }</p>
             {/* The restart button here would trigger a full component remount via App.jsx key */}
             <button style={styles.button} onClick={restartBattle}>再战一场</button>
             {/* This button just closes the battle screen */}
-            <button style={styles.button} onClick={() => onComplete(state.context.battleResult)}>返回主界面</button>
+            <button style={styles.button} onClick={() => onComplete(state.data)}>返回主界面</button>
           </div>
         </div>
       )}
@@ -762,10 +827,11 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           allUnits={state.context.allUnits}
           onUnitClick={handlePlayerUnitClick}
           isPlayerTeam={true}
-          selectionState={{ selectedUnitId, skillForTargeting }}
+          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
           playerActions={playerActions}
           hoveredCell={hoveredCell}
           setHoveredCell={setHoveredCell}
+          onUnitHover={() => {}}
         />
         <div style={styles.infoPanel}>
           <div style={styles.infoPanelGroup}>
@@ -790,6 +856,13 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
             >
               执行回合
             </button>
+            <button
+              style={isPreparation ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+              onClick={handleFlee}
+              disabled={!isPreparation}
+            >
+              逃跑
+            </button>
           </div>
         </div>
         <TeamGrid
@@ -797,10 +870,11 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           allUnits={state.context.allUnits}
           onUnitClick={handleEnemyUnitClick}
           isPlayerTeam={false}
-          selectionState={{ selectedUnitId, skillForTargeting }}
+          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
           playerActions={playerActions}
           hoveredCell={hoveredCell}
           setHoveredCell={setHoveredCell}
+          onUnitHover={handleUnitHover}
         />
       </div>
 

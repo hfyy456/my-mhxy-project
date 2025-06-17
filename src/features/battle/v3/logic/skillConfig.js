@@ -61,7 +61,16 @@ export const skills = {
         { type: 'HEAL', value: '0.5 * mAtk' }
     ]
   },
+  'capture': {
+    id: 'capture',
+    name: '捕捉',
+    description: '尝试捕捉一个敌方单位。目标生命值越低，成功率越高。',
+    targetType: 'enemy',
+    areaType: 'single',
+    animation: 'support_cast',
+  },
   'defend': {
+    id: 'defend',
     name: '防御',
     targetType: 'self',
     areaType: 'single',

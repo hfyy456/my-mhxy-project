@@ -2,7 +2,7 @@
  * @Author: Cascade AI
  * @Date: 2025-05-25
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-17 07:35:27
+ * @LastEditTime: 2025-06-17 08:28:20
  * @Description: 战斗系统技能系统逻辑
  */
 import { SKILL_TYPES, SKILL_TARGET_TYPES, SKILL_AREA_TYPES } from '@/config/enumConfig';
@@ -13,9 +13,7 @@ import {
   removeBuff, 
   canUnitUseSkill, 
   canUnitBeTargeted, 
-  canUnitAct,
-  processBuffsOnTurnStart,
-  processBuffsOnTurnEnd
+
 } from './buffManager';
 
 /**
@@ -728,4 +726,44 @@ export const processBuffEffect = (unit, effect) => {
         }
       };
   }
+};
+
+/**
+ * Applies a skill's effects to the targets.
+ * @param {object} skill - The skill object from skillConfig.
+ * @param {object} source - The source unit.
+ * @param {array} targets - The target units.
+ * @param {object} battleState - The current battle state.
+ * @returns {array} - An array of events to be handled by the state machine.
+ */
+export const applySkill = (skill, source, targets, battleState) => {
+  const { derivedAttributes: sourceStats } = source;
+  const events = [];
+
+  // --- Defend Action ---
+  if (skill.id === 'defend') {
+    events.push({
+      type: 'LOG_EVENT',
+      message: `${source.name} 进入防御状态，增加了防御力!`,
+      logType: 'info',
+    });
+    events.push({
+      type: 'EFFECT',
+      targetId: source.id,
+      effect: {
+        type: 'defend',
+        duration: skill.duration,
+      },
+    });
+    return events;
+  }
+
+  // --- Standard Damage/Healing Logic ---
+  targets.forEach(target => {
+    const { derivedAttributes: targetStats } = target;
+    const { derivedAttributes: sourceStats } = source;
+    // ... existing code ...
+  });
+
+  return events;
 };

@@ -33,6 +33,7 @@ const initializeBattleContext = assign({
   playerActionsReady: false,
   displayTurnOrder: [],
   completedUnitIdsThisRound: [],
+  capturedUnits: [], // For storing captured units
 });
 
 // --- New Helper Function: Script & Result Generator ---
@@ -44,20 +45,42 @@ const generateScriptAndResult = (action, allUnits, context) => {
   
   if (!skill) {
     console.error(`Skill "${skillId}" not found.`);
-    return { animationScript: [], logicalResult: { hpChanges: [], buffChanges: [] } };
+    return { animationScript: [], logicalResult: { hpChanges: [], buffChanges: [], captures: [] } };
   }
   
   const source = allUnits[unitId];
   const allTargets = getSkillTargets(skill, unitId, primaryTargetId, context);
 
   let animationScript = [];
-  let logicalResult = { hpChanges: [], buffChanges: [] };
+  let logicalResult = { hpChanges: [], buffChanges: [], captures: [] };
 
   // Handle Defend action specifically
   if (skillId === 'defend') {
     animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'defend_aura', delay: 100 });
     animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '防御', color: '#87ceeb', delay: 200 });
     logicalResult.buffChanges.push({ targetId: unitId, buff: { id: 'defending', duration: 1 }});
+    return { animationScript, logicalResult };
+  }
+
+  // Handle Capture action
+  if (skillId === 'capture') {
+    const target = allUnits[primaryTargetId];
+    animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'support_cast', delay: 100 });
+    
+    if (target && target.isCapturable === false) {
+        animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [target.id], text: '不可捕捉', color: '#ffcc00', delay: 200 });
+    } else if (target) {
+        const { maxHp, currentHp } = target.derivedAttributes;
+        const captureChance = 0.3 + 0.7 * (1 - currentHp / maxHp);
+        const isSuccess = Math.random() < captureChance;
+
+        if (isSuccess) {
+            animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [target.id], text: '捕捉成功!', color: '#90ee90', delay: 200 });
+            logicalResult.captures.push({ ...target });
+        } else {
+            animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [target.id], text: '捕捉失败!', color: '#ff7f7f', delay: 200 });
+        }
+    }
     return { animationScript, logicalResult };
   }
 
@@ -114,15 +137,15 @@ export const battleMachine = createMachine({
     currentRound: 0,
     unitActions: {},
     sortedActionQueue: [],
-    currentActionExecution: null, // This will now store { animationScript, logicalResult }
+    currentActionExecution: null,
     battleResult: null,
-    error: null,
     logs: [],
-    skillOverrides: null, // To hold temporary skill data for preview
+    skillOverrides: null,
     aiActionsReady: false,
     playerActionsReady: false,
     displayTurnOrder: [],
     completedUnitIdsThisRound: [],
+    capturedUnits: [], // For storing captured units
   },
   states: {
     idle: {
@@ -211,15 +234,17 @@ export const battleMachine = createMachine({
       },
     },
     preparation: {
-      entry: [
-        () => console.log('[DEBUG] Entering preparation state')
-      ],
+      entry: assign({
+        // Reset readiness flags for the new round
+        aiActionsReady: false,
+        playerActionsReady: false,
+        unitActions: {}, // Clear previous actions
+      }),
       invoke: {
-        id: 'generateAIActions',
+        id: 'generateAIActionsService',
         src: 'generateAIActionsService',
         input: ({ context }) => context,
         onDone: {
-          // AI actions are ready. Just store them.
           actions: assign({
             unitActions: ({ context, event }) => ({ ...context.unitActions, ...event.output }),
             aiActionsReady: true
@@ -229,17 +254,15 @@ export const battleMachine = createMachine({
       },
       on: {
         SUBMIT_PLAYER_ACTIONS: {
-          // Player actions submitted. Just store them.
-          actions: assign({
-            unitActions: ({ context, event }) => ({
-                ...context.unitActions,
-                ...event.payload.actions
-            }),
-            playerActionsReady: true
-          }),
+          actions: 'storeAllPlayerActionsAndSetFlag',
         },
+        FLEE: {
+          target: 'completed',
+          actions: assign({
+            battleResult: 'escaped',
+            logs: (context) => [...(context.logs || []), { type: 'info', message: '玩家选择了逃跑...' }],          })
+        }
       },
-      // This transition will fire automatically once both AI and Player actions are ready.
       always: {
         target: 'execution',
         guard: 'areAllActionsReady',
@@ -333,10 +356,17 @@ export const battleMachine = createMachine({
     },
     completed: {
       type: 'final',
+      data: (context) => ({
+        result: context.battleResult,
+        captured: context.capturedUnits,
+      }),
       entry: assign({
         battleResult: ({ context }) => {
+          if (context.battleResult === 'escaped') {
+            return 'escaped';
+          }
           const livingPlayers = Object.values(context.playerTeam).filter(u => context.allUnits[u.id]?.derivedAttributes.currentHp > 0).length;
-          return livingPlayers > 0 ? 'VICTORY' : 'DEFEAT';
+          return livingPlayers > 0 ? 'victory' : 'defeat';
         }
       })
     },
@@ -380,6 +410,7 @@ export const battleMachine = createMachine({
         playerActionsReady: false,
         displayTurnOrder: calculateDisplayTurnOrder(allUnits),
         completedUnitIdsThisRound: [],
+        capturedUnits: [], // For storing captured units
       };
     }),
     storeUnitAction: assign({
@@ -438,7 +469,7 @@ export const battleMachine = createMachine({
       const { currentActionExecution, allUnits, logs } = context;
       if (!currentActionExecution) return {};
 
-      const { hpChanges, buffChanges } = currentActionExecution.logicalResult;
+      const { hpChanges, buffChanges, captures } = currentActionExecution.logicalResult;
       let updatedUnits = JSON.parse(JSON.stringify(allUnits)); // Deep copy for safety
       let newLogs = [...logs];
       
@@ -480,11 +511,27 @@ export const battleMachine = createMachine({
       }
       // --- END: Apply Buffs ---
 
+      // --- NEW: Handle Captures ---
+      if (captures?.length > 0) {
+        captures.forEach(capturedUnit => {
+          const targetId = capturedUnit.id;
+          newLogs.push({ type: 'info', message: `成功捕捉了 ${capturedUnit.name}!`});
+          
+          // Add to captured list
+          context.capturedUnits.push(capturedUnit);
+          
+          // Remove the unit from the battlefield state
+          delete updatedUnits[targetId];
+        });
+      }
+      // --- END: Handle Captures ---
+
       return {
         allUnits: updatedUnits,
         logs: newLogs,
         currentActionExecution: null,
         completedUnitIdsThisRound: [...context.completedUnitIdsThisRound, currentActionExecution.unitId],
+        capturedUnits: context.capturedUnits,
       };
     }),
     skipDeadUnitAction: assign({
