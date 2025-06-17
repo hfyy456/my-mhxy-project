@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 // 1. Create the context
 const AnimationContext = createContext(null);
@@ -9,9 +9,11 @@ export const AnimationProvider = ({ children }) => {
     floatingTexts: {},
     unitCssClasses: {},
     vfx: [],
+    unitPositions: {},
   });
+  const unitRefs = useRef({});
 
-  const value = { animationState, setAnimationState };
+  const value = { animationState, setAnimationState, unitRefs };
 
   return (
     <AnimationContext.Provider value={value}>
@@ -25,18 +27,46 @@ export const useAnimation = () => useContext(AnimationContext);
 
 // 4. The AnimationPlayer component
 export const AnimationPlayer = ({ script, onComplete }) => {
-  const { setAnimationState } = useAnimation();
+  const { animationState, setAnimationState, unitRefs } = useAnimation();
+  const vfxCleanupRaf = useRef({});
 
   useEffect(() => {
     const timers = [];
 
     // Reset state at the beginning of a new script
-    setAnimationState({ floatingTexts: {}, unitCssClasses: {}, vfx: [] });
+    setAnimationState(prevState => ({ ...prevState, floatingTexts: {}, unitCssClasses: {}, vfx: [], unitPositions: {} }));
     
     script.forEach(step => {
       const timer = setTimeout(() => {
         setAnimationState(prevState => {
           const newState = { ...prevState };
+
+          if (step.type === 'MOVE_TO_TARGET') {
+            if (unitRefs?.current) {
+              const sourceNode = unitRefs.current[step.unitId];
+              const targetNode = unitRefs.current[step.targetId];
+              if (sourceNode && targetNode) {
+                const sourceRect = sourceNode.getBoundingClientRect();
+                const targetRect = targetNode.getBoundingClientRect();
+                
+                // Determine offset to prevent overlapping
+                const offsetX = sourceRect.left < targetRect.left ? -80 : 80;
+
+                const deltaX = targetRect.left - sourceRect.left + offsetX;
+                const deltaY = targetRect.top - sourceRect.top;
+
+                const newUnitPositions = { ...newState.unitPositions };
+                newUnitPositions[step.unitId] = { x: deltaX, y: deltaY };
+                newState.unitPositions = newUnitPositions;
+              }
+            }
+          }
+
+          if (step.type === 'RETURN_TO_POSITION') {
+            const newUnitPositions = { ...newState.unitPositions };
+            delete newUnitPositions[step.unitId];
+            newState.unitPositions = newUnitPositions;
+          }
 
           if (step.type === 'SHOW_FLOATING_TEXT') {
             const newFloatingTexts = { ...newState.floatingTexts };
@@ -56,10 +86,29 @@ export const AnimationPlayer = ({ script, onComplete }) => {
           }
           
           if (step.type === 'SHOW_VFX') {
-            // This part might need more info, like which unit to attach the VFX to.
-            // Assuming targetIds contains one unit for VFX for now.
-            const newVfx = [...newState.vfx, { vfxName: step.vfxName, targetId: step.targetIds[0] }];
-            newState.vfx = newVfx;
+            const vfxId = Date.now() + Math.random();
+            const newVfx = { vfxName: step.vfxName, targetId: step.targetIds[0], id: vfxId };
+            
+            newState.vfx = [...(prevState.vfx || []), newVfx];
+
+            const duration = 400; // ms, should match CSS animation
+            let startTime = null;
+
+            const cleanupAnimation = (timestamp) => {
+              if (!startTime) startTime = timestamp;
+              const elapsed = timestamp - startTime;
+
+              if (elapsed < duration) {
+                vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
+              } else {
+                setAnimationState(p => ({
+                  ...p,
+                  vfx: p.vfx.filter(v => v.id !== vfxId),
+                }));
+                delete vfxCleanupRaf.current[vfxId];
+              }
+            };
+            vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
           }
 
           return newState;
@@ -74,8 +123,10 @@ export const AnimationPlayer = ({ script, onComplete }) => {
 
     return () => {
       timers.forEach(clearTimeout);
+      Object.values(vfxCleanupRaf.current).forEach(cancelAnimationFrame);
+      vfxCleanupRaf.current = {};
     };
-  }, [script, onComplete, setAnimationState]);
+  }, [script, onComplete, setAnimationState, unitRefs]);
 
   return null; // This component does not render anything itself
 }; 

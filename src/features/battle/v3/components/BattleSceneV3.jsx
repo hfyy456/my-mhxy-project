@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext, memo, useRef } from 'react';
+import React, { useState, useEffect, useContext, memo, useRef, useCallback } from 'react';
 import { useBattleV3 } from '../hooks/useBattleV3';
 import { AnimationProvider, useAnimation, AnimationPlayer } from './AnimationPlayer';
 import { BattleLifecycleContext } from '../context/BattleLifecycleContext';
 import { TurnOrderRuler } from './TurnOrderRuler.jsx';
 import { UnitDisplay, unitDisplayStyles } from './UnitDisplay.jsx';
 import { ActionSelector } from './ActionSelector.jsx';
+import { BattleResultsScreen } from './BattleResultsScreen.jsx';
 import { skills as allSkills } from '../logic/skillConfig';
 import { getAffectedCellCoords } from '../logic/targetLogic.js';
 import { PhaseAnnouncer } from './PhaseAnnouncer.jsx';
@@ -130,6 +131,11 @@ const styles = {
     'from': { transform: 'translate(30px, -10px) scale(1.05)' },
     'to': { transform: 'translate(0, 0) scale(1)' },
   },
+  '@keyframes knockback': {
+    '0%': { transform: 'translateX(0)' },
+    '50%': { transform: 'translateX(var(--knockback-direction, 15px)) scale(1.02)' },
+    '100%': { transform: 'translateX(0)' },
+  },
   '@keyframes shake': {
     '0%, 100%': { transform: 'translateX(0)' },
     '25%': { transform: 'translateX(-8px)' },
@@ -230,15 +236,6 @@ const styles = {
   },
   enemyUnitTurn: {
     backgroundColor: '#dc3545',
-  },
-  'attack_lunge': {
-    animation: 'lunge 0.5s ease-in-out',
-  },
-  'take_hit_shake': {
-    animation: 'shake 0.4s',
-  },
-  'return_to_idle': {
-    animation: 'returnLunge 0.3s ease-in-out',
   },
   targetableUnit: {
     borderColor: '#ffc107',
@@ -394,10 +391,11 @@ styleSheet.innerText = `
   @keyframes lunge { ${keyframesToString(styles['@keyframes lunge'])} }
   @keyframes returnLunge { ${keyframesToString(styles['@keyframes returnLunge'])} }
   @keyframes breathing { ${keyframesToString(styles['@keyframes breathing'])} }
+  @keyframes knockback { ${keyframesToString(styles['@keyframes knockback'])} }
 `;
 document.head.appendChild(styleSheet);
 
-const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell, onUnitHover }) => {
+const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell, onUnitHover, unitRefs }) => {
   const { selectedUnitId, skillForTargeting } = selectionState;
   const [hoveredTargetId, setHoveredTargetId] = useState(null);
 
@@ -573,7 +571,7 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
                 捕捉概率: {selectionState.hoveredUnitCaptureChance}%
               </div>
             )}
-            {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} /> : null}
+            {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} ref={el => unitRefs.current[unit.id] = el} /> : null}
           </div>
         );
       })}
@@ -585,6 +583,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const [state, send] = useBattleV3();
   const { restartBattle } = useContext(BattleLifecycleContext);
   const logContainerRef = useRef(null);
+  const { unitRefs } = useAnimation(); // Get refs from context
   const [isLogPanelExpanded, setIsLogPanelExpanded] = useState(true);
 
   // --- NEW: State for announcements ---
@@ -610,7 +609,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     }
   }, [state.context.logs]);
   
-  const isCompleted = state.matches('completed');
+  const isBattleFinished = state.matches('battleEnded');
 
   // Effect for announcements
   const prevRoundRef = useRef(state.context.currentRound);
@@ -649,10 +648,10 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   }, [state]); // Depend on the whole state object for accurate change detection
 
   useEffect(() => {
-    if (isCompleted && onComplete) {
+    if (isBattleFinished && onComplete) {
       onComplete(state.data);
     }
-  }, [isCompleted, onComplete, state.data]);
+  }, [isBattleFinished, onComplete, state.data]);
   
   const handleSubmitAction = (unitId) => {
     const livingEnemies = Object.values(state.context.enemyTeam).filter(u => state.context.allUnits[u.id]?.derivedAttributes.currentHp > 0);
@@ -669,6 +668,10 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const isAnimating = state.matches('execution.animating');
   
   const script = state.context.currentActionExecution?.animationScript;
+
+  const handleAnimationComplete = useCallback(() => {
+    send({ type: 'ANIMATION_COMPLETE' });
+  }, [send]);
 
   // Reset local state when a new preparation phase begins
   useEffect(() => {
@@ -799,26 +802,13 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
         />
       )}
 
-      {isAnimating && script && (
-        <AnimationPlayer
-          script={script}
-          onComplete={() => send({ type: 'ANIMATION_COMPLETE' })}
-        />
-      )}
+      {isAnimating && script && <AnimationPlayer script={script} onComplete={handleAnimationComplete} />}
 
-      {isCompleted && (
-        <div style={styles.overlay}>
-          <div style={styles.resultBox}>
-            <p style={styles.resultText}>{
-              state.context.battleResult === 'victory' ? '战斗胜利' : 
-              state.context.battleResult === 'defeat' ? '战斗失败' : '成功逃跑'
-            }</p>
-            {/* The restart button here would trigger a full component remount via App.jsx key */}
-            <button style={styles.button} onClick={restartBattle}>再战一场</button>
-            {/* This button just closes the battle screen */}
-            <button style={styles.button} onClick={() => onComplete(state.data)}>返回主界面</button>
-          </div>
-        </div>
+      {state.matches('results') && (
+        <BattleResultsScreen 
+          result={state.context.battleResult}
+          onConfirm={() => send({ type: 'CONFIRM_RESULTS' })}
+        />
       )}
 
       <div style={styles.battlefield}>
@@ -832,6 +822,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           hoveredCell={hoveredCell}
           setHoveredCell={setHoveredCell}
           onUnitHover={() => {}}
+          unitRefs={unitRefs}
         />
         <div style={styles.infoPanel}>
           <div style={styles.infoPanelGroup}>
@@ -875,6 +866,7 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           hoveredCell={hoveredCell}
           setHoveredCell={setHoveredCell}
           onUnitHover={handleUnitHover}
+          unitRefs={unitRefs}
         />
       </div>
 

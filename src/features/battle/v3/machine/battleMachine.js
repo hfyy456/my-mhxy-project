@@ -49,12 +49,12 @@ const generateScriptAndResult = (action, allUnits, context) => {
   }
   
   const source = allUnits[unitId];
-  const allTargets = getSkillTargets(skill, unitId, primaryTargetId, context);
-
   let animationScript = [];
   let logicalResult = { hpChanges: [], buffChanges: [], captures: [] };
 
-  // Handle Defend action specifically
+  // --- Start of refined target handling ---
+
+  // For 'defend', no target is needed.
   if (skillId === 'defend') {
     animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'defend_aura', delay: 100 });
     animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '防御', color: '#87ceeb', delay: 200 });
@@ -62,14 +62,19 @@ const generateScriptAndResult = (action, allUnits, context) => {
     return { animationScript, logicalResult };
   }
 
-  // Handle Capture action
+  // For 'capture', the specific target must be alive. No retargeting.
   if (skillId === 'capture') {
     const target = allUnits[primaryTargetId];
     animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'support_cast', delay: 100 });
     
-    if (target && target.isCapturable === false) {
+    if (!target || target.derivedAttributes.currentHp <= 0) {
+        animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '目标已阵亡', color: '#ffcc00', delay: 200 });
+        return { animationScript, logicalResult };
+    }
+    
+    if (target.isCapturable === false) {
         animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [target.id], text: '不可捕捉', color: '#ffcc00', delay: 200 });
-    } else if (target) {
+    } else {
         const { maxHp, currentHp } = target.derivedAttributes;
         const captureChance = 0.3 + 0.7 * (1 - currentHp / maxHp);
         const isSuccess = Math.random() < captureChance;
@@ -84,11 +89,92 @@ const generateScriptAndResult = (action, allUnits, context) => {
     return { animationScript, logicalResult };
   }
 
-  if (allTargets.length > 0) {
+  // For all other skills (attacks included), find a valid target if the primary is dead.
+  let currentTargetId = primaryTargetId;
+  const originalTargetUnit = allUnits[currentTargetId];
+  if (!originalTargetUnit || originalTargetUnit.derivedAttributes.currentHp <= 0) {
+      const sourceTeam = source.team;
+      let teamToSearch;
+
+      // NEW: Check skill's targetType to determine which team to find a new target from.
+      if (skill.targetType === 'enemy') {
+          const opposingTeamName = sourceTeam === 'player' ? 'enemyTeam' : 'playerTeam';
+          teamToSearch = context[opposingTeamName];
+      } else { // 'self' or 'ally'
+          const friendlyTeamName = sourceTeam === 'player' ? 'playerTeam' : 'enemyTeam';
+          teamToSearch = context[friendlyTeamName];
+      }
+
+      const livingUnitsInTeam = Object.values(teamToSearch)
+          .map(u => allUnits[u.id])
+          .filter(u => u && u.derivedAttributes.currentHp > 0);
+      
+      if (livingUnitsInTeam.length > 0) {
+          // Simple retarget to the first living unit in the correct team.
+          currentTargetId = livingUnitsInTeam[0].id; 
+      } else {
+          // No living units in the target team, stop the action.
+          return { 
+              animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无有效目标', color: '#ffcc00', delay: 100 }],
+              logicalResult: { hpChanges: [], buffChanges: [], captures: [] }
+          };
+      }
+  }
+
+  // Now, get all targets based on the (potentially new) primary target ID, and filter for living ones.
+  const allFinalTargets = getSkillTargets(skill, unitId, currentTargetId, context);
+  const livingTargetIds = allFinalTargets.filter(id => allUnits[id] && allUnits[id].derivedAttributes.currentHp > 0);
+
+  // If after all that, there are no living targets for a damaging/effect skill, abort.
+  if (livingTargetIds.length === 0) {
+    return { 
+        animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无效目标', color: '#ffcc00', delay: 100 }],
+        logicalResult: { hpChanges: [], buffChanges: [], captures: [] }
+    };
+  }
+  // --- End of refined target handling ---
+
+  // NEW: Handle Basic Attack with different animation types
+  if (skillId === 'basic_attack') {
+    const attackType = source.attackType || 'direct'; // Default to direct attack
+    const targetId = livingTargetIds[0]; // Use the first living target
+    const targetUnit = allUnits[targetId];
+
+    if (targetUnit && attackType === 'direct') {
+      let totalDamage = 0;
+      const pAtk = source.derivedAttributes.physicalAttack || 0;
+      totalDamage = Math.round(pAtk * (skill.damage || 1.0));
+
+      const targetHasDefendBuff = targetUnit.statusEffects?.some(buff => buff.id === 'defending');
+      if (targetHasDefendBuff) {
+        totalDamage = Math.round(totalDamage * 0.85);
+      }
+      
+      if (totalDamage > 0) {
+        logicalResult.hpChanges.push({ targetId, change: -totalDamage });
+      }
+
+      animationScript.push({ type: 'MOVE_TO_TARGET', unitId, targetId, delay: 0 });
+      
+      // Add VFX based on whether the target is defending
+      const vfxName = targetHasDefendBuff ? 'defend_burst' : 'hit_spark';
+      animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName, delay: 100 });
+
+      animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_knockback', delay: 100 });
+      animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${totalDamage}`, color: '#ff4d4d', delay: 150 });
+      animationScript.push({ type: 'RETURN_TO_POSITION', unitId, delay: 500 });
+
+      return { animationScript, logicalResult };
+    }
+    // Future: Add 'projectile' attackType handler here
+  }
+
+  // This block handles other (non-basic attack) skills
+  if (livingTargetIds.length > 0) {
     // Base animation for the attacker
     animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'attack_lunge', delay: 0 });
 
-    allTargets.forEach((targetId, index) => {
+    livingTargetIds.forEach((targetId, index) => {
       const targetUnit = allUnits[targetId];
       if (!targetUnit) return;
 
@@ -115,11 +201,8 @@ const generateScriptAndResult = (action, allUnits, context) => {
     });
 
     // Return-to-idle animation for the attacker
-    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'return_to_idle', delay: 600 + (allTargets.length * 150) });
+    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'return_to_idle', delay: 600 + (livingTargetIds.length * 150) });
   }
-  
-  // This part needs a big refactor to work with the new structure.
-  // For now, let's simplify and focus on damage.
   
   return { animationScript, logicalResult };
 };
@@ -260,7 +343,8 @@ export const battleMachine = createMachine({
           target: 'completed',
           actions: assign({
             battleResult: 'escaped',
-            logs: (context) => [...(context.logs || []), { type: 'info', message: '玩家选择了逃跑...' }],          })
+            logs: (context) => [...(context.logs || []), { type: 'info', message: '玩家选择了逃跑...' }],
+          })
         }
       },
       always: {
@@ -355,11 +439,14 @@ export const battleMachine = createMachine({
       ],
     },
     completed: {
-      type: 'final',
+      // type: 'final', // This is no longer a final state
+      always: 'results',
+      /* data property is moved to the new final state: battleEnded
       data: (context) => ({
         result: context.battleResult,
         captured: context.capturedUnits,
       }),
+      */
       entry: assign({
         battleResult: ({ context }) => {
           if (context.battleResult === 'escaped') {
@@ -369,6 +456,18 @@ export const battleMachine = createMachine({
           return livingPlayers > 0 ? 'victory' : 'defeat';
         }
       })
+    },
+    results: {
+      on: {
+        CONFIRM_RESULTS: 'battleEnded',
+      },
+    },
+    battleEnded: {
+      type: 'final',
+      data: ({ context }) => ({
+        result: context.battleResult,
+        captured: context.capturedUnits,
+      }),
     },
     error: {
       on: {
@@ -439,6 +538,9 @@ export const battleMachine = createMachine({
       const targetUnit = allUnits[actionToExecute.target];
 
       const { animationScript, logicalResult } = generateScriptAndResult(actionToExecute, allUnits, context);
+
+      // --- NEW DEBUG LOG ---
+      console.log('[battleMachine] Generated animation script for unit ' + actionToExecute.unitId + ':', animationScript);
 
       const skillUsed = skillConfig[actionToExecute.type];
       let logMessage;
@@ -625,4 +727,3 @@ export const battleMachine = createMachine({
     }),
   },
 });
- 

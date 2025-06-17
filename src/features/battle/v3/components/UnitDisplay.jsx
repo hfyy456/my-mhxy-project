@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, forwardRef } from 'react';
 import { useAnimation } from './AnimationPlayer';
 
 const images = import.meta.glob('/src/assets/summons/*.png', { eager: true });
@@ -22,6 +22,15 @@ export const unitDisplayStyles = {
   },
   unitBoxAttacking: {
     transform: 'scale(1.08)',
+  },
+  'attack_lunge': {
+    animation: 'lunge 0.5s ease-in-out',
+  },
+  'take_hit_knockback': {
+    animation: 'knockback-anim 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards',
+  },
+  'return_to_idle': {
+    animation: 'returnLunge 0.3s ease-in-out',
   },
   unitBoxHitting: {
     animation: 'shake 0.3s',
@@ -88,6 +97,31 @@ export const unitDisplayStyles = {
     fontWeight: 'bold',
     boxShadow: '0 0 6px rgba(0, 123, 255, 0.6)',
   },
+  vfxHitSpark: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '150px',
+    height: '150px',
+    background: 'radial-gradient(circle, white, rgba(200, 200, 200, 0.6) 40%, transparent 80%)',
+    borderRadius: '50%',
+    animation: 'vfx-impact-anim 0.3s ease-out forwards',
+    zIndex: 20,
+    transform: 'translate(-50%, -50%)',
+  },
+  vfxDefendBurst: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '120px',
+    height: '120px',
+    border: '3px solid #87ceeb',
+    borderRadius: '50%',
+    boxShadow: '0 0 20px #87ceeb, inset 0 0 15px #87ceeb',
+    animation: 'defend-burst-anim 0.4s ease-out forwards',
+    zIndex: 15,
+    transform: 'translate(-50%, -50%)',
+  },
 };
 
 const getSpriteSrc = (summonSourceId) => {
@@ -95,12 +129,12 @@ const getSpriteSrc = (summonSourceId) => {
   return images[path]?.default || images['/src/assets/summons/default.png']?.default;
 };
 
-export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
+export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }, ref) => {
   if (!unit) return null;
   
   const hpPercentage = (unit.derivedAttributes.currentHp / unit.derivedAttributes.maxHp) * 100;
   const { animationState } = useAnimation();
-  const { floatingTexts, unitCssClasses } = animationState;
+  const { floatingTexts, unitCssClasses, unitPositions, vfx } = animationState;
   
   const getHpColor = (percentage) => {
     if (percentage > 50) return '#4caf50';
@@ -110,6 +144,14 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
   
   const isDefeated = unit.derivedAttributes.currentHp <= 0;
   const currentAnimClass = unitCssClasses[unit.id];
+  const customPosition = unitPositions && unitPositions[unit.id];
+  const activeVfx = vfx?.find(v => v.targetId === unit.id);
+
+  // --- DEBUG ---
+  if (activeVfx) {
+    console.log('VFX found for unit:', { unitId: unit.id, vfx: activeVfx });
+  }
+  // --- END DEBUG ---
 
   const isDefending = unit.statusEffects?.some(effect => effect.id === 'defending');
 
@@ -118,6 +160,16 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
     ...(currentAnimClass ? unitDisplayStyles[currentAnimClass] : {}),
     opacity: isDefeated ? 0.5 : 1,
   };
+  
+  if (currentAnimClass === 'take_hit_knockback') {
+    unitStyle['--knockback-direction'] = isPlayerUnit ? '-25px' : '25px';
+  }
+
+  if (customPosition) {
+    unitStyle.transform = `translate(${customPosition.x}px, ${customPosition.y}px)`;
+    unitStyle.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    unitStyle.zIndex = 10;
+  }
 
   const spriteStyle = {
     ...unitDisplayStyles.unitSprite,
@@ -125,7 +177,14 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
   };
 
   return (
-    <div style={unitStyle}>
+    <div style={unitStyle} ref={ref}>
+      {activeVfx && activeVfx.vfxName === 'hit_spark' && 
+        <div style={unitDisplayStyles.vfxHitSpark}></div>
+      }
+      {activeVfx && activeVfx.vfxName === 'defend_burst' && 
+        <div style={unitDisplayStyles.vfxDefendBurst}></div>
+      }
+
       {hasActionSet && <div style={unitDisplayStyles.actionSetIndicator}>✔</div>}
       
       <div style={unitDisplayStyles.statusEffectContainer}>
@@ -142,6 +201,7 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
         alt={unit.name}
         style={spriteStyle}
       />
+
       {!isDefeated && (
         <div style={unitDisplayStyles.hpBarContainer}>
           <div style={{ ...unitDisplayStyles.hpBar, width: `${hpPercentage}%`, backgroundColor: getHpColor(hpPercentage) }} />
@@ -149,4 +209,26 @@ export const UnitDisplay = memo(({ unit, isPlayerUnit, hasActionSet }) => {
       )}
     </div>
   );
-}); 
+}));
+
+const styleSheet = document.getElementById('dynamic-keyframes') || document.createElement('style');
+styleSheet.id = 'dynamic-keyframes';
+styleSheet.innerText += `
+  @keyframes vfx-impact-anim {
+    0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+    80% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+  @keyframes defend-burst-anim {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; border-width: 5px; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; border-width: 0px; }
+  }
+  @keyframes knockback-anim {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(var(--knockback-direction)); }
+    100% { transform: translateX(0); }
+  }
+`;
+if (!document.getElementById('dynamic-keyframes')) {
+  document.head.appendChild(styleSheet);
+}
