@@ -144,62 +144,62 @@ export const generateSkillResult = (action, allUnits, context) => {
   }
   // --- END: Handle Double Strike ---
 
-  // --- NEW: Handle Bloodthirsty Pursuit ---
+  // --- NEW: Handle Bloodthirsty Pursuit (Chain Attack Version) ---
   if (skillId === 'bloodthirsty_pursuit') {
+    let runningAnimationTime = 0;
+    
+    // The primary target is the first one available.
     const primaryTargetId = livingTargetIds[0];
-    const primaryTargetUnit = allUnits[primaryTargetId];
-    let attackDelay = 0;
-
-    if (!primaryTargetUnit) {
-      // Should have been handled already, but as a safeguard.
+    if (!primaryTargetId) {
       return { 
         animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无效目标', color: '#ffcc00', delay: 100 }],
         logicalResult 
       };
     }
-    
-    const createAttackSequence = (targetId, damageEffect, delay, isFollowUp = false) => {
-      const targetUnit = allUnits[targetId];
-      if (!targetUnit) return;
 
-      const damageResult = calculateDamage(source, damageEffect.value);
-      logicalResult.hpChanges.push({ targetId, change: -damageResult.damage, isCrit: damageResult.isCrit });
-      updatePrdCounterForResult(logicalResult, source, damageResult.isCrit);
-      
-      const vfx = isFollowUp ? 'hit_spark_red' : 'hit_spark';
-
-      animationScript.push({ type: 'MOVE_TO_TARGET', unitId, targetId, delay: delay });
-      animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName: vfx, delay: delay + 100 });
-      animationScript.push({ type: 'PAUSE', duration: 100, delay: delay + 105 });
-      animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_knockback', delay: delay + 200 });
-      animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${damageResult.damage}`, isCrit: damageResult.isCrit, delay: delay + 250 });
-      animationScript.push({ type: 'CLEAR_ENTITY_ANIMATION', targetIds: [targetId], delay: delay + 700 });
-    };
-
-    // 1. Attack primary target
-    createAttackSequence(primaryTargetId, skill.effects[0], attackDelay);
-    attackDelay += 800; // Delay for the next attack
-
-    // 2. Find and attack random secondary targets
+    // Find up to two additional random targets.
     const enemyTeamName = source.team === 'player' ? 'enemyTeam' : 'playerTeam';
-    const potentialTargets = Object.values(context[enemyTeamName])
+    const potentialFollowUp = Object.values(context[enemyTeamName])
       .map(u => allUnits[u.id])
       .filter(u => u && u.id !== primaryTargetId && u.derivedAttributes.currentHp > 0);
     
-    // Shuffle and pick up to 2 targets
-    const shuffledTargets = potentialTargets.sort(() => 0.5 - Math.random());
-    const followUpTargets = shuffledTargets.slice(0, 2);
+    const shuffledFollowUp = potentialFollowUp.sort(() => 0.5 - Math.random());
+    const attackQueue = [primaryTargetId, ...shuffledFollowUp.slice(0, 2).map(t => t.id)];
 
-    // 3. Create attack sequences for follow-up targets
-    followUpTargets.forEach((target, index) => {
-      // skill.effects[1] for the first random, skill.effects[2] for the second
-      const damageEffect = skill.effects[index + 1];
-      createAttackSequence(target.id, damageEffect, attackDelay, true);
-      attackDelay += 800; // Increment delay for the next one
+    // Generate animation and logic for each attack in the queue.
+    attackQueue.forEach((targetId, index) => {
+      const damageEffect = skill.effects[index];
+      if (!damageEffect) return;
+
+      const targetUnit = allUnits[targetId];
+      if (!targetUnit) return;
+      
+      const damageResult = calculateDamage(source, damageEffect.value);
+      logicalResult.hpChanges.push({ targetId, change: -damageResult.damage, isCrit: damageResult.isCrit });
+      updatePrdCounterForResult(logicalResult, source, damageResult.isCrit);
+
+      const isPrimary = index === 0;
+      const vfx = 'bleed_effect';
+      const moveDuration = isPrimary ? 300 : 200; // Faster subsequent dashes
+      const hitDelay = runningAnimationTime + moveDuration;
+      const sequenceDuration = moveDuration + 250; // Total time for one hit sequence before next starts
+
+      // For subsequent moves, we need to know the previous target to calculate the correct vector
+      const previousTargetId = index > 0 ? attackQueue[index - 1] : null;
+
+      // Generate the animation sequence for a single hit
+      animationScript.push({ type: 'MOVE_TO_TARGET', unitId, targetId, previousTargetId, options: { duration: moveDuration }, delay: runningAnimationTime });
+      animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName: vfx, delay: hitDelay });
+      animationScript.push({ type: 'PAUSE', duration: 100, delay: hitDelay + 5 });
+      animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_knockback', delay: hitDelay + 50 });
+      animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${damageResult.damage}`, isCrit: damageResult.isCrit, delay: hitDelay + 100 });
+      
+      // DO NOT return to position here. The next MOVE_TO_TARGET will override the transform.
+      runningAnimationTime += sequenceDuration;
     });
     
-    // N. Return home after all attacks
-    animationScript.push({ type: 'RETURN_TO_POSITION', unitId, delay: attackDelay });
+    // After all attacks, add a final return to home base.
+    animationScript.push({ type: 'RETURN_TO_POSITION', unitId, delay: runningAnimationTime + 200 });
 
     return { animationScript, logicalResult };
   }

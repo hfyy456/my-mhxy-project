@@ -10,6 +10,73 @@ import { skills as allSkills } from '../logic/skillConfig';
 import { getAffectedCellCoords } from '../logic/targetLogic.js';
 import { PhaseAnnouncer } from './PhaseAnnouncer.jsx';
 
+const GlobalStyles = () => (
+  <style>{`
+    @keyframes lunge {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, -10px) scale(1.05); }
+      100% { transform: translate(0, 0) scale(1); }
+    }
+
+    @keyframes returnLunge {
+      from { transform: translate(30px, -10px) scale(1.05); }
+      to { transform: translate(0, 0) scale(1); }
+    }
+    
+    @keyframes knockback-anim {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(var(--knockback-direction, 40px)); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes vfx-impact-anim {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
+
+    @keyframes bleed-anim {
+      0% {
+        transform: translate(-50%, -50%) rotate(-20deg) scaleX(0);
+        opacity: 0.8;
+      }
+      30% {
+        transform: translate(-50%, -50%) rotate(-20deg) scaleX(1.2);
+        opacity: 0.9;
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(-20deg) scaleX(1.2);
+        opacity: 0;
+      }
+    }
+
+    @keyframes defend-burst-anim {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    @keyframes floatUpAndScale {
+      0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
+      70% { opacity: 1; }
+      100% { transform: translate(-50%, -100px) scale(1.5); opacity: 0; }
+    }
+    
+    @keyframes floatUpAndScaleCrit {
+      0% { transform: translate(-50%, 0) scale(1); opacity: 1; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 3px 3px 6px rgba(0,0,0,0.7); }
+      70% { opacity: 1; }
+      100% { transform: translate(-50%, -120px) scale(2.2); opacity: 0; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 10px 10px 15px rgba(0,0,0,0.3); }
+    }
+
+    .unit-box.is-acting {
+      z-index: 10;
+    }
+    .unit-box.take_hit_knockback {
+      animation: knockback-anim 0.5s ease-out forwards;
+    }
+    
+  `}</style>
+);
+
 const calculateCaptureChance = (targetUnit) => {
   if (!targetUnit || targetUnit.isCapturable === false) return 0;
   const { maxHp, currentHp } = targetUnit.derivedAttributes;
@@ -410,7 +477,7 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell, onUnitHover, unitRefs }) => {
+const TeamGrid = memo(({ teamId, grid, allUnits, onUnitClick, isPlayerTeam, selectionState, playerActions, hoveredCell, setHoveredCell, onUnitHover, gridCellRefs }) => {
   const { selectedUnitId, skillForTargeting } = selectionState;
   const [hoveredTargetId, setHoveredTargetId] = useState(null);
 
@@ -467,7 +534,6 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
         const { unitId, rowIndex, colIndex } = cell;
         const unit = unitId ? allUnits[unitId] : null;
 
-        // For enemy team, render column 0 as 2, 1 as 1, 2 as 0 to mirror
         const finalStyle = {
           ...styles.gridCell,
           gridColumn: isPlayerTeam ? colIndex + 1 :  colIndex + 1,
@@ -485,11 +551,10 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
         let canBeTargeted = unit && skillForTargeting && !isPlayerTeam && unit.derivedAttributes.currentHp > 0;
         let isUncapturable = false;
 
-        // Special handling for the 'capture' skill
         if (canBeTargeted && skillForTargeting.skillId === 'capture') {
           if (unit.isCapturable === false) {
-            canBeTargeted = false; // Cannot be targeted
-            isUncapturable = true; // Mark for special styling
+            canBeTargeted = false;
+            isUncapturable = true;
           }
         }
         
@@ -503,34 +568,29 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
           Object.assign(finalStyle, styles.targetableUnit);
         }
 
-        // --- Apply AOE Highlight ---
         if (isCellHighlighted(rowIndex, colIndex)) {
             Object.assign(finalStyle, styles.aoeHighlight);
         }
-        // --- End Apply AOE Highlight ---
 
         const canBeSelected = unit && isPlayerTeam && !skillForTargeting;
         if (canBeSelected) {
           finalStyle.cursor = 'pointer';
         }
 
-        const hasActionSet = isPlayerTeam && playerActions[unitId];
+        const cellKey = `${teamId}-${rowIndex}-${colIndex}`;
 
         return (
           <div 
             key={cell.key} 
+            ref={el => gridCellRefs.current[cellKey] = el}
             style={finalStyle} 
             onClick={() => {
-              // If not in targeting mode, only clicks on units matter to select them.
               if (!skillForTargeting) {
                   if (unit && onUnitClick) onUnitClick(unit.id);
                   return;
               }
 
-              // --- In Targeting Mode ---
               if (!onUnitClick) return;
-
-              // Prevent action if target is not valid (e.g., uncapturable)
               if (!canBeTargeted) return;
               
               const skill = allSkills[skillForTargeting.skillId];
@@ -538,17 +598,12 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
               const areaType = skill.areaType || 'single';
 
               if (areaType === 'single') {
-                  // For single target skills, must click on a valid unit.
                   if (unit) onUnitClick(unit.id);
               } else if (areaType === 'group') {
-                  // For group skills, any click on an enemy confirms. Find a nominal target to send.
                   const nominalTarget = Object.values(allUnits).find(u => !u.isPlayerUnit && u.derivedAttributes.currentHp > 0);
                   if (nominalTarget) onUnitClick(nominalTarget.id);
               } else if (areaType === 'cross' || areaType === 'square') {
-                  // For area skills, the click confirms the area centered on the hovered cell.
                   if (hoveredCell) {
-                      // We need a primary target to send to the state machine.
-                      // It can be the unit in the center of the AoE, or the first living unit found in the area.
                       const centerUnitId = grid[hoveredCell.row]?.[hoveredCell.col];
                       if (centerUnitId && allUnits[centerUnitId]?.derivedAttributes.currentHp > 0) {
                           onUnitClick(centerUnitId);
@@ -557,7 +612,7 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
 
                       const affectedCoords = getAffectedCellCoords(skill, hoveredCell);
                       const firstValidTarget = affectedCoords
-                          .map(coords => grid[coords.r]?.[coords.c])
+                          .map(coords => grid[coords.row]?.[coords.col])
                           .find(targetUnitId => targetUnitId && allUnits[targetUnitId]?.derivedAttributes.currentHp > 0);
                       
                       if (firstValidTarget) {
@@ -586,7 +641,9 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
                 捕捉概率: {selectionState.hoveredUnitCaptureChance}%
               </div>
             )}
-            {unit ? <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={hasActionSet} ref={el => unitRefs.current[unit.id] = el} /> : null}
+            {unit && allUnits[unit.id].derivedAttributes.currentHp <= 0 && (
+                <UnitDisplay unit={unit} isPlayerUnit={isPlayerTeam} hasActionSet={false} />
+            )}
           </div>
         );
       })}
@@ -600,6 +657,56 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const logContainerRef = useRef(null);
   const { unitRefs } = useAnimation(); // Get refs from context
   const [isLogPanelExpanded, setIsLogPanelExpanded] = useState(true);
+
+  // --- REFACTOR: Refs and State for Decoupled Rendering ---
+  const gridContainerRef = useRef(null); // Ref for the main battle area
+  const gridCellRefs = useRef({}); // Refs for each individual grid cell
+  const [unitInitialPositions, setUnitInitialPositions] = useState({}); // Store calculated {top, left} for each unit
+  
+  // --- REFACTOR: Calculate initial positions of units ---
+  useEffect(() => {
+    const SPRITE_WIDTH = 150; // Define standard sprite dimensions
+    const SPRITE_HEIGHT = 150;
+
+    const containerRect = gridContainerRef.current?.getBoundingClientRect();
+    if (!containerRect || Object.keys(gridCellRefs.current).length === 0) return;
+
+    const newPositions = {};
+    const allUnits = state.context.allUnits;
+
+    const locateUnit = (unitId) => {
+      for (const team of ['playerGrid', 'enemyGrid']) {
+        const grid = state.context[team];
+        for (let r = 0; r < grid.length; r++) {
+          for (let c = 0; c < grid[r].length; c++) {
+            if (grid[r][c] === unitId) {
+              return { teamId: team === 'playerGrid' ? 'playerTeam' : 'enemyTeam', row: r, col: c };
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    for (const unitId in allUnits) {
+      const location = locateUnit(unitId);
+      if (location) {
+        const cellKey = `${location.teamId}-${location.row}-${location.col}`;
+        const cellNode = gridCellRefs.current[cellKey];
+        if (cellNode) {
+          const cellRect = cellNode.getBoundingClientRect();
+          // Calculate top/left for the sprite container to be bottom-centered in the cell
+          newPositions[unitId] = {
+            top: (cellRect.top - containerRect.top) + cellRect.height - (SPRITE_HEIGHT /2) - 20, // -20 for bottom padding
+            left: (cellRect.left - containerRect.left) + (cellRect.width / 2)- 60,
+          };
+        }
+      }
+    }
+    setUnitInitialPositions(newPositions);
+
+  }, [state.context.allUnits, state.context.playerGrid, state.context.enemyGrid]); // Recalculate if layout changes
+
 
   // --- NEW: State for announcements ---
   const [announcement, setAnnouncement] = useState({ text: '', trigger: 0 });
@@ -799,106 +906,133 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   const allPlayerUnitsHaveAction = livingPlayerUnits.every(u => playerActions[u.id]);
 
   return (
-    <div style={styles.container} onContextMenu={handleContextMenu}>
-      <PhaseAnnouncer text={announcement.text} trigger={announcement.trigger} />
-      <TurnOrderRuler
-        order={state.context.displayTurnOrder}
-        allUnits={state.context.allUnits}
-        currentUnitId={state.context.currentActionExecution?.unitId}
-        completedUnitIds={state.context.completedUnitIdsThisRound}
-      />
-      
-      {selectedUnitId && !skillForTargeting && (
-        <ActionSelector
-          unit={state.context.allUnits[selectedUnitId]}
-          skills={allSkills}
-          onSkillSelect={handleSkillSelect}
-          onClose={handleCancel}
-        />
-      )}
-
-      {isAnimating && script && <AnimationPlayer script={script} onComplete={handleAnimationComplete} />}
-
-      {state.matches('results') && (
-        <BattleResultsScreen 
-          result={state.context.battleResult}
-          onConfirm={() => send({ type: 'CONFIRM_RESULTS' })}
-        />
-      )}
-
-      <div style={styles.battlefield}>
-        <TeamGrid
-          grid={state.context.playerGrid}
+    <BattleLifecycleContext.Provider value={state.context}>
+      <GlobalStyles />
+      <div style={styles.container} onContextMenu={handleContextMenu}>
+        <PhaseAnnouncer text={announcement.text} trigger={announcement.trigger} />
+        <TurnOrderRuler
+          order={state.context.displayTurnOrder}
           allUnits={state.context.allUnits}
-          onUnitClick={handlePlayerUnitClick}
-          isPlayerTeam={true}
-          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
-          playerActions={playerActions}
-          hoveredCell={hoveredCell}
-          setHoveredCell={setHoveredCell}
-          onUnitHover={() => {}}
-          unitRefs={unitRefs}
+          currentUnitId={state.context.currentActionExecution?.unitId}
+          completedUnitIds={state.context.completedUnitIdsThisRound}
         />
-        <div style={styles.infoPanel}>
-          <div style={styles.infoPanelGroup}>
-            <p style={styles.roundText}>第 {state.context.currentRound} 回合</p>
-            <p style={styles.statusText}>{isPreparation ? '准备阶段' : isAnimating ? '行动中' : '等待中...'}</p>
-          </div>
-          <p style={styles.vsText}>VS</p>
-          <p style={styles.infoText}>
-            {isPreparation
-              ? (selectedUnitId && !skillForTargeting
-                ? `选择技能`
-                : skillForTargeting
-                ? `选择目标`
-                : '选择单位')
-              : '正在执行行动...'}
-          </p>
-          <div style={styles.infoPanelGroup}>
-            <button
-              style={(isPreparation && allPlayerUnitsHaveAction) ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
-              onClick={handleSubmitTurn}
-              disabled={!isPreparation || !allPlayerUnitsHaveAction}
-            >
-              执行回合
-            </button>
-            <button
-              style={isPreparation ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
-              onClick={handleFlee}
-              disabled={!isPreparation}
-            >
-              逃跑
-            </button>
-          </div>
-        </div>
-        <TeamGrid
-          grid={state.context.enemyGrid}
-          allUnits={state.context.allUnits}
-          onUnitClick={handleEnemyUnitClick}
-          isPlayerTeam={false}
-          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
-          playerActions={playerActions}
-          hoveredCell={hoveredCell}
-          setHoveredCell={setHoveredCell}
-          onUnitHover={handleUnitHover}
-          unitRefs={unitRefs}
-        />
-      </div>
-
-      <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
-        <div style={styles.logPanelTitle} onClick={() => setIsLogPanelExpanded(!isLogPanelExpanded)}>
-          <span>战斗日志</span>
-          <button style={styles.logToggleButton}>{isLogPanelExpanded ? '−' : '+'}</button>
-        </div>
-        {isLogPanelExpanded && (
-          <div style={styles.logEntriesContainer} ref={logContainerRef}>
-            {state.context.logs.map((log, index) => (
-              <p key={index} style={{...styles.logEntry, ...styles[`logEntry_${log.type}`]}}>{log.message}</p>
-            ))}
-          </div>
+        
+        {selectedUnitId && !skillForTargeting && (
+          <ActionSelector
+            unit={state.context.allUnits[selectedUnitId]}
+            skills={allSkills}
+            onSkillSelect={handleSkillSelect}
+            onClose={handleCancel}
+          />
         )}
+
+        {isAnimating && script && <AnimationPlayer script={script} onComplete={handleAnimationComplete} />}
+
+        {state.matches('results') && (
+          <BattleResultsScreen 
+            result={state.context.battleResult}
+            onConfirm={() => send({ type: 'CONFIRM_RESULTS' })}
+          />
+        )}
+
+        <div style={styles.battlefield} ref={gridContainerRef}>
+          <TeamGrid
+            teamId="playerTeam"
+            grid={state.context.playerGrid}
+            allUnits={state.context.allUnits}
+            onUnitClick={handlePlayerUnitClick}
+            isPlayerTeam={true}
+            selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
+            playerActions={playerActions}
+            hoveredCell={hoveredCell}
+            setHoveredCell={setHoveredCell}
+            onUnitHover={handleUnitHover}
+            gridCellRefs={gridCellRefs}
+          />
+          <div style={styles.infoPanel}>
+            <div style={styles.infoPanelGroup}>
+              <p style={styles.roundText}>第 {state.context.currentRound} 回合</p>
+              <p style={styles.statusText}>{isPreparation ? '准备阶段' : isAnimating ? '行动中' : '等待中...'}</p>
+            </div>
+            <p style={styles.vsText}>VS</p>
+            <p style={styles.infoText}>
+              {isPreparation
+                ? (selectedUnitId && !skillForTargeting
+                  ? `选择技能`
+                  : skillForTargeting
+                  ? `选择目标`
+                  : '选择单位')
+                : '正在执行行动...'}
+            </p>
+            <div style={styles.infoPanelGroup}>
+              <button
+                style={(isPreparation && allPlayerUnitsHaveAction) ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+                onClick={handleSubmitTurn}
+                disabled={!isPreparation || !allPlayerUnitsHaveAction}
+              >
+                执行回合
+              </button>
+              <button
+                style={isPreparation ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+                onClick={handleFlee}
+                disabled={!isPreparation}
+              >
+                逃跑
+              </button>
+            </div>
+          </div>
+          <TeamGrid
+            teamId="enemyTeam"
+            grid={state.context.enemyGrid}
+            allUnits={state.context.allUnits}
+            onUnitClick={handleEnemyUnitClick}
+            isPlayerTeam={false}
+            selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
+            playerActions={playerActions}
+            hoveredCell={hoveredCell}
+            setHoveredCell={setHoveredCell}
+            onUnitHover={handleUnitHover}
+            gridCellRefs={gridCellRefs}
+          />
+
+          {/* --- REFACTOR: Decoupled Unit Rendering Layer --- */}
+          <div className="unit-sprite-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            {Object.values(state.context.allUnits).map(unit => {
+              const initialPos = unitInitialPositions[unit.id];
+              if (!unit || !initialPos) return null;
+              
+              const isDefeated = unit.derivedAttributes.currentHp <= 0;
+              if (isDefeated) return null;
+
+              return (
+                <UnitDisplay
+                  key={unit.id}
+                  ref={el => unitRefs.current[unit.id] = el}
+                  unit={unit}
+                  isPlayerUnit={unit.team === 'player'}
+                  hasActionSet={!!playerActions?.[unit.id]}
+                  initialPosition={initialPos}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
+          <div style={styles.logPanelTitle} onClick={() => setIsLogPanelExpanded(!isLogPanelExpanded)}>
+            <span>战斗日志</span>
+            <button style={styles.logToggleButton}>{isLogPanelExpanded ? '−' : '+'}</button>
+          </div>
+          {isLogPanelExpanded && (
+            <div style={styles.logEntriesContainer} ref={logContainerRef}>
+              {state.context.logs.map((log, index) => (
+                <p key={index} style={{...styles.logEntry, ...styles[`logEntry_${log.type}`]}}>{log.message}</p>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </BattleLifecycleContext.Provider>
   );
 }
 

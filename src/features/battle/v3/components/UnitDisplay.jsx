@@ -5,14 +5,12 @@ const images = import.meta.glob('/src/assets/summons/*.png', { eager: true });
 
 export const unitDisplayStyles = {
   unitBox: {
-    padding: '10px',
-    backgroundColor: 'transparent',
-    transition: 'all 0.3s ease-in-out',
-    position: 'relative',
+    position: 'absolute',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    width: '100%',
+    justifyContent: 'flex-end',
+    pointerEvents: 'none',
   },
   spriteContainer: {
     position: 'relative',
@@ -49,6 +47,9 @@ export const unitDisplayStyles = {
   },
   'return_to_idle': {
     animation: 'returnLunge 0.3s ease-in-out',
+  },
+  'is-acting': {
+    zIndex: 10,
   },
   unitBoxHitting: {
     animation: 'shake 0.3s',
@@ -163,6 +164,19 @@ export const unitDisplayStyles = {
     zIndex: 15,
     transform: 'translate(-50%, -50%)',
   },
+  vfxBleed: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '120px',
+    height: '15px',
+    background: 'rgba(220, 20, 60, 0.7)',
+    boxShadow: '0 0 15px 5px rgba(255, 0, 0, 0.5)',
+    borderRadius: '50%',
+    animation: 'bleed-anim 0.5s ease-out forwards',
+    zIndex: 20,
+    transform: 'translate(-50%, -50%) rotate(-20deg)',
+  },
 };
 
 const getSpriteSrc = (summonSourceId) => {
@@ -170,7 +184,7 @@ const getSpriteSrc = (summonSourceId) => {
   return images[path]?.default || images['/src/assets/summons/default.png']?.default;
 };
 
-export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }, ref) => {
+export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, initialPosition }, ref) => {
   if (!unit) return null;
   
   const hpPercentage = (unit.derivedAttributes.currentHp / unit.derivedAttributes.maxHp) * 100;
@@ -188,29 +202,40 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
   const customPosition = unitPositions && unitPositions[unit.id];
   const activeVfx = vfx?.find(v => v.targetId === unit.id);
 
-  // --- DEBUG ---
-  if (activeVfx) {
-    console.log('VFX found for unit:', { unitId: unit.id, vfx: activeVfx });
-  }
-  // --- END DEBUG ---
-
   const isDefending = unit.statusEffects?.some(effect => effect.id === 'defending');
 
+  const unitStyleClasses = ['unit-box'];
+  if (isDefeated) unitStyleClasses.push('defeated');
+  if (currentAnimClass) unitStyleClasses.push(...currentAnimClass.split(' '));
+
   const unitStyle = {
-    ...unitDisplayStyles.unitBox,
-    ...(currentAnimClass ? unitDisplayStyles[currentAnimClass] : {}),
     opacity: isDefeated ? 0.5 : 1,
     filter: isDefeated ? 'grayscale(100%)' : 'none',
   };
+
+  if (initialPosition) {
+    unitStyle.position = 'absolute';
+    unitStyle.top = `${initialPosition.top}px`;
+    unitStyle.left = `${initialPosition.left}px`;
+    
+    unitStyle.width = '150px';
+    unitStyle.height = '150px';
+    
+    unitStyle.pointerEvents = 'none';
+  }
   
-  if (currentAnimClass === 'take_hit_knockback') {
+  if (currentAnimClass && currentAnimClass.includes('take_hit_knockback')) {
     unitStyle['--knockback-direction'] = isPlayerUnit ? '-40px' : '40px';
   }
 
+  const animationTransform = customPosition 
+    ? `translate(${customPosition.x}px, ${customPosition.y}px)` 
+    : '';
+
+  unitStyle.transform = animationTransform;
+
   if (customPosition) {
-    unitStyle.transform = `translate(${customPosition.x}px, ${customPosition.y}px)`;
     unitStyle.transition = `transform ${customPosition.transitionDuration || 400}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-    unitStyle.zIndex = 10;
   }
 
   const spriteStyle = {
@@ -218,13 +243,25 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
     transform: isPlayerUnit ? 'scaleX(-1)' : 'none',
   };
 
+  const nameplateStyle = {
+    ...unitDisplayStyles.nameplate,
+    position: 'absolute',
+    bottom: '-45px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginTop: 0,
+  };
+
   return (
-    <div style={unitStyle} ref={ref}>
+    <div style={unitStyle} className={unitStyleClasses.join(' ')} ref={ref}>
       {activeVfx && activeVfx.vfxName === 'hit_spark' && 
         <div style={unitDisplayStyles.vfxHitSpark}></div>
       }
       {activeVfx && activeVfx.vfxName === 'defend_burst' && 
         <div style={unitDisplayStyles.vfxDefendBurst}></div>
+      }
+      {activeVfx && activeVfx.vfxName === 'bleed_effect' &&
+        <div style={unitDisplayStyles.vfxBleed}></div>
       }
 
       {hasActionSet && <div style={unitDisplayStyles.actionSetIndicator}>✔</div>}
@@ -242,7 +279,6 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
           ...(isCrit ? unitDisplayStyles.critDamage : unitDisplayStyles.nonCritDamage)
         };
         
-        // Dynamically override animation based on crit status
         damageStyle.animation = `${isCrit ? 'floatUpAndScaleCrit' : 'floatUpAndScale'} 1.2s ease-out forwards`;
         damageStyle.animationDelay = `${index * 0.05}s`;
         
@@ -260,7 +296,7 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
       </div>
 
       {!isDefeated && (
-        <div style={unitDisplayStyles.nameplate}>
+        <div style={nameplateStyle}>
           <div style={unitDisplayStyles.unitName}>{unit.name}</div>
           <div style={unitDisplayStyles.hpBarContainer}>
             <div style={{ ...unitDisplayStyles.hpBar, width: `${hpPercentage}%`, background: getHpColor(hpPercentage) }} />

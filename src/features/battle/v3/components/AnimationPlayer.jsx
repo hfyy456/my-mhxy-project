@@ -48,30 +48,52 @@ export const AnimationPlayer = ({ script, onComplete }) => {
 
         setAnimationState(prevState => {
           const newState = { ...prevState };
+          let newUnitCssClasses = { ...newState.unitCssClasses };
 
           if (step.type === 'MOVE_TO_TARGET') {
-            if (unitRefs?.current) {
-              const sourceNode = unitRefs.current[step.unitId];
-              const targetNode = unitRefs.current[step.targetId];
-              if (sourceNode && targetNode) {
-                const sourceRect = sourceNode.getBoundingClientRect();
-                const targetRect = targetNode.getBoundingClientRect();
-                
-                const baseOffsetX = sourceRect.left < targetRect.left ? -80 : 80;
+            const sourceNode = unitRefs.current[step.unitId];
+            const targetNode = unitRefs.current[step.targetId];
+            const moveSourceNode = step.previousTargetId ? unitRefs.current[step.previousTargetId] : sourceNode;
+
+            if (sourceNode && targetNode && moveSourceNode) {
+              const sourceRect = moveSourceNode.getBoundingClientRect();
+              const targetRect = targetNode.getBoundingClientRect();
+              
+              const prevPosition = prevState.unitPositions[step.unitId] || { x: 0, y: 0 };
+              let newX = prevPosition.x;
+              let newY = prevPosition.y;
+
+              if (step.previousTargetId) {
+                // It's a chained move (e.g., from A to B).
+                // The delta is from the previous target to the new target.
+                const moveDeltaX = targetRect.left - sourceRect.left;
+                const moveDeltaY = targetRect.top - sourceRect.top;
+                newX += moveDeltaX;
+                newY += moveDeltaY;
+              } else {
+                // It's the first move (e.g., from Home to A).
+                const targetWidth = targetRect.width;
+                const baseOffsetX = sourceRect.left < targetRect.left 
+                  ? - (targetWidth / 2 + 40)
+                  : (targetWidth / 2 + 40);
                 const offsetX = step.options?.offsetX ?? baseOffsetX;
                 const offsetY = step.options?.offsetY ?? 0;
-
-                const deltaX = targetRect.left - sourceRect.left + offsetX;
-                const deltaY = targetRect.top - sourceRect.top;
-
-                const newUnitPositions = { ...newState.unitPositions };
-                newUnitPositions[step.unitId] = { 
-                  x: deltaX, 
-                  y: deltaY,
-                  transitionDuration: step.options?.duration || 400
-                };
-                newState.unitPositions = newUnitPositions;
+                
+                const moveDeltaX = targetRect.left - sourceRect.left + offsetX;
+                const moveDeltaY = targetRect.top - sourceRect.top + offsetY;
+                newX = moveDeltaX; // Not accumulating, this is the first transform
+                newY = moveDeltaY;
               }
+
+              const newUnitPositions = { ...newState.unitPositions };
+              newUnitPositions[step.unitId] = { 
+                x: newX, 
+                y: newY,
+                transitionDuration: step.options?.duration || 400
+              };
+              newState.unitPositions = newUnitPositions;
+              
+              newUnitCssClasses[step.unitId] = (newUnitCssClasses[step.unitId] || '') + ' is-acting';
             }
           }
 
@@ -79,6 +101,14 @@ export const AnimationPlayer = ({ script, onComplete }) => {
             const newUnitPositions = { ...newState.unitPositions };
             delete newUnitPositions[step.unitId];
             newState.unitPositions = newUnitPositions;
+            
+            // Revert z-index when returning
+            if (newUnitCssClasses[step.unitId]) {
+              newUnitCssClasses[step.unitId] = newUnitCssClasses[step.unitId].replace(' is-acting', '').trim();
+              if (newUnitCssClasses[step.unitId] === '') {
+                delete newUnitCssClasses[step.unitId];
+              }
+            }
           }
 
           if (step.type === 'SHOW_FLOATING_TEXT') {
@@ -91,26 +121,35 @@ export const AnimationPlayer = ({ script, onComplete }) => {
           }
           
           if (step.type === 'ENTITY_ANIMATION') {
-            const newUnitCssClasses = { ...newState.unitCssClasses };
             step.targetIds.forEach(targetId => {
-              newUnitCssClasses[targetId] = step.animationName;
+              // Append animation class, don't overwrite the acting class
+              const existingClasses = newUnitCssClasses[targetId] || '';
+              const newClasses = existingClasses.includes(step.animationName) 
+                ? existingClasses 
+                : `${existingClasses} ${step.animationName}`.trim();
+              newUnitCssClasses[targetId] = newClasses;
             });
-            newState.unitCssClasses = newUnitCssClasses;
           }
           
           if (step.type === 'CLEAR_ENTITY_ANIMATION') {
-            const newUnitCssClasses = { ...newState.unitCssClasses };
             step.targetIds.forEach(targetId => {
-              delete newUnitCssClasses[targetId];
+              if (newUnitCssClasses[targetId]) {
+                newUnitCssClasses[targetId] = newUnitCssClasses[targetId]
+                  .replace('take_hit_knockback', '')
+                  .replace('take_hit_shake','')
+                  .trim();
+                if (newUnitCssClasses[targetId] === 'is-acting') {
+                  // Don't remove the class if it's just the acting class
+                } else if (newUnitCssClasses[targetId] === '') {
+                  delete newUnitCssClasses[targetId];
+                }
+              }
             });
-            newState.unitCssClasses = newUnitCssClasses;
           }
           
           if (step.type === 'SHOW_VFX') {
             const vfxId = Date.now() + Math.random();
-            // Fallback for missing VFX
-            const vfxName = step.vfxName === 'hit_spark_red' ? 'hit_spark' : step.vfxName;
-            const newVfx = { vfxName: vfxName, targetId: step.targetIds[0], id: vfxId };
+            const newVfx = { vfxName: step.vfxName, targetId: step.targetIds[0], id: vfxId };
             
             newState.vfx = [...(prevState.vfx || []), newVfx];
 
@@ -134,6 +173,7 @@ export const AnimationPlayer = ({ script, onComplete }) => {
             vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
           }
 
+          newState.unitCssClasses = newUnitCssClasses;
           return newState;
         });
       }, step.delay);
