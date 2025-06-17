@@ -79,5 +79,26 @@ export const skills = {
       { type: 'SHOW_VFX', target: 'source', vfxName: 'defend_aura', delay: 100 },
       { type: 'SHOW_FLOATING_TEXT', target: 'source', text: '防御', color: '#87ceeb', delay: 200 },
     ],
+  },
+  'double_strike': {
+    id: 'double_strike',
+    name: '二连击',
+    description: '快速连续攻击目标两次。',
+    targetType: 'enemy',
+    effects: [
+      { type: 'DAMAGE', value: 1.0 }, // First hit at 100% damage
+      { type: 'DAMAGE', value: 0.7 }  // Second hit at 70% damage
+    ]
+  },
+  'bloodthirsty_pursuit': {
+    id: 'bloodthirsty_pursuit',
+    name: '嗜血追击',
+    description: '攻击目标后，再随机追击两个其他敌人。',
+    targetType: 'enemy',
+    effects: [
+      { type: 'DAMAGE', value: 1.0 }, // 主目标 100% 伤害
+      { type: 'DAMAGE', value: 0.6 }, // 随机目标1 60% 伤害
+      { type: 'DAMAGE', value: 0.6 }  // 随机目标2 60% 伤害
+    ]
   }
 }; 

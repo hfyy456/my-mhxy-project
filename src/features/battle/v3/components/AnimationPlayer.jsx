@@ -38,6 +38,14 @@ export const AnimationPlayer = ({ script, onComplete }) => {
     
     script.forEach(step => {
       const timer = setTimeout(() => {
+        // --- NEW: Handle the PAUSE type ---
+        // A pause step doesn't update state, it just creates a delay.
+        // We can just return early for this type.
+        if (step.type === 'PAUSE') {
+          return;
+        }
+        // --- END: Handle PAUSE ---
+
         setAnimationState(prevState => {
           const newState = { ...prevState };
 
@@ -49,14 +57,19 @@ export const AnimationPlayer = ({ script, onComplete }) => {
                 const sourceRect = sourceNode.getBoundingClientRect();
                 const targetRect = targetNode.getBoundingClientRect();
                 
-                // Determine offset to prevent overlapping
-                const offsetX = sourceRect.left < targetRect.left ? -80 : 80;
+                const baseOffsetX = sourceRect.left < targetRect.left ? -80 : 80;
+                const offsetX = step.options?.offsetX ?? baseOffsetX;
+                const offsetY = step.options?.offsetY ?? 0;
 
                 const deltaX = targetRect.left - sourceRect.left + offsetX;
                 const deltaY = targetRect.top - sourceRect.top;
 
                 const newUnitPositions = { ...newState.unitPositions };
-                newUnitPositions[step.unitId] = { x: deltaX, y: deltaY };
+                newUnitPositions[step.unitId] = { 
+                  x: deltaX, 
+                  y: deltaY,
+                  transitionDuration: step.options?.duration || 400
+                };
                 newState.unitPositions = newUnitPositions;
               }
             }
@@ -85,9 +98,19 @@ export const AnimationPlayer = ({ script, onComplete }) => {
             newState.unitCssClasses = newUnitCssClasses;
           }
           
+          if (step.type === 'CLEAR_ENTITY_ANIMATION') {
+            const newUnitCssClasses = { ...newState.unitCssClasses };
+            step.targetIds.forEach(targetId => {
+              delete newUnitCssClasses[targetId];
+            });
+            newState.unitCssClasses = newUnitCssClasses;
+          }
+          
           if (step.type === 'SHOW_VFX') {
             const vfxId = Date.now() + Math.random();
-            const newVfx = { vfxName: step.vfxName, targetId: step.targetIds[0], id: vfxId };
+            // Fallback for missing VFX
+            const vfxName = step.vfxName === 'hit_spark_red' ? 'hit_spark' : step.vfxName;
+            const newVfx = { vfxName: vfxName, targetId: step.targetIds[0], id: vfxId };
             
             newState.vfx = [...(prevState.vfx || []), newVfx];
 
@@ -117,7 +140,7 @@ export const AnimationPlayer = ({ script, onComplete }) => {
       timers.push(timer);
     });
 
-    const totalDuration = Math.max(...script.map(s => s.delay)) + 1000; // Add buffer for animation to finish
+    const totalDuration = Math.max(0, ...script.map(s => (s.delay || 0) + (s.duration || 0))) + 1000; // Add buffer for animation to finish
     const completionTimer = setTimeout(onComplete, totalDuration);
     timers.push(completionTimer);
 

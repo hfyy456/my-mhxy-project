@@ -14,6 +14,24 @@ export const unitDisplayStyles = {
     alignItems: 'center',
     width: '100%',
   },
+  spriteContainer: {
+    position: 'relative',
+    width: '150px',
+    height: '150px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pedestal: {
+    position: 'absolute',
+    bottom: '5px',
+    width: '100px',
+    height: '20px',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    borderRadius: '50%',
+    filter: 'blur(5px)',
+    zIndex: -1,
+  },
   unitSprite: {
     width: '150px',
     height: '150px',
@@ -27,7 +45,7 @@ export const unitDisplayStyles = {
     animation: 'lunge 0.5s ease-in-out',
   },
   'take_hit_knockback': {
-    animation: 'knockback-anim 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards',
+    animation: 'knockback-anim 0.5s ease-out forwards',
   },
   'return_to_idle': {
     animation: 'returnLunge 0.3s ease-in-out',
@@ -35,8 +53,23 @@ export const unitDisplayStyles = {
   unitBoxHitting: {
     animation: 'shake 0.3s',
   },
+  nameplate: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '120px',
+    marginTop: '5px',
+  },
+  unitName: {
+    color: '#f1f1f1',
+    fontWeight: 'bold',
+    fontSize: '16px',
+    textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+    marginBottom: '4px',
+  },
   hpBarContainer: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#333',
     borderRadius: '5px',
     height: '12px',
     width: '90%',
@@ -48,16 +81,24 @@ export const unitDisplayStyles = {
     borderRadius: '5px',
     transition: 'width 0.5s ease-in-out, background-color 0.5s ease-in-out',
   },
-  floatingDamage: {
+  damageNumberBase: {
     position: 'absolute',
-    top: '-20px',
+    top: '-30px',
     left: '50%',
-    transform: 'translateX(-50%)',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#dc3545',
-    animation: 'floatUp 1s ease-out forwards',
-    textShadow: '1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff',
+    fontFamily: "Impact, 'Arial Black', sans-serif",
+    fontSize: '32px',
+    fontWeight: '900',
+    animation: 'floatUpAndScale 1.2s ease-out forwards',
+    textShadow: 
+      '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, ' + // White outline
+      '2px 2px 4px rgba(0,0,0,0.5)', // Softer Black shadow
+    zIndex: 30,
+  },
+  nonCritDamage: {
+    color: '#ffc700', // Brighter, more saturated yellow
+  },
+  critDamage: {
+    color: '#ef4a5a', // Red core
   },
   actionSetIndicator: {
     position: 'absolute',
@@ -137,9 +178,9 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
   const { floatingTexts, unitCssClasses, unitPositions, vfx } = animationState;
   
   const getHpColor = (percentage) => {
-    if (percentage > 50) return '#4caf50';
-    if (percentage > 20) return '#ff9800';
-    return '#f44336';
+    if (percentage > 50) return 'linear-gradient(to right, #4caf50, #81c784)';
+    if (percentage > 20) return 'linear-gradient(to right, #ff9800, #ffb74d)';
+    return 'linear-gradient(to right, #f44336, #e57373)';
   };
   
   const isDefeated = unit.derivedAttributes.currentHp <= 0;
@@ -159,15 +200,16 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
     ...unitDisplayStyles.unitBox,
     ...(currentAnimClass ? unitDisplayStyles[currentAnimClass] : {}),
     opacity: isDefeated ? 0.5 : 1,
+    filter: isDefeated ? 'grayscale(100%)' : 'none',
   };
   
   if (currentAnimClass === 'take_hit_knockback') {
-    unitStyle['--knockback-direction'] = isPlayerUnit ? '-25px' : '25px';
+    unitStyle['--knockback-direction'] = isPlayerUnit ? '-40px' : '40px';
   }
 
   if (customPosition) {
     unitStyle.transform = `translate(${customPosition.x}px, ${customPosition.y}px)`;
-    unitStyle.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    unitStyle.transition = `transform ${customPosition.transitionDuration || 400}ms cubic-bezier(0.4, 0, 0.2, 1)`;
     unitStyle.zIndex = 10;
   }
 
@@ -193,18 +235,36 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
         )}
       </div>
 
-      {floatingTexts[unit.id]?.map((ft, index) => (
-        <div key={index} style={{...unitDisplayStyles.floatingDamage, color: ft.color}}>{ft.text}</div>
-      ))}
-      <img 
-        src={getSpriteSrc(unit.summonSourceId)}
-        alt={unit.name}
-        style={spriteStyle}
-      />
+      {floatingTexts[unit.id]?.map((ft, index) => {
+        const isCrit = ft.isCrit;
+        const damageStyle = {
+          ...unitDisplayStyles.damageNumberBase,
+          ...(isCrit ? unitDisplayStyles.critDamage : unitDisplayStyles.nonCritDamage)
+        };
+        
+        // Dynamically override animation based on crit status
+        damageStyle.animation = `${isCrit ? 'floatUpAndScaleCrit' : 'floatUpAndScale'} 1.2s ease-out forwards`;
+        damageStyle.animationDelay = `${index * 0.05}s`;
+        
+        return (
+          <div key={index} style={damageStyle}>{ft.text}</div>
+        );
+      })}
+      <div style={unitDisplayStyles.spriteContainer}>
+        <img 
+          src={getSpriteSrc(unit.summonSourceId)}
+          alt={unit.name}
+          style={spriteStyle}
+        />
+        <div style={unitDisplayStyles.pedestal}></div>
+      </div>
 
       {!isDefeated && (
-        <div style={unitDisplayStyles.hpBarContainer}>
-          <div style={{ ...unitDisplayStyles.hpBar, width: `${hpPercentage}%`, backgroundColor: getHpColor(hpPercentage) }} />
+        <div style={unitDisplayStyles.nameplate}>
+          <div style={unitDisplayStyles.unitName}>{unit.name}</div>
+          <div style={unitDisplayStyles.hpBarContainer}>
+            <div style={{ ...unitDisplayStyles.hpBar, width: `${hpPercentage}%`, background: getHpColor(hpPercentage) }} />
+          </div>
         </div>
       )}
     </div>
@@ -213,7 +273,7 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet }
 
 const styleSheet = document.getElementById('dynamic-keyframes') || document.createElement('style');
 styleSheet.id = 'dynamic-keyframes';
-styleSheet.innerText += `
+styleSheet.innerText = `
   @keyframes vfx-impact-anim {
     0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
     80% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; }
@@ -223,9 +283,19 @@ styleSheet.innerText += `
     0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; border-width: 5px; }
     100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; border-width: 0px; }
   }
+  @keyframes floatUpAndScale {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+    20% { opacity: 1; transform: translate(-50%, -40px) scale(1.3); }
+    100% { opacity: 0; transform: translate(-50%, -130px) scale(0.9); }
+  }
+  @keyframes floatUpAndScaleCrit {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(1.2); }
+    20% { opacity: 1; transform: translate(-50%, -60px) scale(1.8); }
+    100% { opacity: 0; transform: translate(-50%, -160px) scale(1.2); }
+  }
   @keyframes knockback-anim {
     0% { transform: translateX(0); }
-    50% { transform: translateX(var(--knockback-direction)); }
+    30% { transform: translateX(var(--knockback-direction)); }
     100% { transform: translateX(0); }
   }
 `;

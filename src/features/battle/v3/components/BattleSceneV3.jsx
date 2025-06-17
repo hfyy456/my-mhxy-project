@@ -78,19 +78,21 @@ const styles = {
     gap: '20px',
   },
   gridCell: {
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: 'rgba(135, 206, 235, 0.2)',
-    borderRadius: '8px',
+    border: '1px solid transparent',
+    borderRadius: '12px',
     minHeight: '200px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
-    backgroundColor: 'rgba(135, 206, 235, 0.05)',
-    backgroundImage: 'radial-gradient(circle, rgba(135, 206, 235, 0.1) 10%, transparent 70%)',
+    transition: 'all 0.3s ease',
+    backgroundColor: '#0a192f',
+    // Hexagon pattern background
+    backgroundImage: 'radial-gradient(circle at center, rgba(13, 37, 69, 0.8) 20%, transparent 70%), linear-gradient(315deg, transparent 48%, rgba(20, 40, 70, 0.7) 49%, rgba(20, 40, 70, 0.7) 51%, transparent 52%), linear-gradient(45deg, transparent 48%, rgba(20, 40, 70, 0.7) 49%, rgba(20, 40, 70, 0.7) 51%, transparent 52%)',
+    backgroundSize: '100% 100%, 30px 30px, 30px 30px',
     position: 'relative',
+    boxShadow: '0 0 8px rgba(0, 191, 255, 0.2), inset 0 0 4px rgba(0, 191, 255, 0.1)',
+    animation: 'cell-breathing 8s infinite ease-in-out',
   },
   unitBox: {
     border: '1px solid #ccc',
@@ -146,6 +148,16 @@ const styles = {
     '0%': { transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 4px 1px rgba(255, 255, 100, 0.7)' },
     '50%': { transform: 'translate(-50%, -50%) scale(1.15)', boxShadow: '0 0 12px 5px rgba(255, 255, 100, 0.9)' },
     '100%': { transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 4px 1px rgba(255, 255, 100, 0.7)' },
+  },
+  '@keyframes cell-breathing': {
+    '0%': { boxShadow: '0 0 8px rgba(0, 191, 255, 0.2), inset 0 0 4px rgba(0, 191, 255, 0.1)' },
+    '50%': { boxShadow: '0 0 16px rgba(0, 191, 255, 0.4), inset 0 0 8px rgba(0, 191, 255, 0.3)' },
+    '100%': { boxShadow: '0 0 8px rgba(0, 191, 255, 0.2), inset 0 0 4px rgba(0, 191, 255, 0.1)' },
+  },
+  '@keyframes cell-breathing-hover': {
+    '0%': { outline: '3px solid rgba(220, 53, 69, 0.8)' },
+    '50%': { outline: '5px solid rgba(220, 53, 69, 1)' },
+    '100%': { outline: '3px solid rgba(220, 53, 69, 0.8)' },
   },
   floatingDamage: {
     position: 'absolute',
@@ -238,17 +250,18 @@ const styles = {
     backgroundColor: '#dc3545',
   },
   targetableUnit: {
-    borderColor: '#ffc107',
-    boxShadow: '0 0 12px rgba(255, 193, 7, 0.6)',
-    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    borderColor: 'transparent',
+    outline: '3px solid rgba(255, 193, 7, 0.7)',
+    outlineOffset: '2px',
+    backgroundColor: 'rgba(255, 193, 7, 0.08)',
   },
   targetableUnitHover: {
-    borderColor: '#dc3545',
-    boxShadow: '0 0 16px rgba(220, 53, 69, 1)',
-    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+    borderColor: 'transparent',
+    outlineColor: 'rgba(220, 53, 69, 1)',
+    animation: 'cell-breathing-hover 2s infinite ease-in-out',
   },
   aoeHighlight: {
-    backgroundColor: 'rgba(255, 193, 7, 0.25)',
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
     boxShadow: 'inset 0 0 10px rgba(255, 193, 7, 0.5)',
   },
   infoPanel: {
@@ -392,6 +405,8 @@ styleSheet.innerText = `
   @keyframes returnLunge { ${keyframesToString(styles['@keyframes returnLunge'])} }
   @keyframes breathing { ${keyframesToString(styles['@keyframes breathing'])} }
   @keyframes knockback { ${keyframesToString(styles['@keyframes knockback'])} }
+  @keyframes cell-breathing { ${keyframesToString(styles['@keyframes cell-breathing'])} }
+  @keyframes cell-breathing-hover { ${keyframesToString(styles['@keyframes cell-breathing-hover'])} }
 `;
 document.head.appendChild(styleSheet);
 
@@ -461,7 +476,7 @@ const TeamGrid = memo(({ grid, allUnits, onUnitClick, isPlayerTeam, selectionSta
 
         const isSelected = unit && unit.id === selectedUnitId;
         if (isSelected) {
-          finalStyle.borderWidth = '2px';
+          finalStyle.borderWidth = '0px';
           finalStyle.borderColor = '#007bff';
           finalStyle.boxShadow = '0 0 12px rgba(0, 123, 255, 0.8)';
           finalStyle.backgroundColor = 'rgba(0, 123, 255, 0.15)';
@@ -833,10 +848,10 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
           <p style={styles.infoText}>
             {isPreparation
               ? (selectedUnitId && !skillForTargeting
-                ? `为 ${state.context.allUnits[selectedUnitId]?.name} 选择技能`
+                ? `选择技能`
                 : skillForTargeting
-                ? `为技能 ${allSkills[skillForTargeting.skillId]?.name} 选择目标`
-                : '选择单位下达指令')
+                ? `选择目标`
+                : '选择单位')
               : '正在执行行动...'}
           </p>
           <div style={styles.infoPanelGroup}>
