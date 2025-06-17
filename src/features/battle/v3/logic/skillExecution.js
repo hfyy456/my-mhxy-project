@@ -205,6 +205,40 @@ export const generateSkillResult = (action, allUnits, context) => {
   }
   // --- END: Handle Bloodthirsty Pursuit ---
 
+  // --- NEW: Handle Healing Skill ---
+  if (skill.type === 'HEAL') {
+    // Healing skills target living allies. `primaryTargetId` is correctly passed in the action.
+    const targetId = primaryTargetId; 
+    const targetUnit = allUnits[targetId];
+
+    if (targetUnit) {
+      const healEffect = skill.effects.find(e => e.type === 'HEAL');
+      if (healEffect) {
+        const mAtk = source.derivedAttributes.magicAttack || 0;
+        // Simple formula parsing for now, assumes "X * mAtk"
+        const multiplier = parseFloat(healEffect.value.split('*')[0]);
+        const healAmount = Math.round(mAtk * multiplier);
+        
+        const finalHeal = Math.min(healAmount, targetUnit.derivedAttributes.maxHp - targetUnit.derivedAttributes.currentHp);
+
+        // Always show the casting animation to indicate the skill was used.
+        animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'support_cast', delay: 0 });
+        
+        if (finalHeal > 0) {
+          // If actual healing occurs, add to logical result and show healing VFX.
+          logicalResult.hpChanges.push({ targetId, change: finalHeal });
+          animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName: 'heal_aura', delay: 200 });
+          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${finalHeal}`, isHeal: true, delay: 300 });
+        } else {
+          // If target is at full health, show an informational message instead.
+          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: '生命已满', isHeal: false, delay: 200 });
+        }
+      }
+    }
+    return { animationScript, logicalResult };
+  }
+  // --- END: Handle Healing Skill ---
+
   // NEW: Handle Basic Attack with different animation types
   if (skillId === 'basic_attack') {
     const attackType = source.attackType || 'direct'; // Default to direct attack

@@ -322,6 +322,11 @@ const styles = {
     outlineOffset: '2px',
     backgroundColor: 'rgba(255, 193, 7, 0.08)',
   },
+  targetableAllyUnit: {
+    outline: '3px solid rgba(66, 139, 202, 0.8)', // A friendly blue
+    outlineOffset: '2px',
+    backgroundColor: 'rgba(66, 139, 202, 0.1)',
+  },
   targetableUnitHover: {
     borderColor: 'transparent',
     outlineColor: 'rgba(220, 53, 69, 1)',
@@ -548,9 +553,19 @@ const TeamGrid = memo(({ teamId, grid, allUnits, onUnitClick, isPlayerTeam, sele
           finalStyle.backgroundColor = 'rgba(0, 123, 255, 0.15)';
         }
         
-        let canBeTargeted = unit && skillForTargeting && !isPlayerTeam && unit.derivedAttributes.currentHp > 0;
-        let isUncapturable = false;
+        const skill = allSkills[skillForTargeting?.skillId];
+        const targetType = skill?.targetType || 'enemy'; // Default to enemy
 
+        let canBeTargeted = false;
+        if (unit && skillForTargeting && unit.derivedAttributes.currentHp > 0) {
+          if (targetType === 'enemy' && !isPlayerTeam) {
+            canBeTargeted = true;
+          } else if (targetType === 'ally' && isPlayerTeam) {
+            canBeTargeted = true;
+          }
+        }
+        
+        let isUncapturable = false;
         if (canBeTargeted && skillForTargeting.skillId === 'capture') {
           if (unit.isCapturable === false) {
             canBeTargeted = false;
@@ -565,7 +580,12 @@ const TeamGrid = memo(({ teamId, grid, allUnits, onUnitClick, isPlayerTeam, sele
 
         if (canBeTargeted) {
           finalStyle.cursor = 'crosshair';
-          Object.assign(finalStyle, styles.targetableUnit);
+          // Use different highlight color for allies vs enemies
+          if (targetType === 'ally') {
+            Object.assign(finalStyle, styles.targetableAllyUnit);
+          } else {
+            Object.assign(finalStyle, styles.targetableUnit);
+          }
         }
 
         if (isCellHighlighted(rowIndex, colIndex)) {
@@ -585,40 +605,13 @@ const TeamGrid = memo(({ teamId, grid, allUnits, onUnitClick, isPlayerTeam, sele
             ref={el => gridCellRefs.current[cellKey] = el}
             style={finalStyle} 
             onClick={() => {
-              if (!skillForTargeting) {
-                  if (unit && onUnitClick) onUnitClick(unit.id);
-                  return;
+              // Pass the click event to the parent, which will decide what to do
+              if (canBeTargeted && onUnitClick && unit) {
+                onUnitClick(unit.id);
               }
-
-              if (!onUnitClick) return;
-              if (!canBeTargeted) return;
-              
-              const skill = allSkills[skillForTargeting.skillId];
-              if (!skill) return;
-              const areaType = skill.areaType || 'single';
-
-              if (areaType === 'single') {
-                  if (unit) onUnitClick(unit.id);
-              } else if (areaType === 'group') {
-                  const nominalTarget = Object.values(allUnits).find(u => !u.isPlayerUnit && u.derivedAttributes.currentHp > 0);
-                  if (nominalTarget) onUnitClick(nominalTarget.id);
-              } else if (areaType === 'cross' || areaType === 'square') {
-                  if (hoveredCell) {
-                      const centerUnitId = grid[hoveredCell.row]?.[hoveredCell.col];
-                      if (centerUnitId && allUnits[centerUnitId]?.derivedAttributes.currentHp > 0) {
-                          onUnitClick(centerUnitId);
-                          return;
-                      }
-
-                      const affectedCoords = getAffectedCellCoords(skill, hoveredCell);
-                      const firstValidTarget = affectedCoords
-                          .map(coords => grid[coords.row]?.[coords.col])
-                          .find(targetUnitId => targetUnitId && allUnits[targetUnitId]?.derivedAttributes.currentHp > 0);
-                      
-                      if (firstValidTarget) {
-                          onUnitClick(firstValidTarget);
-                      }
-                  }
+              // Handle clicking on player units for selection (not targeting)
+              else if (canBeSelected && onUnitClick && unit) {
+                onUnitClick(unit.id);
               }
             }}
             onMouseEnter={() => {
@@ -810,6 +803,22 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
     if (!isPreparation) return;
     const unit = state.context.allUnits[unitId];
     if (unit.derivedAttributes.currentHp <= 0) return;
+
+    // --- NEW: Handle clicks when in targeting mode ---
+    if (skillForTargeting) {
+      const skill = allSkills[skillForTargeting.skillId];
+      if (skill?.targetType === 'ally') {
+        // This is a valid ally target click, confirm the action
+        setPlayerActions(prev => ({
+          ...prev,
+          [selectedUnitId]: { type: skillForTargeting.skillId, target: unitId, unitId: selectedUnitId }
+        }));
+        setSelectedUnitId(null);
+        setSkillForTargeting(null);
+        return;
+      }
+    }
+    // --- END: Handle new clicks ---
 
     // If we click the already selected unit, or another unit, close the selector and reset.
     if (selectedUnitId === unitId || selectedUnitId) {

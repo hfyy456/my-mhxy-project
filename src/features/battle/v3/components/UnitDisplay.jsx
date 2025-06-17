@@ -101,6 +101,12 @@ export const unitDisplayStyles = {
   critDamage: {
     color: '#ef4a5a', // Red core
   },
+  healText: {
+    color: '#28a745', // Green for healing
+    textShadow:
+      '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, ' +
+      '2px 2px 4px rgba(0,0,0,0.5)',
+  },
   actionSetIndicator: {
     position: 'absolute',
     top: '0px',
@@ -272,27 +278,52 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, 
         )}
       </div>
 
-      {floatingTexts[unit.id]?.map((ft, index) => {
-        const isCrit = ft.isCrit;
-        const damageStyle = {
-          ...unitDisplayStyles.damageNumberBase,
-          ...(isCrit ? unitDisplayStyles.critDamage : unitDisplayStyles.nonCritDamage)
-        };
+      <div style={unitDisplayStyles.spriteContainer} className={unitStyleClasses.join(' ')}>
+        <div style={unitDisplayStyles.pedestal} />
+        <img style={spriteStyle} src={getSpriteSrc(unit.sourceId)} alt={unit.name} />
+
+        {/* Floating Damage/Heal Numbers */}
+        {floatingTexts?.[unit.id] && floatingTexts[unit.id].map((ft, index) => {
+          let numberStyle = { ...unitDisplayStyles.damageNumberBase };
+          if (ft.isHeal) {
+            Object.assign(numberStyle, unitDisplayStyles.healText);
+            ft.text = `+${ft.text}`;
+          } else if (ft.isCrit) {
+            Object.assign(numberStyle, unitDisplayStyles.critDamage);
+            numberStyle.animationName = 'floatUpAndScaleCrit';
+          } else {
+            Object.assign(numberStyle, unitDisplayStyles.nonCritDamage);
+          }
+          
+          // Stagger multiple numbers slightly
+          numberStyle.animationDelay = `${index * 0.15}s`;
+
+          return (
+            <div key={index} style={numberStyle}>
+              {ft.text}
+            </div>
+          );
+        })}
         
-        damageStyle.animation = `${isCrit ? 'floatUpAndScaleCrit' : 'floatUpAndScale'} 1.2s ease-out forwards`;
-        damageStyle.animationDelay = `${index * 0.05}s`;
-        
-        return (
-          <div key={index} style={damageStyle}>{ft.text}</div>
-        );
-      })}
-      <div style={unitDisplayStyles.spriteContainer}>
-        <img 
-          src={getSpriteSrc(unit.summonSourceId)}
-          alt={unit.name}
-          style={spriteStyle}
-        />
-        <div style={unitDisplayStyles.pedestal}></div>
+        {isDefending && (
+          <div style={{
+            position: 'absolute',
+            top: '0px',
+            right: '0px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 123, 255, 0.8)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 0 6px rgba(0, 123, 255, 0.6)',
+            zIndex: 5,
+          }} title="防御中">🛡️</div>
+        )}
       </div>
 
       {!isDefeated && (

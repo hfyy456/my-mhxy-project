@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-15 05:39:50
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-17 06:51:19
+ * @LastEditTime: 2025-06-18 05:35:17
  */
 // src/features/battle/v3/logic/skillConfig.js
 
@@ -50,8 +50,8 @@ export const skills = {
     ]
   },
   'self_heal': {
-    name: '自我治疗',
-    targetType: 'self',
+    name: '治疗',
+    targetType: 'ally',
     areaType: 'single', // 对自身施法也是'single'
     animationScriptTemplate: [
         { type: 'SHOW_VFX', target: 'source', vfxName: 'heal_aura', delay: 100 },
@@ -100,5 +100,16 @@ export const skills = {
       { type: 'DAMAGE', value: 0.6 }, // 随机目标1 60% 伤害
       { type: 'DAMAGE', value: 0.6 }  // 随机目标2 60% 伤害
     ]
-  }
+  },
+  // --- NEW HEALING SKILL ---
+  'single_heal': {
+    name: '治愈术',
+    description: '对单个友方目标进行治疗，恢复少量生命值。',
+    type: 'HEAL',
+    targetType: 'ally',
+    areaType: 'single',
+    mpCost: 15,
+    effects: [{ type: 'HEAL', value: '1.2 * mAtk' }],
+  },
+  // --- END NEW HEALING SKILL ---
 }; 
