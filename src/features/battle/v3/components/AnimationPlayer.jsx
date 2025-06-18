@@ -30,6 +30,20 @@ export const AnimationPlayer = ({ script, onComplete }) => {
   const { animationState, setAnimationState, unitRefs } = useAnimation();
   const vfxCleanupRaf = useRef({});
 
+  // NEW: Helper function to get VFX duration
+  const getVfxDuration = (vfxName) => {
+    const durations = {
+      'heal_aura': 1000, // e.g., Heal aura lasts for 1 second
+      'hit_spark': 400,
+      'defend_aura': 1500,
+      'bleed_effect': 600,
+      'defend_burst': 500,
+      'support_cast': 800,
+      // Add other VFX durations here
+    };
+    return durations[vfxName] || 400; // Default duration
+  };
+
   useEffect(() => {
     const timers = [];
 
@@ -51,14 +65,14 @@ export const AnimationPlayer = ({ script, onComplete }) => {
           let newUnitCssClasses = { ...newState.unitCssClasses };
 
           if (step.type === 'MOVE_TO_TARGET') {
-            const sourceNode = unitRefs.current[step.unitId];
-            const targetNode = unitRefs.current[step.targetId];
+              const sourceNode = unitRefs.current[step.unitId];
+              const targetNode = unitRefs.current[step.targetId];
             const moveSourceNode = step.previousTargetId ? unitRefs.current[step.previousTargetId] : sourceNode;
 
             if (sourceNode && targetNode && moveSourceNode) {
               const sourceRect = moveSourceNode.getBoundingClientRect();
-              const targetRect = targetNode.getBoundingClientRect();
-              
+                const targetRect = targetNode.getBoundingClientRect();
+                
               const prevPosition = prevState.unitPositions[step.unitId] || { x: 0, y: 0 };
               let newX = prevPosition.x;
               let newY = prevPosition.y;
@@ -85,13 +99,13 @@ export const AnimationPlayer = ({ script, onComplete }) => {
                 newY = moveDeltaY;
               }
 
-              const newUnitPositions = { ...newState.unitPositions };
+                const newUnitPositions = { ...newState.unitPositions };
               newUnitPositions[step.unitId] = { 
                 x: newX, 
                 y: newY,
                 transitionDuration: step.options?.duration || 400
               };
-              newState.unitPositions = newUnitPositions;
+                newState.unitPositions = newUnitPositions;
               
               newUnitCssClasses[step.unitId] = (newUnitCssClasses[step.unitId] || '') + ' is-acting';
             }
@@ -115,7 +129,13 @@ export const AnimationPlayer = ({ script, onComplete }) => {
             const newFloatingTexts = { ...newState.floatingTexts };
             step.targetIds.forEach(targetId => {
               if (!newFloatingTexts[targetId]) newFloatingTexts[targetId] = [];
-              newFloatingTexts[targetId].push({ text: step.text, color: step.color });
+              newFloatingTexts[targetId].push({
+                text: step.text,
+                color: step.color,
+                isCrit: step.isCrit,
+                isHeal: step.isHeal,
+                id: `${targetId}-${Date.now()}-${Math.random()}`
+              });
             });
             newState.floatingTexts = newFloatingTexts;
           }
@@ -153,7 +173,7 @@ export const AnimationPlayer = ({ script, onComplete }) => {
             
             newState.vfx = [...(prevState.vfx || []), newVfx];
 
-            const duration = 400; // ms, should match CSS animation
+            const duration = getVfxDuration(step.vfxName); // Use the new helper function
             let startTime = null;
 
             const cleanupAnimation = (timestamp) => {

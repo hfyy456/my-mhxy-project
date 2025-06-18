@@ -408,7 +408,7 @@ export const battleMachine = createMachine({
         const target = updatedUnits[targetId];
         if (target && target.derivedAttributes) {
           const oldHp = target.derivedAttributes.currentHp;
-          const newHp = Math.max(0, oldHp + change);
+          const newHp = Math.min(target.derivedAttributes.maxHp, Math.max(0, oldHp + change));
           
           if (change < 0) {
             newLogs.push({ type: 'damage', message: `${target.name} 受到了 ${-change} 点伤害。`});

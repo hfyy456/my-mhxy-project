@@ -94,6 +94,7 @@ export const unitDisplayStyles = {
       '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, ' + // White outline
       '2px 2px 4px rgba(0,0,0,0.5)', // Softer Black shadow
     zIndex: 30,
+    transform: 'translateX(-50%)',
   },
   nonCritDamage: {
     color: '#ffc700', // Brighter, more saturated yellow
@@ -103,9 +104,6 @@ export const unitDisplayStyles = {
   },
   healText: {
     color: '#28a745', // Green for healing
-    textShadow:
-      '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, ' +
-      '2px 2px 4px rgba(0,0,0,0.5)',
   },
   actionSetIndicator: {
     position: 'absolute',
@@ -182,6 +180,50 @@ export const unitDisplayStyles = {
     animation: 'bleed-anim 0.5s ease-out forwards',
     zIndex: 20,
     transform: 'translate(-50%, -50%) rotate(-20deg)',
+  },
+  vfxHealAura: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    boxShadow: '0 0 25px 10px rgba(76, 175, 80, 0.7)',
+    animation: 'heal-aura-anim 1s ease-out forwards',
+    zIndex: 5,
+    transform: 'translate(-50%, -50%)',
+  },
+  vfxFireAuraStart: {
+    position: 'absolute',
+    bottom: '5px',
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    background: 'radial-gradient(ellipse at center, rgba(255,100,0,0.5) 0%, rgba(255,40,0,0) 70%)',
+    animation: 'fire-aura-pulse-anim 0.8s ease-out forwards',
+    zIndex: 0,
+  },
+  vfxFireSlashImpactContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '180px',
+    height: '180px',
+    transform: 'translate(-50%, -50%)',
+    animation: 'fire-slash-fade-in 0.4s ease-out forwards',
+    zIndex: 25,
+  },
+  fireSlashLine: {
+    position: 'absolute',
+    top: '50%',
+    left: '10%',
+    width: '80%',
+    height: '12px',
+    background: 'linear-gradient(90deg, transparent, #ffdd00, #ff8800, #ff4400, #ff8800, #ffdd00, transparent)',
+    boxShadow: '0 0 10px 2px #ff8c00',
+    borderRadius: '6px',
+    transformOrigin: 'center',
   },
 };
 
@@ -269,6 +311,18 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, 
       {activeVfx && activeVfx.vfxName === 'bleed_effect' &&
         <div style={unitDisplayStyles.vfxBleed}></div>
       }
+      {activeVfx && activeVfx.vfxName === 'heal_aura' &&
+        <div style={unitDisplayStyles.vfxHealAura}></div>
+      }
+      {activeVfx && activeVfx.vfxName === 'fire_aura_start' &&
+        <div style={unitDisplayStyles.vfxFireAuraStart}></div>
+      }
+      {activeVfx && activeVfx.vfxName === 'fire_slash_impact' &&
+        <div style={unitDisplayStyles.vfxFireSlashImpactContainer}>
+          <div style={{...unitDisplayStyles.fireSlashLine, transform: 'translateY(-50%) rotate(45deg)'}}></div>
+          <div style={{...unitDisplayStyles.fireSlashLine, transform: 'translateY(-50%) rotate(-45deg)'}}></div>
+        </div>
+      }
 
       {hasActionSet && <div style={unitDisplayStyles.actionSetIndicator}>✔</div>}
       
@@ -283,24 +337,32 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, 
         <img style={spriteStyle} src={getSpriteSrc(unit.sourceId)} alt={unit.name} />
 
         {/* Floating Damage/Heal Numbers */}
-        {floatingTexts?.[unit.id] && floatingTexts[unit.id].map((ft, index) => {
+        {floatingTexts?.[unit.id] && floatingTexts[unit.id].map((ft) => {
           let numberStyle = { ...unitDisplayStyles.damageNumberBase };
+          let displayText = ft.text;
+
           if (ft.isHeal) {
             Object.assign(numberStyle, unitDisplayStyles.healText);
-            ft.text = `+${ft.text}`;
+            displayText = `+${ft.text}`;
           } else if (ft.isCrit) {
             Object.assign(numberStyle, unitDisplayStyles.critDamage);
             numberStyle.animationName = 'floatUpAndScaleCrit';
           } else {
-            Object.assign(numberStyle, unitDisplayStyles.nonCritDamage);
+            // For non-crit damage or other info text, use provided color
+            if (ft.color) {
+              numberStyle.color = ft.color;
+            } else {
+              // Fallback to default damage color if no color is provided
+              Object.assign(numberStyle, unitDisplayStyles.nonCritDamage);
+            }
           }
           
           // Stagger multiple numbers slightly
-          numberStyle.animationDelay = `${index * 0.15}s`;
+          numberStyle.animationDelay = `${(ft.id?.slice(-4) % 10) * 0.05}s`;
 
           return (
-            <div key={index} style={numberStyle}>
-              {ft.text}
+            <div key={ft.id} style={numberStyle}>
+              {displayText}
             </div>
           );
         })}
@@ -329,7 +391,7 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, 
       {!isDefeated && (
         <div style={nameplateStyle}>
           <div style={unitDisplayStyles.unitName}>{unit.name}</div>
-          <div style={unitDisplayStyles.hpBarContainer}>
+        <div style={unitDisplayStyles.hpBarContainer}>
             <div style={{ ...unitDisplayStyles.hpBar, width: `${hpPercentage}%`, background: getHpColor(hpPercentage) }} />
           </div>
         </div>
@@ -364,6 +426,20 @@ styleSheet.innerText = `
     0% { transform: translateX(0); }
     30% { transform: translateX(var(--knockback-direction)); }
     100% { transform: translateX(0); }
+  }
+  @keyframes heal-aura-anim {
+    0% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.2); }
+  }
+  @keyframes fire-aura-pulse-anim {
+    0% { opacity: 0.8; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+  @keyframes fire-slash-fade-in {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 `;
 if (!document.getElementById('dynamic-keyframes')) {

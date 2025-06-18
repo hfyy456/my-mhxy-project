@@ -214,7 +214,7 @@ export const generateSkillResult = (action, allUnits, context) => {
     if (targetUnit) {
       const healEffect = skill.effects.find(e => e.type === 'HEAL');
       if (healEffect) {
-        const mAtk = source.derivedAttributes.magicAttack || 0;
+        const mAtk = source.derivedAttributes.magicalAttack || 0;
         // Simple formula parsing for now, assumes "X * mAtk"
         const multiplier = parseFloat(healEffect.value.split('*')[0]);
         const healAmount = Math.round(mAtk * multiplier);
@@ -228,10 +228,10 @@ export const generateSkillResult = (action, allUnits, context) => {
           // If actual healing occurs, add to logical result and show healing VFX.
           logicalResult.hpChanges.push({ targetId, change: finalHeal });
           animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName: 'heal_aura', delay: 200 });
-          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${finalHeal}`, isHeal: true, delay: 300 });
+          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: `${finalHeal}`, isHeal: true, color: '#28a745', delay: 300 });
         } else {
           // If target is at full health, show an informational message instead.
-          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: '生命已满', isHeal: false, delay: 200 });
+          animationScript.push({ type: 'SHOW_FLOATING_TEXT', targetIds: [targetId], text: '生命已满', color: '#ffffff', delay: 200 });
         }
       }
     }
@@ -294,7 +294,68 @@ export const generateSkillResult = (action, allUnits, context) => {
     // Future: Add 'projectile' attackType handler here
   }
 
-  // This block handles other (non-basic attack) skills
+  // --- NEW: Generic skill handler using animationScriptTemplate ---
+  if (skill.animationScriptTemplate) {
+    const primaryTargetId = livingTargetIds[0];
+
+    // 1. Calculate logical results for all targets first
+    const damageResults = {};
+    livingTargetIds.forEach(targetId => {
+      const targetUnit = allUnits[targetId];
+      if (!targetUnit) return;
+
+      let totalDamageForTarget = 0;
+      let isCritForTarget = false;
+
+      skill.effects?.forEach(effect => {
+        if (effect.type === 'DAMAGE') {
+          // The multiplier is sourced from skill.damage for simplicity for now.
+          const damageResult = calculateDamage(source, skill.damage || 1.0);
+          totalDamageForTarget += damageResult.damage;
+          
+          if (damageResult.isCrit) isCritForTarget = true;
+          
+          logicalResult.hpChanges.push({ targetId, change: -damageResult.damage, isCrit: damageResult.isCrit });
+          // Only update the PRD counter once per source, per action
+          updatePrdCounterForResult(logicalResult, source, damageResult.isCrit);
+        }
+        // Future: Handle other effects like BUFF, DEBUFF
+      });
+      damageResults[targetId] = { damage: totalDamageForTarget, isCrit: isCritForTarget };
+    });
+
+    // 2. Build animation script from template
+    const damageForPlaceholder = damageResults[primaryTargetId]?.damage ?? 0;
+    const isCritForPlaceholder = damageResults[primaryTargetId]?.isCrit ?? false;
+
+    skill.animationScriptTemplate.forEach(templateStep => {
+      const step = { ...templateStep }; // Create a mutable copy
+
+      // Replace placeholders in text
+      if (step.text) {
+        step.text = step.text.replace('{{damage}}', damageForPlaceholder);
+      }
+      step.isCrit = isCritForPlaceholder;
+
+      // Resolve target placeholders to targetIds array
+      if (step.target === 'source') {
+        step.targetIds = [unitId];
+      } else if (step.target === 'primaryTarget') {
+        step.targetIds = [primaryTargetId];
+      } else if (step.target === 'allLivingTargets') {
+        step.targetIds = livingTargetIds;
+      }
+      // Clean up the template-specific property
+      delete step.target; 
+      
+      animationScript.push(step);
+    });
+
+    return { animationScript, logicalResult };
+  }
+  // --- END: Generic skill handler ---
+
+  // This block handles other (non-basic attack) skills that DON'T have a template
   if (livingTargetIds.length > 0) {
     // Base animation for the attacker
     animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'attack_lunge', delay: 0 });

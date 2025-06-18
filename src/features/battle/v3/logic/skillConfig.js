@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-15 05:39:50
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-18 05:35:17
+ * @LastEditTime: 2025-06-19 05:51:42
  */
 // src/features/battle/v3/logic/skillConfig.js
 

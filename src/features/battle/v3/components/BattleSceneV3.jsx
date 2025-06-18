@@ -584,7 +584,7 @@ const TeamGrid = memo(({ teamId, grid, allUnits, onUnitClick, isPlayerTeam, sele
           if (targetType === 'ally') {
             Object.assign(finalStyle, styles.targetableAllyUnit);
           } else {
-            Object.assign(finalStyle, styles.targetableUnit);
+          Object.assign(finalStyle, styles.targetableUnit);
           }
         }
 
@@ -917,90 +917,90 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
   return (
     <BattleLifecycleContext.Provider value={state.context}>
       <GlobalStyles />
-      <div style={styles.container} onContextMenu={handleContextMenu}>
-        <PhaseAnnouncer text={announcement.text} trigger={announcement.trigger} />
-        <TurnOrderRuler
-          order={state.context.displayTurnOrder}
-          allUnits={state.context.allUnits}
-          currentUnitId={state.context.currentActionExecution?.unitId}
-          completedUnitIds={state.context.completedUnitIdsThisRound}
+    <div style={styles.container} onContextMenu={handleContextMenu}>
+      <PhaseAnnouncer text={announcement.text} trigger={announcement.trigger} />
+      <TurnOrderRuler
+        order={state.context.displayTurnOrder}
+        allUnits={state.context.allUnits}
+        currentUnitId={state.context.currentActionExecution?.unitId}
+        completedUnitIds={state.context.completedUnitIdsThisRound}
+      />
+      
+      {selectedUnitId && !skillForTargeting && (
+        <ActionSelector
+          unit={state.context.allUnits[selectedUnitId]}
+          skills={allSkills}
+          onSkillSelect={handleSkillSelect}
+          onClose={handleCancel}
         />
-        
-        {selectedUnitId && !skillForTargeting && (
-          <ActionSelector
-            unit={state.context.allUnits[selectedUnitId]}
-            skills={allSkills}
-            onSkillSelect={handleSkillSelect}
-            onClose={handleCancel}
-          />
-        )}
+      )}
 
-        {isAnimating && script && <AnimationPlayer script={script} onComplete={handleAnimationComplete} />}
+      {isAnimating && script && <AnimationPlayer script={script} onComplete={handleAnimationComplete} />}
 
-        {state.matches('results') && (
-          <BattleResultsScreen 
-            result={state.context.battleResult}
-            onConfirm={() => send({ type: 'CONFIRM_RESULTS' })}
-          />
-        )}
+      {state.matches('results') && (
+        <BattleResultsScreen 
+          result={state.context.battleResult}
+          onConfirm={() => send({ type: 'CONFIRM_RESULTS' })}
+        />
+      )}
 
         <div style={styles.battlefield} ref={gridContainerRef}>
-          <TeamGrid
+        <TeamGrid
             teamId="playerTeam"
-            grid={state.context.playerGrid}
-            allUnits={state.context.allUnits}
-            onUnitClick={handlePlayerUnitClick}
-            isPlayerTeam={true}
-            selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
-            playerActions={playerActions}
-            hoveredCell={hoveredCell}
-            setHoveredCell={setHoveredCell}
+          grid={state.context.playerGrid}
+          allUnits={state.context.allUnits}
+          onUnitClick={handlePlayerUnitClick}
+          isPlayerTeam={true}
+          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
+          playerActions={playerActions}
+          hoveredCell={hoveredCell}
+          setHoveredCell={setHoveredCell}
             onUnitHover={handleUnitHover}
             gridCellRefs={gridCellRefs}
-          />
-          <div style={styles.infoPanel}>
-            <div style={styles.infoPanelGroup}>
-              <p style={styles.roundText}>第 {state.context.currentRound} 回合</p>
-              <p style={styles.statusText}>{isPreparation ? '准备阶段' : isAnimating ? '行动中' : '等待中...'}</p>
-            </div>
-            <p style={styles.vsText}>VS</p>
-            <p style={styles.infoText}>
-              {isPreparation
-                ? (selectedUnitId && !skillForTargeting
+        />
+        <div style={styles.infoPanel}>
+          <div style={styles.infoPanelGroup}>
+            <p style={styles.roundText}>第 {state.context.currentRound} 回合</p>
+            <p style={styles.statusText}>{isPreparation ? '准备阶段' : isAnimating ? '行动中' : '等待中...'}</p>
+          </div>
+          <p style={styles.vsText}>VS</p>
+          <p style={styles.infoText}>
+            {isPreparation
+              ? (selectedUnitId && !skillForTargeting
                   ? `选择技能`
-                  : skillForTargeting
+                : skillForTargeting
                   ? `选择目标`
                   : '选择单位')
-                : '正在执行行动...'}
-            </p>
-            <div style={styles.infoPanelGroup}>
-              <button
-                style={(isPreparation && allPlayerUnitsHaveAction) ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
-                onClick={handleSubmitTurn}
-                disabled={!isPreparation || !allPlayerUnitsHaveAction}
-              >
-                执行回合
-              </button>
-              <button
-                style={isPreparation ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
-                onClick={handleFlee}
-                disabled={!isPreparation}
-              >
-                逃跑
-              </button>
-            </div>
+              : '正在执行行动...'}
+          </p>
+          <div style={styles.infoPanelGroup}>
+            <button
+              style={(isPreparation && allPlayerUnitsHaveAction) ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+              onClick={handleSubmitTurn}
+              disabled={!isPreparation || !allPlayerUnitsHaveAction}
+            >
+              执行回合
+            </button>
+            <button
+              style={isPreparation ? styles.button : { ...styles.button, ...styles.buttonDisabled }}
+              onClick={handleFlee}
+              disabled={!isPreparation}
+            >
+              逃跑
+            </button>
           </div>
-          <TeamGrid
+        </div>
+        <TeamGrid
             teamId="enemyTeam"
-            grid={state.context.enemyGrid}
-            allUnits={state.context.allUnits}
-            onUnitClick={handleEnemyUnitClick}
-            isPlayerTeam={false}
-            selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
-            playerActions={playerActions}
-            hoveredCell={hoveredCell}
-            setHoveredCell={setHoveredCell}
-            onUnitHover={handleUnitHover}
+          grid={state.context.enemyGrid}
+          allUnits={state.context.allUnits}
+          onUnitClick={handleEnemyUnitClick}
+          isPlayerTeam={false}
+          selectionState={{ selectedUnitId, skillForTargeting, hoveredUnitCaptureChance }}
+          playerActions={playerActions}
+          hoveredCell={hoveredCell}
+          setHoveredCell={setHoveredCell}
+          onUnitHover={handleUnitHover}
             gridCellRefs={gridCellRefs}
           />
 
@@ -1021,26 +1021,26 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
                   isPlayerUnit={unit.team === 'player'}
                   hasActionSet={!!playerActions?.[unit.id]}
                   initialPosition={initialPos}
-                />
+        />
               );
             })}
           </div>
-        </div>
-
-        <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
-          <div style={styles.logPanelTitle} onClick={() => setIsLogPanelExpanded(!isLogPanelExpanded)}>
-            <span>战斗日志</span>
-            <button style={styles.logToggleButton}>{isLogPanelExpanded ? '−' : '+'}</button>
-          </div>
-          {isLogPanelExpanded && (
-            <div style={styles.logEntriesContainer} ref={logContainerRef}>
-              {state.context.logs.map((log, index) => (
-                <p key={index} style={{...styles.logEntry, ...styles[`logEntry_${log.type}`]}}>{log.message}</p>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
+
+      <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
+        <div style={styles.logPanelTitle} onClick={() => setIsLogPanelExpanded(!isLogPanelExpanded)}>
+          <span>战斗日志</span>
+          <button style={styles.logToggleButton}>{isLogPanelExpanded ? '−' : '+'}</button>
+        </div>
+        {isLogPanelExpanded && (
+          <div style={styles.logEntriesContainer} ref={logContainerRef}>
+            {state.context.logs.map((log, index) => (
+              <p key={index} style={{...styles.logEntry, ...styles[`logEntry_${log.type}`]}}>{log.message}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
     </BattleLifecycleContext.Provider>
   );
 }
