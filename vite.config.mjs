@@ -35,5 +35,5 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: true,
   },
-  assetsInclude: ["**/*.png"],
+  assetsInclude: ["**/*.png", "**/*.gif"],
 });

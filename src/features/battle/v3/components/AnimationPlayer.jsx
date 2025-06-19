@@ -39,6 +39,7 @@ export const AnimationPlayer = ({ script, onComplete }) => {
       'bleed_effect': 600,
       'defend_burst': 500,
       'support_cast': 800,
+      'fire_storm_aoe': 1200, // New: Duration for the fire storm effect
       // Add other VFX durations here
     };
     return durations[vfxName] || 400; // Default duration
@@ -168,29 +169,32 @@ export const AnimationPlayer = ({ script, onComplete }) => {
           }
           
           if (step.type === 'SHOW_VFX') {
-            const vfxId = Date.now() + Math.random();
-            const newVfx = { vfxName: step.vfxName, targetId: step.targetIds[0], id: vfxId };
+            const vfxToAdd = [];
+            step.targetIds.forEach(targetId => {
+              const vfxId = `${targetId}-${step.vfxName}-${Date.now()}-${Math.random()}`;
+              vfxToAdd.push({ vfxName: step.vfxName, targetId: targetId, id: vfxId });
+
+              const duration = getVfxDuration(step.vfxName);
+              let startTime = null;
+
+              const cleanupAnimation = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+
+                if (elapsed < duration) {
+                  vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
+                } else {
+                  setAnimationState(p => ({
+                    ...p,
+                    vfx: p.vfx ? p.vfx.filter(v => v.id !== vfxId) : [],
+                  }));
+                  delete vfxCleanupRaf.current[vfxId];
+                }
+              };
+              vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
+            });
             
-            newState.vfx = [...(prevState.vfx || []), newVfx];
-
-            const duration = getVfxDuration(step.vfxName); // Use the new helper function
-            let startTime = null;
-
-            const cleanupAnimation = (timestamp) => {
-              if (!startTime) startTime = timestamp;
-              const elapsed = timestamp - startTime;
-
-              if (elapsed < duration) {
-                vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
-              } else {
-                setAnimationState(p => ({
-                  ...p,
-                  vfx: p.vfx.filter(v => v.id !== vfxId),
-                }));
-                delete vfxCleanupRaf.current[vfxId];
-              }
-            };
-            vfxCleanupRaf.current[vfxId] = requestAnimationFrame(cleanupAnimation);
+            newState.vfx = [...(prevState.vfx || []), ...vfxToAdd];
           }
 
           newState.unitCssClasses = newUnitCssClasses;

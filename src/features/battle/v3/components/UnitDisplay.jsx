@@ -259,6 +259,10 @@ export const UnitDisplay = memo(forwardRef(({ unit, isPlayerUnit, hasActionSet, 
   const unitStyle = {
     opacity: isDefeated ? 0.5 : 1,
     filter: isDefeated ? 'grayscale(100%)' : 'none',
+    zIndex: 1,
+    ...initialPosition,
+    '--knockback-direction': isPlayerUnit ? '20px' : '-20px',
+    '--cast-direction': isPlayerUnit ? '15px' : '-15px',
   };
 
   if (initialPosition) {

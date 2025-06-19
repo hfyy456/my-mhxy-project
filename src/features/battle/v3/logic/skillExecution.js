@@ -56,7 +56,11 @@ export const generateSkillResult = (action, allUnits, context) => {
 
   // For all other skills (attacks included), find a valid target if the primary is dead.
   let currentTargetId = primaryTargetId;
-  const originalTargetUnit = allUnits[currentTargetId];
+  // const originalTargetUnit = allUnits[currentTargetId]; // This line is also part of the flawed logic
+
+  // This entire re-targeting block is flawed because it doesn't account for AOE skills correctly.
+  // The logic inside getSkillTargets and the subsequent check is sufficient.
+  /*
   if (!originalTargetUnit || originalTargetUnit.derivedAttributes.currentHp <= 0) {
       const sourceTeam = source.team;
       let teamToSearch;
@@ -80,11 +84,12 @@ export const generateSkillResult = (action, allUnits, context) => {
       } else {
           // No living units in the target team, stop the action.
           return { 
-              animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无有效目标', color: '#ffcc00', delay: 100 }],
+              animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '没有存活的目标', color: '#ffcc00', delay: 100 }],
               logicalResult: { hpChanges: [], buffChanges: [], captures: [], stateUpdates: [] }
           };
       }
   }
+  */
 
   // Now, get all targets based on the (potentially new) primary target ID, and filter for living ones.
   const allFinalTargets = getSkillTargets(skill, unitId, currentTargetId, context);
@@ -93,11 +98,89 @@ export const generateSkillResult = (action, allUnits, context) => {
   // If after all that, there are no living targets for a damaging/effect skill, abort.
   if (livingTargetIds.length === 0) {
     return { 
-        animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无效目标', color: '#ffcc00', delay: 100 }],
+        animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '没有存活的目标', color: '#ffcc00', delay: 100 }],
         logicalResult: { hpChanges: [], buffChanges: [], captures: [], stateUpdates: [] }
     };
   }
   // --- End of refined target handling ---
+
+  // --- NEW: Handle Fire Slash Skill ---
+  if (skillId === 'fire_slash') {
+    console.log('[fire_slash] Handling skill. Living targets:', livingTargetIds);
+    // Fire Slash hits all targets in the 'livingTargetIds' array simultaneously.
+    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'attack_lunge', delay: 0 });
+    animationScript.push({ type: 'SHOW_VFX', targetIds: [unitId], vfxName: 'fire_aura_start', delay: 100 });
+    
+    let runningDelay = 300; // Stagger the impact animations slightly for better visual feedback
+
+    livingTargetIds.forEach(targetId => {
+      const targetUnit = allUnits[targetId];
+      if (targetUnit) {
+        // 1. Calculate logical result
+        const damageResult = calculateDamage(source, skill.damage);
+        logicalResult.hpChanges.push({ targetId, change: -damageResult.damage, isCrit: damageResult.isCrit });
+        updatePrdCounterForResult(logicalResult, source, damageResult.isCrit);
+
+        // 2. Build animation script for this target
+        animationScript.push({ type: 'SHOW_VFX', targetIds: [targetId], vfxName: 'fire_slash_impact', delay: runningDelay });
+        animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_shake', delay: runningDelay });
+        animationScript.push({ 
+          type: 'SHOW_FLOATING_TEXT', 
+          targetIds: [targetId], 
+          text: `${damageResult.damage}`, 
+          isCrit: damageResult.isCrit, 
+          delay: runningDelay + 100 
+        });
+        
+        runningDelay += 50; // Add a small delay for the next target in the AOE
+      }
+    });
+
+    animationScript.push({ type: 'RETURN_TO_POSITION', unitId, delay: runningDelay + 400 });
+
+    console.log('[fire_slash] Final Animation Script:', JSON.stringify(animationScript, null, 2));
+    console.log('[fire_slash] Final Logical Result:', JSON.stringify(logicalResult, null, 2));
+    return { animationScript, logicalResult };
+  }
+  // --- END: Handle Fire Slash Skill ---
+
+  // --- NEW: Handle Fire Storm Skill ---
+  if (skillId === 'fire_storm') {
+    // This is a group-wide attack.
+    // We trigger one large visual effect centered on the enemy team's grid.
+    animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [unitId], animationName: 'cast_step_forward', delay: 0 });
+    animationScript.push({ type: 'SHOW_VFX', targetIds: ['enemy-team-center'], vfxName: 'fire_storm_aoe', delay: 200 });
+    
+    let runningDelay = 400; // Delay for floating text after the main VFX
+
+    livingTargetIds.forEach(targetId => {
+      const targetUnit = allUnits[targetId];
+      if (targetUnit) {
+        // 1. Calculate logical result
+        const damageResult = calculateDamage(source, skill.damage);
+        logicalResult.hpChanges.push({ targetId, change: -damageResult.damage, isCrit: damageResult.isCrit });
+        updatePrdCounterForResult(logicalResult, source, damageResult.isCrit);
+
+        // 2. Build animation script for this target (mostly just text)
+        animationScript.push({ type: 'ENTITY_ANIMATION', targetIds: [targetId], animationName: 'take_hit_shake', delay: runningDelay - 100 });
+        animationScript.push({ 
+          type: 'SHOW_FLOATING_TEXT', 
+          targetIds: [targetId], 
+          text: `${damageResult.damage}`, 
+          isCrit: damageResult.isCrit, 
+          delay: runningDelay 
+        });
+        
+        runningDelay += 30; // Stagger text slightly
+      }
+    });
+
+    // Add a return to position after everything
+    animationScript.push({ type: 'RETURN_TO_POSITION', unitId, delay: runningDelay + 400 });
+
+    return { animationScript, logicalResult };
+  }
+  // --- END: Handle Fire Storm Skill ---
 
   // --- NEW: Handle Double Strike Skill ---
   if (skillId === 'double_strike') {
@@ -152,7 +235,7 @@ export const generateSkillResult = (action, allUnits, context) => {
     const primaryTargetId = livingTargetIds[0];
     if (!primaryTargetId) {
       return { 
-        animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '无效目标', color: '#ffcc00', delay: 100 }],
+        animationScript: [{ type: 'SHOW_FLOATING_TEXT', targetIds: [unitId], text: '没有存活的目标', color: '#ffcc00', delay: 100 }],
         logicalResult 
       };
     }

@@ -9,6 +9,7 @@ import { BattleResultsScreen } from './BattleResultsScreen.jsx';
 import { skills as allSkills } from '../logic/skillConfig';
 import { getAffectedCellCoords } from '../logic/targetLogic.js';
 import { PhaseAnnouncer } from './PhaseAnnouncer.jsx';
+import fireStormGif from '@/assets/skills/file_storm.gif';
 
 const GlobalStyles = () => (
   <style>{`
@@ -67,13 +68,63 @@ const GlobalStyles = () => (
       100% { transform: translate(-50%, -120px) scale(2.2); opacity: 0; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 10px 10px 15px rgba(0,0,0,0.3); }
     }
 
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      50% { transform: translateX(8px); }
+      75% { transform: translateX(-8px); }
+    }
+
+    @keyframes cast_step_forward {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(var(--cast-direction, 15px), 0) scale(1.02); }
+      100% { transform: translate(var(--cast-direction, 15px), 0) scale(1.02); }
+    }
+
     .unit-box.is-acting {
       z-index: 10;
     }
     .unit-box.take_hit_knockback {
       animation: knockback-anim 0.5s ease-out forwards;
     }
+    .unit-box.take_hit_shake {
+      animation: shake 0.4s ease-in-out;
+    }
+    .unit-box.cast_step_forward {
+      animation: cast_step_forward 0.5s ease-out forwards;
+    }
     
+    /* Copied from BattleAnimations.css */
+    @keyframes fire-storm-animation {
+      0% {
+        transform: translateY(-150px) scale(0.5);
+        opacity: 0;
+      }
+      30% {
+        transform: translateY(0) scale(1.2);
+        opacity: 1;
+      }
+      80% {
+        transform: translateY(0) scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(20px) scale(1.1);
+        opacity: 0;
+      }
+    }
+
+    .vfx.fire_storm_aoe {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      background-image: url('${fireStormGif}');
+      background-size: contain;
+      background-repeat: no-repeat;
+      animation: fire-storm-animation 1.2s ease-out forwards;
+      /* Ensure it's above the units but below UI popups */
+      z-index: 5; 
+    }
   `}</style>
 );
 
@@ -471,7 +522,6 @@ const keyframesToString = (kfObj) => {
 const styleSheet = document.createElement("style");
 styleSheet.type = "text/css";
 styleSheet.innerText = `
-  @keyframes shake { ${keyframesToString(styles['@keyframes shake'])} }
   @keyframes floatUp { ${keyframesToString(styles['@keyframes floatUp'])} }
   @keyframes lunge { ${keyframesToString(styles['@keyframes lunge'])} }
   @keyframes returnLunge { ${keyframesToString(styles['@keyframes returnLunge'])} }
@@ -1025,6 +1075,47 @@ const BattleSceneV3Internal = ({ initialData, onComplete }) => {
               );
             })}
           </div>
+
+          {/* --- NEW: VFX Rendering Layer --- */}
+          <div className="vfx-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15 }}>
+            {useAnimation().animationState.vfx.map(vfx => {
+              let style = {};
+              // Handle the special case for a battlefield-wide effect
+              if (vfx.targetId === 'enemy-team-center') {
+                // Find the parent element of any enemy grid cell to get the container
+                const enemyGridContainer = gridCellRefs.current['enemyTeam-1-1']?.parentElement;
+                if (enemyGridContainer) {
+                  const rect = enemyGridContainer.getBoundingClientRect();
+                  const containerRect = gridContainerRef.current.getBoundingClientRect();
+                  style = {
+                    position: 'absolute',
+                    top: `${rect.top - containerRect.top + rect.height / 2 + rect.height * 0.1}px`, // Offset Y by 10% of grid height
+                    left: `${rect.left - containerRect.left + rect.width / 2}px`,
+                    transform: 'translate(-50%, -50%)',
+                    width: `${rect.width * 0.9}px`, // Cover 90% of the grid width
+                    height: `${rect.height * 0.9}px`,
+                  };
+                }
+              } else {
+                // Default logic for unit-targeted VFX
+                const targetUnitPos = unitInitialPositions[vfx.targetId];
+                if (!targetUnitPos) return null;
+                style = {
+                  position: 'absolute',
+                  top: `${targetUnitPos.top}px`,
+                  left: `${targetUnitPos.left}px`,
+                  width: '150px',
+                  height: '150px',
+                };
+              }
+
+              return (
+                <div key={vfx.id} style={style}>
+                  <div className={`vfx ${vfx.vfxName}`} style={{ width: '100%', height: '100%' }} />
+                </div>
+              );
+            })}
+          </div>
       </div>
 
       <div style={{...styles.logPanel, height: isLogPanelExpanded ? '220px' : '58px'}}>
@@ -1049,4 +1140,4 @@ export const BattleSceneV3 = ({ initialData, onComplete }) => (
   <AnimationProvider>
     <BattleSceneV3Internal initialData={initialData} onComplete={onComplete} />
   </AnimationProvider>
-); 
+);

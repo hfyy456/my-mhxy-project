@@ -63,19 +63,21 @@ export const getSkillTargets = (skill, sourceUnitId, primaryTargetId, context) =
   let targetPool = {};
   let targetGrid = null;
   
+  const isPlayerSource = Object.values(context.playerTeam).some(p => p.id === sourceUnitId);
+
   switch(skill.targetType) {
     case 'self':
       return [sourceUnitId];
     case 'ally':
-      targetPool = context.playerTeam;
-      targetGrid = playerGrid;
+      targetPool = isPlayerSource ? context.playerTeam : context.enemyTeam;
+      targetGrid = isPlayerSource ? playerGrid : enemyGrid;
       break;
     case 'enemy':
-    case 'group': // 'group' also targets enemies
-    case 'area':  // 'area' also targets enemies
+    case 'group': // 'group' now correctly determines target based on source
+    case 'area':  // 'area' now correctly determines target based on source
     default:
-      targetPool = context.enemyTeam;
-      targetGrid = enemyGrid;
+      targetPool = isPlayerSource ? context.enemyTeam : context.playerTeam;
+      targetGrid = isPlayerSource ? enemyGrid : playerGrid;
       break;
   }
 
@@ -99,7 +101,7 @@ export const getSkillTargets = (skill, sourceUnitId, primaryTargetId, context) =
       const affectedCoords = getAffectedCellCoords(skill, primaryTargetCoords);
       
       const affectedTargets = affectedCoords
-        .map(coords => targetGrid[coords.r]?.[coords.c])
+        .map(coords => targetGrid[coords.row]?.[coords.col])
         .filter(unitId => unitId && allUnits[unitId]?.derivedAttributes.currentHp > 0);
       
       return [...new Set(affectedTargets)];
