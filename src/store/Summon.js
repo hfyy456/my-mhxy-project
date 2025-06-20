@@ -60,10 +60,6 @@ class Summon {
     this.updatedAt = data.updatedAt || Date.now();
     this.manager = null;
 
-    if (!data.aptitudeRatios || Object.keys(data.aptitudeRatios).length === 0) {
-      this.calculateAptitudeRatios();
-    }
-
     this.recalculateStats();
   }
 
@@ -332,32 +328,7 @@ class Summon {
   }
 
   generateId() {
-    return generateUniqueId("summon");
-  }
-
-  calculateAptitudeRatios() {
-    const config = this.getConfig();
-    if (!config || !config.basicAttributeRanges) {
-      this.aptitudeRatios = {};
-      return;
-    }
-
-    const ratios = {};
-    for (const attr in config.basicAttributeRanges) {
-      const range = config.basicAttributeRanges[attr];
-      const currentValue = this.innateAttributes[attr] || 0;
-      const min = range.min || 0;
-      const max = range.max || 1;
-
-      if (max - min === 0) {
-        ratios[attr] = 1.0; // 避免除以零
-      } else {
-        // 将资质标准化为 0.5 - 1.5 的范围，平均为1.0
-        const normalizedValue = (currentValue - min) / (max - min); // 0-1范围
-        ratios[attr] = 0.5 + normalizedValue; // 0.5-1.5范围
-      }
-    }
-    this.aptitudeRatios = ratios;
+    return generateUniqueId("sum");
   }
 
   refine() {

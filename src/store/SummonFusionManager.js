@@ -87,7 +87,11 @@ class SummonFusionManager extends EventEmitter {
       predictedLevel: this.calculatePredictedLevel(summon1, summon2, selectedMaterials),
       predictedAttributes: this.calculatePredictedAttributes(summon1, summon2, selectedMaterials),
       possibleElements: this.calculatePossibleElements(summon1, summon2, selectedMaterials),
-      materialCosts: this.calculateMaterialCosts(selectedMaterials)
+      materialCosts: this.calculateMaterialCosts(selectedMaterials),
+      predictedNatureType: this._predictNatureType(summon1.natureType, summon2.natureType),
+      predictedGrowthRateRange: this._predictGrowthRateRange(summon1, summon2, selectedMaterials),
+      predictedAttributeRanges: this._predictAttributeRanges(summon1, summon2, selectedMaterials),
+      predictedPersonalities: [summon1.personalityId, summon2.personalityId].filter(Boolean),
     };
     
     return preview;
@@ -208,6 +212,72 @@ class SummonFusionManager extends EventEmitter {
     
     // 这是一个非常粗略的估计，只基于0级和先天属性
     return finalPredictedInnate;
+  }
+  
+  /**
+   * 预测新召唤兽的 Nature Type 及其概率
+   */
+  _predictNatureType(natureType1, natureType2) {
+    const { WILD, BABY, MUTANT } = SUMMON_NATURE_TYPES;
+    if (natureType1 === WILD && natureType2 === WILD) {
+      return [{ type: WILD, chance: 1 }];
+    }
+    if ((natureType1 === WILD && natureType2 === BABY) || (natureType1 === BABY && natureType2 === WILD)) {
+      return [{ type: BABY, chance: 0.6 }, { type: WILD, chance: 0.4 }];
+    }
+    if (natureType1 === BABY && natureType2 === BABY) {
+      return [{ type: BABY, chance: 0.8 }, { type: MUTANT, chance: 0.2 }];
+    }
+    if ((natureType1 === BABY && natureType2 === MUTANT) || (natureType1 === MUTANT && natureType2 === BABY)) {
+      return [{ type: BABY, chance: 0.5 }, { type: MUTANT, chance: 0.5 }];
+    }
+    if (natureType1 === MUTANT && natureType2 === MUTANT) {
+      return [{ type: MUTANT, chance: 0.7 }, { type: BABY, chance: 0.3 }];
+    }
+    return [{ type: WILD, chance: 1 }]; // 默认情况
+  }
+
+  /**
+   * 预测成长率的范围
+   */
+  _predictGrowthRateRange(summon1, summon2, materials) {
+    const baseGrowth = this._calculateInheritedGrowthRates(summon1, summon2, materials);
+    const growthRateRange = {};
+    for (const key in baseGrowth) {
+      const value = baseGrowth[key];
+      growthRateRange[key] = {
+        min: parseFloat((value * 0.95).toFixed(4)),
+        max: parseFloat((value * 1.05).toFixed(4)),
+      };
+    }
+    return growthRateRange;
+  }
+
+  /**
+   * 预测不同 Nature Type 下的属性范围
+   */
+  _predictAttributeRanges(summon1, summon2, materials) {
+    const predictedNatures = this._predictNatureType(summon1.natureType, summon2.natureType);
+    const baseAttributes = this._calculateInheritedInnateAttributes(summon1, summon2, materials);
+
+    const ranges = {};
+
+    predictedNatures.forEach(({ type }) => {
+      const natureConfig = SUMMON_NATURE_CONFIG[type];
+      if (!natureConfig) return;
+
+      const attrRange = {};
+      for (const attr in baseAttributes) {
+        const baseValue = baseAttributes[attr] * natureConfig.baseAttributeMultiplier;
+        attrRange[attr] = {
+          min: Math.floor(baseValue * 0.9),
+          max: Math.floor(baseValue * 1.1),
+        };
+      }
+      ranges[type] = attrRange;
+    });
+
+    return ranges;
   }
   
   /**
@@ -375,7 +445,6 @@ class SummonFusionManager extends EventEmitter {
     // 5. 计算其他属性 (技能、等级、性格)
     const inheritedSkills = this.calculateInheritedSkills(summon1, summon2, materials);
     const newLevel = this.calculatePredictedLevel(summon1, summon2, materials);
-    const personalityId = getRandomPersonalityId();
     
     // 确定五行属性
     let finalElement = selectedElement;
@@ -402,7 +471,14 @@ class SummonFusionManager extends EventEmitter {
     newSummonInstance.basicAttributes = { ...finalInnateAttributes }; // 初始基础属性等于先天属性
     newSummonInstance.growthRates = finalGrowthRates; // 使用纯粹的遗传成长率
     newSummonInstance.skillSet = inheritedSkills;
+
+    // 性格遗传：从父母中随机选择一个。如果父母都没有性格，则随机生成一个。
+    const possiblePersonalities = [summon1.personalityId, summon2.personalityId].filter(Boolean);
+    const personalityId = possiblePersonalities.length > 0
+      ? possiblePersonalities[Math.floor(Math.random() * possiblePersonalities.length)]
+      : getRandomPersonalityId();
     newSummonInstance.personalityId = personalityId;
+    
     newSummonInstance.fiveElement = finalElement; // 设置五行
     newSummonInstance.parentInfo = {
         parent1Id: summon1.id,

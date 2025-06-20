@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-20 05:56:22
+ * @LastEditTime: 2025-06-21 04:52:57
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,7 +31,6 @@ import NpcOOPDemo from "@/features/npc/components/NpcOOPDemo";
 import BattlePreparationModal from "@/features/formation/components/BattlePreparationModal";
 import ThemePreview from "@/features/ui/components/ThemePreview";
 import ThemeDemo from "@/features/ui/components/ThemeDemo";
-import EnhancedSummonFusionModal from "@/features/summon/components/EnhancedSummonFusionModal";
 import SummonHomePanel from "@/features/summon/components/SummonHomePanel";
 
 import { useAppModals } from "@/hooks/useAppModals";
@@ -610,17 +609,7 @@ const GamePageContent = ({
             <ThemeDemo />
           </CommonModal>
 
-          {/* 召唤兽融合模态框 */}
-          <EnhancedSummonFusionModal
-            isOpen={isFusionModalOpen}
-            onClose={closeFusionModal}
-            onFusion={(newSummon) => {
-              const newSummonData = typeof newSummon.toJSON === 'function' ? newSummon.toJSON() : newSummon;
-              createSummon(newSummonData);
-              showToast(`融合成功，获得【${newSummon.name}】!`, 'success');
-            }}
-          />
-
+     
           {/* 召唤兽之家功能面板 */}
           {isSummonHomePanelOpen && (
             <div className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center">

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-21 03:08:57
+ * @LastEditTime: 2025-06-21 06:16:53
  */
 import allSummons from '../config/summon/allSummons.json';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '../config/config';
@@ -92,7 +92,16 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         finalSkillSet.push(randomSkill);
     }
 
-    // 4. Construct the data object for the Summon class
+    // 4. Generate aptitude ratios
+    const aptitudeRatios = {};
+    if (template.growthRates) {
+        for (const attr in template.growthRates) {
+            const randomFactor = 0.8 + Math.random() * 0.4;
+            aptitudeRatios[attr] = parseFloat(randomFactor.toFixed(4));
+        }
+    }
+
+    // 5. Construct the data object for the Summon class
     const creatureData = {
         id: generateUniqueId(UNIQUE_ID_PREFIXES.SUMMON),
         summonSourceId: templateId,
@@ -109,6 +118,7 @@ export const createCreatureFromTemplate = ({ templateId, level = 1, natureType =
         basicAttributes: basicAttributes, // Level 1 derivedAttributes
         innateAttributes: innateAttributes,
         growthRates: template.growthRates || {},
+        aptitudeRatios: aptitudeRatios, // Add the generated ratios
         allocatedPoints: {},
         potentialPoints: (level - 1) * 5, // Assuming 5 points per level
         skillSet: finalSkillSet,
@@ -153,6 +163,27 @@ export const determineCombatRole = (effectiveBasicAttributes) => {
 };
 
 /**
+ * Calculates the final growth rates of a summon, including effects from nature type and aptitude.
+ * @param {object} params - The summon's properties.
+ * @param {object} params.growthRates - The base growth rates.
+ * @param {string} params.natureType - The nature of the summon (e.g., 'wild', 'baby').
+ * @param {object} params.aptitudeRatios - The aptitude ratios.
+ * @returns {Object} An object containing the final growth rates for each attribute.
+ */
+export const getFinalGrowthRates = ({ growthRates, natureType, aptitudeRatios }) => {
+    const finalRates = {};
+    const natureConfig = SUMMON_NATURE_CONFIG[natureType] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
+    const { growthRateMultiplier } = natureConfig;
+
+    for (const attr in growthRates) {
+        const baseGrowthRate = growthRates[attr] || 0;
+        const aptitude = aptitudeRatios[attr] || 1.0;
+        finalRates[attr] = baseGrowthRate * growthRateMultiplier * aptitude;
+    }
+    return finalRates;
+};
+
+/**
  * Calculates the final basic attributes of a summon, including effects from leveling, points allocation, and equipment.
  * @param {Summon} summonInstance - The summon instance.
  * @returns {Promise<Object>} A promise that resolves to an object containing the final basic attributes and the map of equipped items.
@@ -167,21 +198,19 @@ export const calculateFinalBasicAttributes = async (summonInstance) => {
 
     // 根据召唤兽的 natureType 获取对应的配置
     const natureConfig = SUMMON_NATURE_CONFIG[natureType] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
-    const { baseAttributeMultiplier, growthRateMultiplier } = natureConfig;
+    const { baseAttributeMultiplier } = natureConfig;
+
+    // Get final growth rates from the new helper function
+    const finalGrowthRates = getFinalGrowthRates({ growthRates, natureType, aptitudeRatios });
 
     // 1. Calculate level-based attributes
     const levelBasedAttributes = {};
     for (const attr in innateAttributes) {
-        // 应用 natureType 对成长率的加成
-        const finalGrowthRate = (growthRates[attr] || 0) * growthRateMultiplier;
-        const aptitude = aptitudeRatios[attr] || 1.0; // 获取资质系数，默认为1
-        
         // 应用 natureType 对先天属性的加成
         const finalInnateAttribute = innateAttributes[attr] * baseAttributeMultiplier;
 
         // 使用最终的先天属性和成长率进行等级计算
-        // 同时应用成长率和资质系数
-        levelBasedAttributes[attr] = Math.floor(finalInnateAttribute * (1 + (level - 1) * finalGrowthRate * aptitude));
+        levelBasedAttributes[attr] = Math.floor(finalInnateAttribute * (1 + (level - 1) * (finalGrowthRates[attr] || 0)));
     }
 
     // 2. Apply allocated points
