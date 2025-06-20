@@ -25,6 +25,8 @@ export const useAppModals = () => {
   const [isHomesteadModalOpen, setIsHomesteadModalOpen] = useState(false);
   const [isSummonEquipmentOpen, setIsSummonEquipmentOpen] = useState(false);
   const [isSummonOOPDemoOpen, setIsSummonOOPDemoOpen] = useState(false);
+  const [isFusionModalOpen, setIsFusionModalOpen] = useState(false);
+  const [isSummonHomePanelOpen, setIsSummonHomePanelOpen] = useState(false);
 
   const openSummonModal = useCallback(() => {
     if (summons.length > 0) {
@@ -109,6 +111,12 @@ export const useAppModals = () => {
 
   const closeSummonOOPDemoModal = useCallback(() => setIsSummonOOPDemoOpen(false), []);
 
+  const openFusionModal = useCallback(() => setIsFusionModalOpen(true), []);
+  const closeFusionModal = useCallback(() => setIsFusionModalOpen(false), []);
+
+  const openSummonHomePanel = useCallback(() => setIsSummonHomePanelOpen(true), []);
+  const closeSummonHomePanel = useCallback(() => setIsSummonHomePanelOpen(false), []);
+
   return {
     isSummonModalOpen,
     openSummonModal,
@@ -151,5 +159,11 @@ export const useAppModals = () => {
     isSummonOOPDemoOpen,
     openSummonOOPDemoModal,
     closeSummonOOPDemoModal,
+    isFusionModalOpen,
+    openFusionModal,
+    closeFusionModal,
+    isSummonHomePanelOpen,
+    openSummonHomePanel,
+    closeSummonHomePanel,
   };
 }; 

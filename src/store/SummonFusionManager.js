@@ -9,81 +9,8 @@ import { generateUniqueId } from '@/utils/idUtils';
 import { FIVE_ELEMENTS, SUMMON_NATURE_TYPES, SUMMON_NATURE_CONFIG } from '@/config/enumConfig';
 import { personalityConfig, getRandomPersonalityId, PERSONALITY_EFFECT_MODIFIER, PERSONALITY_TYPES, EXTREME_POSITIVE_MODIFIER } from '@/config/summon/personalityConfig';
 import EventEmitter from 'events';
-
-/**
- * 合成材料配置
- */
-export const FUSION_MATERIALS = {
-  BEAST_PILL: {
-    id: 'beast_pill',
-    name: '兽丹',
-    description: '提升合成成功率和技能继承概率',
-    successRateBonus: 0.2,
-    skillInheritBonus: 0.15,
-    rarity: 'rare'
-  },
-  FIVE_ELEMENT_STONE: {
-    id: 'five_element_stone', 
-    name: '五行石',
-    description: '可指定新生召唤兽的五行属性',
-    allowElementChoice: true,
-    rarity: 'epic'
-  },
-  SOUL_CRYSTAL: {
-    id: 'soul_crystal',
-    name: '魂晶',
-    description: '大幅提升合成后召唤兽的等级和属性',
-    levelBonus: 5,
-    attributeBonus: 0.3,
-    rarity: 'legendary'
-  }
-};
-
-/**
- * 合成规则配置
- */
-export const FUSION_RULES = {
-  // 基础成功率
-  BASE_SUCCESS_RATE: 0.7,
-  
-  // 技能继承规则
-  SKILL_INHERIT: {
-    BASE_RATE: 0.32, // 基础继承率32%（30%-35%范围内）
-    RATE_VARIANCE: 0.03, // 随机波动±3%，实现30%-35%范围
-    SKILL_DECREASE_FACTOR: 0.02 // 技能数量多时的递减因子降低
-  },
-  
-  // 五行相克加成
-  ELEMENT_COMPATIBILITY: {
-    [FIVE_ELEMENTS.METAL]: {
-      [FIVE_ELEMENTS.WOOD]: 0.1,  // 金克木，轻微加成
-      [FIVE_ELEMENTS.FIRE]: -0.1, // 火克金，轻微减成
-    },
-    [FIVE_ELEMENTS.WOOD]: {
-      [FIVE_ELEMENTS.EARTH]: 0.1,
-      [FIVE_ELEMENTS.METAL]: -0.1,
-    },
-    [FIVE_ELEMENTS.WATER]: {
-      [FIVE_ELEMENTS.FIRE]: 0.1,
-      [FIVE_ELEMENTS.EARTH]: -0.1,
-    },
-    [FIVE_ELEMENTS.FIRE]: {
-      [FIVE_ELEMENTS.METAL]: 0.1,
-      [FIVE_ELEMENTS.WATER]: -0.1,
-    },
-    [FIVE_ELEMENTS.EARTH]: {
-      [FIVE_ELEMENTS.WATER]: 0.1,
-      [FIVE_ELEMENTS.WOOD]: -0.1,
-    }
-  },
-  
-  // 等级影响
-  LEVEL_IMPACT: {
-    MIN_LEVEL_RATIO: 0.3, // 最低等级保留比例
-    MAX_LEVEL_RATIO: 0.8, // 最高等级保留比例
-    AVERAGE_WEIGHT: 0.6    // 平均值权重
-  }
-};
+import { FUSION_RULES, FUSION_MATERIALS } from '../config/gachaConfig';
+import { createCreatureFromTemplate } from '@/utils/summonUtils';
 
 /**
  * 合成结果类
@@ -253,52 +180,34 @@ class SummonFusionManager extends EventEmitter {
    * 计算预期等级
    */
   calculatePredictedLevel(summon1, summon2, materials = []) {
-    const avgLevel = (summon1.level + summon2.level) / 2;
-    let predictedLevel = Math.floor(avgLevel * FUSION_RULES.LEVEL_IMPACT.AVERAGE_WEIGHT);
-    
-    // 材料等级加成
-    materials.forEach(materialId => {
-      const material = FUSION_MATERIALS[materialId];
-      if (material && material.levelBonus) {
-        predictedLevel += material.levelBonus;
-      }
-    });
-    
-    return Math.max(1, predictedLevel);
+    // 根据新的遗传模型，融合出的宝宝/变异召唤兽等级总是从0开始。
+    // 野生召唤兽目前不会通过融合产生。
+    return 0;
   }
   
   /**
-   * 计算预期属性
+   * 计算融合后的预测属性，现在仅用于预览
    */
   calculatePredictedAttributes(summon1, summon2, materials = []) {
-    const config1 = summonConfig[summon1.summonSourceId];
-    const config2 = summonConfig[summon2.summonSourceId];
+    //
+    // 重要提示：此函数现在主要用于UI预览，
+    // 实际生成召唤兽的属性计算在 generateNewSummon 中完成，
+    // 并且基于的是 `innateAttributes` (先天属性) 的遗传。
+    //
+    // 为了给用户一个大致的预期，我们可以模拟一个简化的计算，
+    // 但最终结果以 `generateNewSummon` 为准。
+
+    const tempOffspringNatureType = this._determineOffspringNatureType(summon1.natureType, summon2.natureType, materials);
+    const natureConfig = SUMMON_NATURE_CONFIG[tempOffspringNatureType];
+
+    const predictedInnate = this._calculateInheritedInnateAttributes(summon1, summon2, materials);
+    const finalPredictedInnate = {};
+    for(const attr in predictedInnate) {
+        finalPredictedInnate[attr] = Math.floor(predictedInnate[attr] * natureConfig.baseAttributeMultiplier);
+    }
     
-    if (!config1 || !config2) return {};
-    
-    const predictedAttributes = {};
-    const attributeTypes = ['constitution', 'strength', 'agility', 'intelligence', 'luck'];
-    
-    attributeTypes.forEach(attr => {
-      const attr1 = summon1.basicAttributes?.[attr] || 0;
-      const attr2 = summon2.basicAttributes?.[attr] || 0;
-      const avgValue = (attr1 + attr2) / 2;
-      
-      // 基础值计算
-      predictedAttributes[attr] = Math.floor(avgValue * 0.7);
-      
-      // 材料属性加成
-      materials.forEach(materialId => {
-        const material = FUSION_MATERIALS[materialId];
-        if (material && material.attributeBonus) {
-          predictedAttributes[attr] *= (1 + material.attributeBonus);
-        }
-      });
-      
-      predictedAttributes[attr] = Math.floor(predictedAttributes[attr]);
-    });
-    
-    return predictedAttributes;
+    // 这是一个非常粗略的估计，只基于0级和先天属性
+    return finalPredictedInnate;
   }
   
   /**
@@ -440,14 +349,33 @@ class SummonFusionManager extends EventEmitter {
    * 生成新召唤兽
    */
   generateNewSummon(summon1, summon2, materials = [], selectedElement = null) {
-    // 随机选择基础召唤兽
+    // 生成默认昵称
+    const generateDefaultNickname = (baseSummonConfig) => {
+        const prefix = baseSummonConfig?.name || '召唤兽';
+        const randomSuffix = Math.floor(Math.random() * 900) + 100;
+        return `${prefix}${randomSuffix}`;
+    };
+
+    // 1. 确定后代的 natureType
+    const offspringNatureType = this._determineOffspringNatureType(summon1.natureType, summon2.natureType, materials);
+
+    // 2. 随机选择一个父本作为物种模板
     const baseSummon = Math.random() < 0.5 ? summon1 : summon2;
     const baseSummonConfig = summonConfig[baseSummon.summonSourceId];
-    
-    // 确保配置存在
     if (!baseSummonConfig) {
-      throw new Error(`无法找到召唤兽配置: ${baseSummon.summonSourceId}`);
+        throw new Error(`无法找到召唤兽配置: ${baseSummon.summonSourceId}`);
     }
+
+    // 3. 计算遗传的裸体属性和成长率 (不再应用natureType加成)
+    const finalInnateAttributes = this._calculateInheritedInnateAttributes(summon1, summon2, materials);
+    const finalGrowthRates = this._calculateInheritedGrowthRates(summon1, summon2, materials);
+
+    // 4. (已移除) natureType 加成现在由核心工具函数 `calculateFinalBasicAttributes` 统一处理
+
+    // 5. 计算其他属性 (技能、等级、性格)
+    const inheritedSkills = this.calculateInheritedSkills(summon1, summon2, materials);
+    const newLevel = this.calculatePredictedLevel(summon1, summon2, materials);
+    const personalityId = getRandomPersonalityId();
     
     // 确定五行属性
     let finalElement = selectedElement;
@@ -455,95 +383,121 @@ class SummonFusionManager extends EventEmitter {
       const possibleElements = this.calculatePossibleElements(summon1, summon2, materials);
       finalElement = possibleElements[Math.floor(Math.random() * possibleElements.length)];
     }
-    
-    // 计算新召唤兽的属性
-    const newAttributes = this.calculatePredictedAttributes(summon1, summon2, materials);
-    
-    // 计算继承的技能
-    const inheritedSkills = this.calculateInheritedSkills(summon1, summon2, materials);
-    
-    // 计算等级
-    const newLevel = this.calculatePredictedLevel(summon1, summon2, materials);
 
-    // ---- START: Determine natureType and initialPotentialPoints ----
-    const natureTypeKeys = Object.keys(SUMMON_NATURE_TYPES);
-    const randomNatureTypeKey = natureTypeKeys[Math.floor(Math.random() * natureTypeKeys.length)];
-    const natureTypeToSet = SUMMON_NATURE_TYPES[randomNatureTypeKey];
-    const natureConfigForSelectedType = SUMMON_NATURE_CONFIG[natureTypeToSet] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
+    // 6. 使用工厂函数创建基础实例
+    const newSummonInstance = createCreatureFromTemplate({
+        templateId: baseSummon.summonSourceId,
+        level: newLevel,
+        natureType: offspringNatureType,
+    });
     
-    let initialPotentialPoints = 0;
-    // 宝宝和变异通常0级开始，有额外潜力点
-    // 野生则根据 initialLevelRange, 但这里 newLevel 是计算好的，我们简单判断 newLevel 是否为0
-    if (newLevel === 0 && natureConfigForSelectedType.potentialPointsBonus) {
-      initialPotentialPoints = natureConfigForSelectedType.potentialPointsBonus;
+    if (!newSummonInstance) {
+        throw new Error("Failed to create summon instance from template.");
     }
-    // ---- END: Determine natureType and initialPotentialPoints ----
-    
-    // ---- START: Get Personality ID for Fused Summon ----
-    const personalityId = getRandomPersonalityId();
-    const selectedPersonality = personalityConfig[personalityId];
 
-    // newAttributes is already calculated. We will modify it directly.
-    if (selectedPersonality && selectedPersonality.id !== PERSONALITY_TYPES.NEUTRAL) {
-      if (selectedPersonality.isExtreme) {
-        const { extremeStat, decreasedStat1, decreasedStat2 } = selectedPersonality;
-        if (extremeStat && newAttributes.hasOwnProperty(extremeStat)) {
-          newAttributes[extremeStat] = Math.floor(newAttributes[extremeStat] * (1 + EXTREME_POSITIVE_MODIFIER));
-        }
-        if (decreasedStat1 && newAttributes.hasOwnProperty(decreasedStat1)) {
-          newAttributes[decreasedStat1] = Math.floor(newAttributes[decreasedStat1] * (1 - PERSONALITY_EFFECT_MODIFIER)); // Using normal negative for decreased
-        }
-        if (decreasedStat2 && newAttributes.hasOwnProperty(decreasedStat2)) {
-          newAttributes[decreasedStat2] = Math.floor(newAttributes[decreasedStat2] * (1 - PERSONALITY_EFFECT_MODIFIER)); // Using normal negative for decreased
-        }
-      } else {
-        const { increasedStat, decreasedStat } = selectedPersonality;
-        if (increasedStat && newAttributes.hasOwnProperty(increasedStat)) {
-          newAttributes[increasedStat] = Math.floor(newAttributes[increasedStat] * (1 + PERSONALITY_EFFECT_MODIFIER));
-        }
-        if (decreasedStat && newAttributes.hasOwnProperty(decreasedStat)) {
-          newAttributes[decreasedStat] = Math.floor(newAttributes[decreasedStat] * (1 - PERSONALITY_EFFECT_MODIFIER));
-        }
-      }
-    }
-    // ---- END: Get Personality ID for Fused Summon (attributes not modified here) ----
-    
-    // 生成默认昵称
-    const generateDefaultNickname = () => {
-      const baseSummonConfig = summonConfig[baseSummon.summonSourceId];
-      const prefix = baseSummonConfig?.name || '召唤兽';
-      const randomSuffix = Math.floor(Math.random() * 900) + 100; // 100-999
-      return `${prefix}${randomSuffix}`; // New: name prefix + suffix
-    };
-    
-    // 生成新召唤兽
-    const newSummon = {
-      id: generateUniqueId('summon'),
-      summonSourceId: baseSummon.summonSourceId,
-      name: baseSummonConfig.name,
-      nickname: generateDefaultNickname(),
-      level: newLevel,
-      experience: 0,
-      basicAttributes: newAttributes,
-      fiveElement: finalElement,
-      skillSet: inheritedSkills,
-      equippedItemIds: {},
-      parentInfo: {
+    // 7. 使用遗传计算结果覆盖模板默认值
+    newSummonInstance.id = generateUniqueId('summon'); // 确保ID是新生成的
+    newSummonInstance.nickname = generateDefaultNickname(baseSummonConfig);
+    newSummonInstance.innateAttributes = finalInnateAttributes; // 使用纯粹的遗传属性
+    newSummonInstance.basicAttributes = { ...finalInnateAttributes }; // 初始基础属性等于先天属性
+    newSummonInstance.growthRates = finalGrowthRates; // 使用纯粹的遗传成长率
+    newSummonInstance.skillSet = inheritedSkills;
+    newSummonInstance.personalityId = personalityId;
+    newSummonInstance.fiveElement = finalElement; // 设置五行
+    newSummonInstance.parentInfo = {
         parent1Id: summon1.id,
         parent1Name: summon1.nickname || summon1.name,
         parent2Id: summon2.id,
         parent2Name: summon2.nickname || summon2.name,
         fusionTime: Date.now(),
-        fusionMaterials: materials
-      },
-      quality: summonConfig[baseSummon.summonSourceId]?.quality || 'normal', // 使用配置中的固定品质
-      natureType: natureTypeToSet,
-      personalityId: personalityId,
-      growthRates: { ...baseSummonConfig.growthRates },
-      potentialPoints: initialPotentialPoints
+        fusionMaterials: materials.map(m => m.id),
     };
-    
-    return newSummon;
+
+    // 7. 更新潜力点 (宝宝和变异有额外加成)
+    newSummonInstance.potentialPoints = (newSummonInstance.potentialPoints || 0) + (SUMMON_NATURE_CONFIG[offspringNatureType]?.potentialPointsBonus || 0);
+
+    return newSummonInstance;
+  }
+  
+  /**
+   * 根据父母双方的 natureType 和所用材料，决定后代的 natureType
+   * @private
+   */
+  _determineOffspringNatureType(natureType1, natureType2, materials = []) {
+    const { WILD, BABY, MUTANT } = SUMMON_NATURE_TYPES;
+    let babyChance = 0;
+    let mutantChance = 0;
+
+    const natureTypes = [natureType1, natureType2];
+
+    if (natureTypes.every(t => t === WILD)) {
+        // 父母都是野生 -> 100% 野生
+        return WILD;
+    }
+
+    if (natureTypes.includes(MUTANT)) {
+        // 有一方是变异
+        babyChance = 0.7; // 70% 几率是宝宝
+        mutantChance = 0.25; // 25% 几率是变异
+    } else if (natureTypes.every(t => t === BABY)) {
+        // 双方都是宝宝
+        babyChance = 0.95; // 95% 几率是宝宝
+        mutantChance = 0.05; // 5% 几率突变成变异
+    } else if (natureTypes.includes(BABY)) {
+        // 一方是宝宝，一方是野生
+        babyChance = 0.6; // 60% 几率是宝宝
+    }
+
+    // TODO: 材料对概率的影响
+    // materials.forEach(material => { ... });
+
+    const rand = Math.random();
+    if (rand < mutantChance) {
+        return MUTANT;
+    }
+    if (rand < mutantChance + babyChance) {
+        return BABY;
+    }
+    return WILD;
+  }
+
+  /**
+   * 计算遗传的、未受 natureType 加成的先天属性
+   * @private
+   */
+  _calculateInheritedInnateAttributes(summon1, summon2, materials = []) {
+    const inherited = {};
+    const attrs = Object.keys(summon1.innateAttributes);
+
+    for (const attr of attrs) {
+        const val1 = summon1.innateAttributes[attr] || 0;
+        const val2 = summon2.innateAttributes[attr] || 0;
+        const avg = (val1 + val2) / 2;
+        // 引入 +/- 5% 的随机遗传浮动
+        const fluctuation = 1 + (Math.random() - 0.5) * 0.1; 
+        inherited[attr] = Math.floor(avg * fluctuation);
+    }
+    return inherited;
+  }
+
+  /**
+   * 计算遗传的、未受 natureType 加成的成长率
+   * @private
+   */
+  _calculateInheritedGrowthRates(summon1, summon2, materials = []) {
+      const inherited = {};
+      const rates = Object.keys(summon1.growthRates);
+
+      for (const rate of rates) {
+          const val1 = summon1.growthRates[rate] || 0;
+          const val2 = summon2.growthRates[rate] || 0;
+          const avg = (val1 + val2) / 2;
+          // 引入 +/- 5% 的随机遗传浮动
+          const fluctuation = 1 + (Math.random() - 0.5) * 0.1;
+          // 成长率保留多位小数
+          inherited[rate] = avg * fluctuation;
+      }
+      return inherited;
   }
   
   /**

@@ -57,29 +57,28 @@ export const useEquipmentRelationship = () => {
         setError(null);
         
         // 调用 ERM 新的 equip 方法，它会处理 slotType
-        const success = await equipmentRelationshipManager.equip(itemId, summonId);
+        const result = await equipmentRelationshipManager.equip(itemId, summonId);
         
-        if (success) {
-          // 保留现有的Redux dispatch逻辑，尽管ERM现在会直接更新Summon实例
-          // 这些dispatch可能用于触发特定UI组件的即时响应或与Redux状态同步
+        if (result.success) {
           const itemRelation = equipmentRelationshipManager.getItemEquipmentStatus(itemId);
-          if (itemRelation) { // 确保物品成功装备并且关系存在
+          if (itemRelation) {
             dispatch({
-              type: 'inventory/updateItemStatus', // 假设的action type
+              type: 'inventory/updateItemStatus',
               payload: { itemId, equipped: true, summonId, slotType: itemRelation.slotType }
             });
             
             dispatch({
-              type: 'summon/updateEquipment', // 假设的action type
+              type: 'summon/updateEquipment',
               payload: { summonId, slotType: itemRelation.slotType, itemId }
             });
           }
         }
         
-        return success;
+        return result; // 直接返回 ERM 的结果对象
       } catch (error) {
+        console.error('[useEquipmentRelationship] equipItem error:', error);
         setError(error.message);
-        return false;
+        return { success: false, message: error.message }; // 确保返回标准格式
       } finally {
         setIsLoading(false);
       }

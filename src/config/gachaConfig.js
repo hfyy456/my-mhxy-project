@@ -1,4 +1,4 @@
-import { QUALITY_TYPES } from "./enumConfig";
+import { QUALITY_TYPES, FIVE_ELEMENTS } from "./enumConfig";
 
 export const gachaPoolConfig = {
   [QUALITY_TYPES.NORMAL]: {
@@ -80,4 +80,83 @@ export const eventGachaPoolConfig = {
   //   bonusSummons?: { [QUALITY_TYPES.LEGENDARY]: ["specialEventSummon"] } // 在原有基础上增加特定召唤兽
   //   probabilityModifiers?: { [QUALITY_TYPES.MYTHIC]: 0.02 } // 修改特定品质概率
   // }
+};
+
+// =================================================================
+// Fusion System Configs
+// =================================================================
+
+/**
+ * 合成材料配置
+ */
+export const FUSION_MATERIALS = {
+  BEAST_PILL: {
+    id: 'beast_pill',
+    name: '兽丹',
+    description: '提升合成成功率和技能继承概率',
+    successRateBonus: 0.2,
+    skillInheritBonus: 0.15,
+    rarity: 'rare'
+  },
+  FIVE_ELEMENT_STONE: {
+    id: 'five_element_stone',
+    name: '五行石',
+    description: '可指定新生召唤兽的五行属性',
+    allowElementChoice: true,
+    rarity: 'epic'
+  },
+  SOUL_CRYSTAL: {
+    id: 'soul_crystal',
+    name: '魂晶',
+    description: '大幅提升合成后召唤兽的等级和属性',
+    levelBonus: 5,
+    attributeBonus: 0.3,
+    rarity: 'legendary'
+  }
+};
+
+/**
+ * 合成规则配置
+ */
+export const FUSION_RULES = {
+  // 基础成功率
+  BASE_SUCCESS_RATE: 0.7,
+
+  // 技能继承规则
+  SKILL_INHERIT: {
+    BASE_RATE: 0.32, // 基础继承率32%（30%-35%范围内）
+    RATE_VARIANCE: 0.03, // 随机波动±3%，实现30%-35%范围
+    SKILL_DECREASE_FACTOR: 0.02 // 技能数量多时的递减因子降低
+  },
+
+  // 等级影响
+  LEVEL_IMPACT: {
+    MIN_LEVEL_RATIO: 0.3, // 最低等级保留比例
+    MAX_LEVEL_RATIO: 0.8, // 最高等级保留比例
+    AVERAGE_WEIGHT: 0.6    // 平均值权重
+  },
+  
+  // 五行相克加成
+  ELEMENT_COMPATIBILITY: {
+    [FIVE_ELEMENTS.METAL]: {
+      [FIVE_ELEMENTS.WOOD]: 0.1,  // 金克木，轻微加成
+      [FIVE_ELEMENTS.FIRE]: -0.1, // 火克金，轻微减成
+    },
+    [FIVE_ELEMENTS.WOOD]: {
+      [FIVE_ELEMENTS.EARTH]: 0.1,
+      [FIVE_ELEMENTS.METAL]: -0.1,
+    },
+    [FIVE_ELEMENTS.WATER]: {
+      [FIVE_ELEMENTS.FIRE]: 0.1,
+      [FIVE_ELEMENTS.EARTH]: -0.1,
+    },
+    [FIVE_ELEMENTS.FIRE]: {
+      [FIVE_ELEMENTS.METAL]: 0.1,
+      [FIVE_ELEMENTS.WATER]: -0.1,
+    },
+    [FIVE_ELEMENTS.EARTH]: {
+      [FIVE_ELEMENTS.WATER]: 0.1,
+      [FIVE_ELEMENTS.WOOD]: -0.1,
+    }
+  },
 }; 

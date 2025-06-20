@@ -63,7 +63,8 @@ const initialState = {
     craftingStations: [],         // 解锁的制作台
     trainingFacilities: [],       // 解锁的训练设施
     teleportPoints: [],           // 解锁的传送点
-    questGivers: []              // 解锁的任务发布者
+    questGivers: [],              // 解锁的任务发布者
+    summonCenterFeatures: []      // 解锁的召唤兽中心功能
   },
   
   // 计时器系统
@@ -181,6 +182,14 @@ const enhancedHomesteadSlice = createSlice({
           if (!state.unlockedFeatures.shops.includes(unlock.data.shopId)) {
             state.unlockedFeatures.shops.push(unlock.data.shopId);
           }
+          break;
+          
+        case UNLOCK_TYPES.SUMMON_CENTER:
+          unlock.data.features.forEach(feature => {
+            if (!state.unlockedFeatures.summonCenterFeatures.includes(feature)) {
+              state.unlockedFeatures.summonCenterFeatures.push(feature);
+            }
+          });
           break;
           
         case UNLOCK_TYPES.CRAFTING_STATION:

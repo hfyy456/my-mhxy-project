@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-07 05:51:32
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-20 06:14:52
+ */
 // src/config/homestead/enhancedBuildingConfig.js
 import { HOMESTEAD_GENERAL_CONFIG } from './homesteadConfig';
 const { HOMESTEAD_RESOURCES } = HOMESTEAD_GENERAL_CONFIG;
@@ -22,6 +28,7 @@ export const UNLOCK_TYPES = {
   TELEPORT_POINT: 'teleport_point',    // 传送点
   STORAGE_EXPANSION: 'storage_expansion', // 存储扩展
   HOMESTEAD_UPGRADE: 'homestead_upgrade', // 家园升级
+  SUMMON_CENTER: 'summon_center',       // 召唤兽中心，解锁所有召唤兽相关功能
 };
 
 export const ENHANCED_BUILDINGS = {
@@ -144,7 +151,7 @@ export const ENHANCED_BUILDINGS = {
     name: '高级采矿场',
     category: BUILDING_CATEGORIES.RESOURCE_PRODUCTION,
     description: '高效开采矿石和珍贵材料',
-    size: { width: 2, height: 3 },
+    size: { width: 2, height: 2 },
     texture: 'buildings/advanced_mine.png',
     icon: '⛏️',
     maxLevel: 8,
@@ -290,13 +297,13 @@ export const ENHANCED_BUILDINGS = {
     ],
   },
 
-  alchemy_lab: {
-    id: 'alchemy_lab',
+  alchemist_lab: {
+    id: 'alchemist_lab',
     name: '炼金实验室',
     category: BUILDING_CATEGORIES.CRAFTING,
     description: '炼制强力药剂和魔法物品',
-    size: { width: 2, height: 3 },
-    texture: 'buildings/alchemy_lab.png',
+    size: { width: 2, height: 2},
+    texture: 'buildings/alchemist_lab.png',
     icon: '⚗️',
     maxLevel: 8,
     requires: [{ buildingId: 'herb_garden', minLevel: 1 }],
@@ -314,8 +321,8 @@ export const ENHANCED_BUILDINGS = {
           { 
             type: UNLOCK_TYPES.CRAFTING_STATION, 
             data: { 
-              stationId: 'alchemy_basic',
-              recipes: ['healing_potion', 'mana_potion', 'buff_potions']
+              stationId: 'alchemist_lab_basic',
+              recipes: ['major_health_potion_recipe', 'mana_regen_potion_recipe']
             } 
           }
         ]
@@ -357,13 +364,13 @@ export const ENHANCED_BUILDINGS = {
   },
 
   // ===== 功能建筑 =====
-  warehouse: {
-    id: 'warehouse',
+  large_warehouse: {
+    id: 'large_warehouse',
     name: '大型仓库',
     category: BUILDING_CATEGORIES.UTILITY,
     description: '大幅增加资源储存容量',
-    size: { width: 3, height: 2 },
-    texture: 'buildings/warehouse.png',
+    size: { width: 2, height: 2 },
+    texture: 'buildings/large_warehouse.png',
     icon: '📦',
     maxLevel: 8,
     levels: [
@@ -467,14 +474,63 @@ export const ENHANCED_BUILDINGS = {
         ]
       }
     ],
-  }
+  },
+
+  // ===== 召唤兽相关建筑 =====
+  summon_home: {
+    id: 'summon_home',
+    name: '召唤兽之家',
+    category: BUILDING_CATEGORIES.UTILITY,
+    description: '进行召唤兽融合、洗练、合成等操作的地方',
+    size: { width: 2, height: 2 },
+    texture: 'buildings/summon_home.png', // 假设一个贴图路径
+    icon: '🐾',
+    maxLevel: 3,
+    requires: [{ buildingId: 'town_hall', minLevel: 2 }],
+    levels: [
+      {
+        level: 1,
+        buildCost: [
+          { resource: HOMESTEAD_RESOURCES.WOOD.id, amount: 250 },
+          { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amount: 50 },
+          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 1500 }
+        ],
+        buildTimeSeconds: 360,
+        unlocks: [
+          {
+            type: UNLOCK_TYPES.SUMMON_CENTER,
+            data: {
+              features: ['fusion', 'synthesis'] // 解锁融合与合成
+            }
+          }
+        ]
+      },
+      {
+        level: 2,
+        buildCost: [
+          { resource: HOMESTEAD_RESOURCES.WOOD.id, amount: 500 },
+          { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amount: 100 },
+          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 3000 }
+        ],
+        buildTimeSeconds: 720,
+        unlocks: [
+          {
+            type: UNLOCK_TYPES.SUMMON_CENTER,
+            data: {
+              features: ['refining'] // 解锁洗练
+            }
+          }
+        ]
+      }
+    ]
+  },
 };
 
 // 建筑放置规则
 export const PLACEMENT_RULES = {
   // 最小距离规则
   MIN_DISTANCE: {
-    'advanced_mine': { 'alchemy_lab': 2 }, // 采矿场距离炼金实验室至少2格
+    'advanced_mine': { 'alchemist_lab': 2 }, // 采矿场距离炼金实验室至少2格
   },
   
   // 相邻加成规则
@@ -482,7 +538,7 @@ export const PLACEMENT_RULES = {
     'blacksmith': {
       'advanced_mine': { type: 'production_boost', value: 0.15 }
     },
-    'alchemy_lab': {
+    'alchemist_lab': {
       'herb_garden': { type: 'production_boost', value: 0.20 }
     }
   },
@@ -500,12 +556,34 @@ export const BUILDING_UNLOCK_CHAIN = {
   herb_garden: [],
   general_store: ['town_hall'],
   advanced_mine: ['town_hall'],
-  warehouse: ['town_hall'],
+  large_warehouse: ['town_hall'],
   blacksmith: ['advanced_mine'],
-  alchemy_lab: ['herb_garden'],
+  alchemist_lab: ['herb_garden'],
   equipment_shop: ['town_hall'],
   training_ground: ['town_hall'],
   teleport_portal: ['town_hall'],
+  fountain: [],
+  flower_bed: [],
+  summon_home: ['town_hall']
+};
+
+/**
+ * 建筑需求链的简单文本表示，方便快速查阅
+ * 注意：这部分不直接参与游戏逻辑，真正的依赖关系在每个建筑的 `requires` 属性中定义。
+ */
+export const BUILDING_REQUIREMENTS_DOC = {
+  general_store: ['town_hall'],
+  equipment_shop: ['town_hall'],
+  advanced_mine: ['town_hall'],
+  blacksmith: ['advanced_mine'],
+  alchemist_lab: ['herb_garden'],
+  training_ground: ['town_hall'],
+  teleport_portal: ['town_hall'],
+  summon_home: ['town_hall'],
+  // 独立建筑
+  lumber_mill: [],
+  herb_garden: [],
+  large_warehouse: [],
   fountain: [],
   flower_bed: []
 }; 

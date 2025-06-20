@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-17 07:17:46
+ * @LastEditTime: 2025-06-20 05:56:22
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,7 +23,6 @@ import BattleScreen from "@/features/battle/components/BattleScreen";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
 import TowerSystem from "@/features/tower/components/TowerSystem";
 import TowerEntry from "@/features/tower/components/TowerEntry";
-import HomesteadView from "@/features/homestead/components/HomesteadView";
 import SummonManagerDemo from "@/components/SummonManagerDemo";
 import ConfigManager from "../components/ConfigManager";
 import ElectronStoreNotification from "../components/ElectronStoreNotification";
@@ -32,11 +31,13 @@ import NpcOOPDemo from "@/features/npc/components/NpcOOPDemo";
 import BattlePreparationModal from "@/features/formation/components/BattlePreparationModal";
 import ThemePreview from "@/features/ui/components/ThemePreview";
 import ThemeDemo from "@/features/ui/components/ThemeDemo";
+import EnhancedSummonFusionModal from "@/features/summon/components/EnhancedSummonFusionModal";
+import SummonHomePanel from "@/features/summon/components/SummonHomePanel";
 
 import { useAppModals } from "@/hooks/useAppModals";
 import { useInventoryManager } from "@/hooks/useInventoryManager";
 
-import { useSummonManager } from "@/hooks/useSummonManager";
+import { useSummonManager, useSummonOperations } from "@/hooks/useSummonManager";
 import { uiText } from "@/config/ui/uiTextConfig";
 import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import { selectIsBattleActive } from "@/store/slices/battleSliceSimplified";
@@ -47,6 +48,7 @@ import worldMapConfig from "@/config/map/worldMapConfig.json";
 
 import CommonModal from "@/features/ui/components/CommonModal";
 import { current } from "@reduxjs/toolkit";
+import SummonInfo from "@/features/summon/components/SummonInfo";
 
 const GamePageContent = ({
   showToast,
@@ -61,6 +63,8 @@ const GamePageContent = ({
   const player = useSelector((state) => state.player);
   const { isFighting } = useSelector((state) => state.battle);
   const { startBattle, transferControlToEngine } = useBattleStateMachine();
+
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
   // 只在游戏初始化后才启用这些Hook
   const inventoryState = gameInitialized
@@ -82,9 +86,14 @@ const GamePageContent = ({
   }, [gameInitialized]);
 
   // 使用OOP召唤兽系统 - 只在游戏初始化后
-  const { allSummons } = gameInitialized
+  const { createSummon, currentSummonFullData } = gameInitialized
     ? useSummonManager()
-    : { allSummons: {} };
+    : {
+        createSummon: () => console.log("Game not initialized"),
+        currentSummonFullData: null,
+      };
+      
+  const { selectSummon } = useSummonOperations();
 
   const {
     isSummonModalOpen,
@@ -125,6 +134,12 @@ const GamePageContent = ({
     closeSummonEquipmentModal,
     isSummonOOPDemoOpen,
     closeSummonOOPDemoModal,
+    isFusionModalOpen,
+    openFusionModal,
+    closeFusionModal,
+    isSummonHomePanelOpen,
+    openSummonHomePanel,
+    closeSummonHomePanel,
   } = useAppModals();
 
   const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
@@ -342,6 +357,10 @@ const GamePageContent = ({
     setEnemyGroup(null);
   };
 
+  const handleSelectSummon = (summonId) => {
+    selectSummon(summonId);
+  };
+
   // 如果游戏未初始化，显示加载提示
   if (!gameInitialized) {
     return (
@@ -358,7 +377,7 @@ const GamePageContent = ({
       <div className="flex-1 relative overflow-hidden">
         {!isBattleActive && (
           <>
-            <BeautifulHomesteadView showToast={showToast} />
+            <BeautifulHomesteadView showToast={showToast} onOpenSummonHome={openSummonHomePanel} />
             <DialoguePanel />
             <GameActionBar /> {/* 渲染恢复的操作栏 */}
             {/* Action Bar */}
@@ -525,18 +544,6 @@ const GamePageContent = ({
           </CommonModal>
 
           <CommonModal
-            isOpen={isHomesteadModalOpen}
-            title={uiText.homestead?.title || "我的家园"}
-            onClose={closeHomesteadModal}
-          >
-            <HomesteadView
-              uiText={uiText}
-              toasts={toasts}
-              setToasts={setToasts}
-            />
-          </CommonModal>
-
-          <CommonModal
             isOpen={isSummonOOPDemoOpen}
             onClose={closeSummonOOPDemoModal}
             title={uiText.titles.summonOOPDemoModal}
@@ -602,6 +609,46 @@ const GamePageContent = ({
           >
             <ThemeDemo />
           </CommonModal>
+
+          {/* 召唤兽融合模态框 */}
+          <EnhancedSummonFusionModal
+            isOpen={isFusionModalOpen}
+            onClose={closeFusionModal}
+            onFusion={(newSummon) => {
+              const newSummonData = typeof newSummon.toJSON === 'function' ? newSummon.toJSON() : newSummon;
+              createSummon(newSummonData);
+              showToast(`融合成功，获得【${newSummon.name}】!`, 'success');
+            }}
+          />
+
+          {/* 召唤兽之家功能面板 */}
+          {isSummonHomePanelOpen && (
+            <div className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center">
+                <SummonHomePanel
+                  isOpen={isSummonHomePanelOpen}
+                  onClose={closeSummonHomePanel}
+                  onFusionSuccess={(newSummon) => {
+                    showToast(`成功融合出新的召唤兽: ${newSummon.name || '未知'}!`, "success");
+                  }}
+                  onSelectSummon={handleSelectSummon}
+                  showToast={showToast}
+                />
+            </div>
+          )}
+
+          {isRightSidebarOpen && currentSummonFullData && (
+            <div className="absolute right-0 top-0 h-full w-full md:w-1/3 bg-gray-900/90 backdrop-blur-sm z-50 shadow-2xl overflow-y-auto">
+               <button 
+                onClick={() => setIsRightSidebarOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+              <div className="p-6 pt-12">
+                <SummonInfo summon={currentSummonFullData} />
+              </div>
+            </div>
+          )}
         </>
         <ElectronStoreNotification
           isOpen={showElectronStoreNotification}

@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-19 05:26:54
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-19 05:13:51
+ * @LastEditTime: 2025-06-21 03:08:57
  */
 import allSummons from '../config/summon/allSummons.json';
 import { qualityConfig, derivedAttributeConfig, levelExperienceRequirements } from '../config/config';
@@ -163,13 +163,25 @@ export const calculateFinalBasicAttributes = async (summonInstance) => {
         return { finalBasicAttributes: {}, equippedItemsDataMap: {} };
     }
 
-    const { level, innateAttributes, growthRates, allocatedPoints } = summonInstance;
+    const { level, innateAttributes, growthRates, allocatedPoints, aptitudeRatios, natureType } = summonInstance;
+
+    // 根据召唤兽的 natureType 获取对应的配置
+    const natureConfig = SUMMON_NATURE_CONFIG[natureType] || SUMMON_NATURE_CONFIG[SUMMON_NATURE_TYPES.WILD];
+    const { baseAttributeMultiplier, growthRateMultiplier } = natureConfig;
 
     // 1. Calculate level-based attributes
     const levelBasedAttributes = {};
     for (const attr in innateAttributes) {
-        const growthRate = growthRates[attr] || 0;
-        levelBasedAttributes[attr] = Math.floor(innateAttributes[attr] * (1 + (level - 1) * growthRate));
+        // 应用 natureType 对成长率的加成
+        const finalGrowthRate = (growthRates[attr] || 0) * growthRateMultiplier;
+        const aptitude = aptitudeRatios[attr] || 1.0; // 获取资质系数，默认为1
+        
+        // 应用 natureType 对先天属性的加成
+        const finalInnateAttribute = innateAttributes[attr] * baseAttributeMultiplier;
+
+        // 使用最终的先天属性和成长率进行等级计算
+        // 同时应用成长率和资质系数
+        levelBasedAttributes[attr] = Math.floor(finalInnateAttribute * (1 + (level - 1) * finalGrowthRate * aptitude));
     }
 
     // 2. Apply allocated points

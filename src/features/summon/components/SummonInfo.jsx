@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useInventoryManager";
 import { useEquipmentRelationship, useSummonEquipmentStatus } from '../../../hooks/useEquipmentRelationship';
 import inventoryManager from '@/store/InventoryManager'; // Import InventoryManager instance
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Restore ItemTooltip to a simpler version based on user feedback
 const ItemTooltip = ({ item, position }) => {
@@ -119,6 +120,75 @@ const BASIC_ATTRIBUTE_KEYS = [
   { key: "luck", name: "运气" },
 ];
 
+const AttributeRadarChart = ({ summon }) => {
+  // 安全检查：确保 summon 对象存在
+  if (!summon) {
+    return <div className="text-center text-gray-500">等待召唤兽数据...</div>;
+  }
+
+  // 关键修正：不再调用 summon.getConfig()，直接从全局 config 获取
+  const { growthRates, innateAttributes, summonSourceId } = summon;
+  const config = summonConfig[summonSourceId];
+
+  const data = useMemo(() => {
+    if (!growthRates || !innateAttributes || !config?.basicAttributeRanges) {
+      return [];
+    }
+    
+    return BASIC_ATTRIBUTE_KEYS.map(({ key, name }) => {
+      const baseGrowth = growthRates[key] || 0;
+      
+      const range = config.basicAttributeRanges[key];
+      let aptitude = 1.0;
+      if (range) {
+        const innateValue = innateAttributes[key] || 0;
+        const min = range.min || 0;
+        const max = range.max || 1;
+        if (max - min !== 0) {
+          const normalized = (innateValue - min) / (max - min);
+          aptitude = 0.5 + Math.max(0, Math.min(1, normalized));
+        }
+      }
+      
+      const finalGrowth = baseGrowth * aptitude;
+
+      return {
+        attribute: name,
+        growth: finalGrowth * 100,
+      };
+    });
+  }, [growthRates, innateAttributes, config]);
+  
+  if (data.length === 0) {
+    return <div className="text-center text-gray-500">属性成长数据不足，无法生成图表</div>;
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={250}>
+      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+        <PolarGrid />
+        <PolarAngleAxis dataKey="attribute" tick={{ fill: '#ccc' }} />
+        <PolarRadiusAxis 
+          angle={30} 
+          domain={[0, 'dataMax + 1']} 
+          tickFormatter={(tick) => `${tick.toFixed(2)}%`} 
+        />
+        <RechartsTooltip 
+          contentStyle={{ 
+            backgroundColor: 'rgba(40, 40, 40, 0.9)', 
+            border: '1px solid #555',
+            borderRadius: '8px'
+          }}
+          labelStyle={{ color: '#eee' }}
+          formatter={(value) => `${value.toFixed(2)}%`}
+        />
+        <Legend />
+        <Radar name="成长率" dataKey="growth" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.7} />
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+};
+
 const SummonInfo = ({
   summon,
   onOpenEquipmentSelectorForSlot,
@@ -127,8 +197,13 @@ const SummonInfo = ({
   levelUpSummon,
   allocatePoints,
   resetPoints,
+  onUnequip,
+  onDelete,
+  onClone,
+  isItemEquipped,
   deleteSummon,
 }) => {
+  const [activeTab, setActiveTab] = useState("attributes");
   // 使用OOP召唤兽管理系统替代Redux (已从props接收，故移除)
   /*
   const {
@@ -239,24 +314,21 @@ const SummonInfo = ({
     const currentEquippedItem = itemId ? inventoryManager.getItemById(itemId) : null;
 
     if (currentEquippedItem) {
-      if (window.confirm(`是否卸下 ${currentEquippedItem.name || '该装备'} (${getSlotDisplayName(slotType)})？`)) {
-        try {
-          const success = await unequipFromSlot(summon.id, slotType);
-          if (success) {
-            console.log(`[SummonInfo] 成功从槽位 ${slotType} 卸下装备 ${currentEquippedItem.name}`);
+      if (window.confirm(`确定要卸下装备 "${currentEquippedItem.name}" 吗？`)) {
+        if (typeof onUnequip === 'function') {
+            onUnequip(slotType);
           } else {
-            console.warn(`[SummonInfo] 从槽位 ${slotType} 卸下装备 ${currentEquippedItem.name} 失败`);
-          }
-        } catch (error) {
-          console.error(`[SummonInfo] 卸下装备 ${currentEquippedItem.name} 时发生错误:`, error);
+            console.error("onUnequip is not provided to SummonInfo");
         }
       }
     } else {
       if (onOpenEquipmentSelectorForSlot) {
-        onOpenEquipmentSelectorForSlot(summon.id, slotType);
+        onOpenEquipmentSelectorForSlot(slotType);
+      } else {
+        console.error("onOpenEquipmentSelectorForSlot is not provided to SummonInfo");
       }
     }
-  }, [summon, equipment, unequipFromSlot, onOpenEquipmentSelectorForSlot, getSlotDisplayName, inventoryManager]);
+  }, [summon, equipment, onUnequip, onOpenEquipmentSelectorForSlot, inventoryManager]);
 
   const renderEquipmentSlots = () => {
     if (!slotConfig) return null;
@@ -275,10 +347,8 @@ const SummonInfo = ({
       const borderColorClass = actualEquippedItem ? `border-${qualityColorDetail}` : 'border-slate-600';
       const iconColorClass = actualEquippedItem ? `text-${qualityColorDetail}` : "text-slate-400";
       const nameColorClass = actualEquippedItem ? `text-${qualityColorDetail}` : "text-slate-300";
-      // Use actualEquippedItem.icon if available, otherwise default slot.icon from config
       const slotIconToDisplay = actualEquippedItem?.icon || slot.icon || 'fa-question-circle'; 
-      // Use actualEquippedItem.name if available, otherwise default slot.displayName from config
-      const slotNameToDisplay = actualEquippedItem?.name || slot.displayName;
+       const slotNameToDisplay = actualEquippedItem?.name || getSlotDisplayName(slot.type);
 
       return (
         <div
@@ -286,7 +356,6 @@ const SummonInfo = ({
           className={`w-full h-20 bg-slate-800 rounded-lg flex flex-col justify-center items-center border-2 ${borderColorClass} cursor-pointer hover:border-opacity-75 transition-all duration-200 p-1.5 relative group`}
           onClick={() => handleEquipmentSlotClick(slot.type)}
           onMouseEnter={(e) => {
-            const eventTimestamp = Date.now(); // Add a timestamp for easier log corellation
             if (actualEquippedItem) {
               clearTimeout(tooltipTimeoutRef.current);
               const rect = e.currentTarget.getBoundingClientRect();
@@ -294,8 +363,6 @@ const SummonInfo = ({
               const screenHeight = window.innerHeight;
               const tooltipWidth = 280; 
               const tooltipHeightEstimate = 150;
-
-            
 
               let xPos = rect.right + 5; 
 
@@ -310,31 +377,19 @@ const SummonInfo = ({
               let yPos = rect.top;
               
               if (yPos + tooltipHeightEstimate > screenHeight) {
-                console.log(`[SummonInfo ${eventTimestamp}] Tooltip (height: ${tooltipHeightEstimate}) would go off bottom screen edge (${yPos + tooltipHeightEstimate} > ${screenHeight}). Repositioning higher.`);
                 yPos = screenHeight - tooltipHeightEstimate - 5;
-                console.log(`[SummonInfo ${eventTimestamp}] New yPos (adjusted from bottom): ${yPos}`);
               }
 
               if (yPos < 0) {
-                console.log(`[SummonInfo ${eventTimestamp}] Tooltip would go off top screen edge (${yPos} < 0). Adjusting to 5.`);
                 yPos = 5;
               }
-              
-              console.log(`[SummonInfo ${eventTimestamp}] Attempting to setTooltipPosition with: xPos=${xPos}, yPos=${yPos}`);
-              
-              // Log the item being sent to the tooltip
-              console.log('[SummonInfo onMouseEnter] actualEquippedItem:', JSON.stringify(actualEquippedItem, null, 2));
               
               setTooltipPosition({ x: xPos, y: yPos });
               setTooltipItem(actualEquippedItem);
               setTooltipVisible(true); 
-            } else {
-              console.log(`[SummonInfo ${eventTimestamp}] actualEquippedItem is NOT present. Tooltip will not show.`);
             }
           }}
-          onMouseLeave={(e) => {
-            const eventTimestamp = Date.now();
-            console.log(`[SummonInfo] MouseLeave triggered at ${eventTimestamp}`);
+          onMouseLeave={() => {
             setTooltipVisible(false);
           }}
         >
@@ -579,7 +634,7 @@ const SummonInfo = ({
                 剩余: {potentialPoints}
               </span>
             </h3>
-            <div className="space-y-2 mb-4">
+            <div className="space-y-1.5 mb-3">
               {BASIC_ATTRIBUTE_KEYS.map(({ key, name: attrDisplayName }) => {
                 const allocatedVal = allocatedPoints[key] || 0;
                 const equipmentBonus = equipmentBonusesToBasic[key] || 0;
@@ -612,7 +667,7 @@ const SummonInfo = ({
 
                 return (
                   <div
-                    className="bg-slate-800/50 rounded-lg p-3 hover:bg-slate-800/70 transition-colors"
+                    className="bg-slate-800/50 rounded-lg p-2 hover:bg-slate-800/70 transition-colors"
                     key={key}
                   >
                     <div className="flex items-center justify-between">
@@ -678,6 +733,27 @@ const SummonInfo = ({
 
         {/* Right Column */}
         <div className="lg:col-span-7  flex flex-col gap-3">
+          {/* Tab Navigation */}
+          <div className="flex border-b border-slate-600/50">
+            <TabButton
+              label="核心属性"
+              icon="fa-star"
+              isActive={activeTab === "attributes"}
+              onClick={() => setActiveTab("attributes")}
+            />
+            <TabButton
+              label="资质 & 技能"
+              icon="fa-dna"
+              isActive={activeTab === "aptitudeAndSkills"}
+              onClick={() => setActiveTab("aptitudeAndSkills")}
+            />
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-grow">
+            {activeTab === "attributes" && (
+              <div className="space-y-3">
+                {/* 装备 */}
           <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
             <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
               <i className="fa-solid fa-gem text-purple-400 mr-1 text-sm"></i>
@@ -687,14 +763,12 @@ const SummonInfo = ({
               {renderEquipmentSlots()}
             </div>
           </div>
-
+                {/* 核心属性 */}
           <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm flex-grow">
             <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
               <i className="fa-solid fa-star text-purple-400 mr-1 text-sm"></i>
               {uiText.titles.coreAttributes}
             </h3>
-            
-            {/* 战力值展示 */}
             {typeof summon.power === "number" && (
               <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 rounded-lg p-1.5 mb-1.5">
                 <div className="flex justify-between items-center">
@@ -707,7 +781,6 @@ const SummonInfo = ({
                 </div>
               </div>
             )}
-            
             <div className="grid grid-cols-2 gap-1.5">
               {[
                 { key: "hp", icon: "fa-heart", color: "text-red-400" },
@@ -751,7 +824,17 @@ const SummonInfo = ({
               )}
             </div>
           </div>
+              </div>
+            )}
 
+            {activeTab === "aptitudeAndSkills" && (
+              <div className="space-y-3">
+                {/* 雷达图 */}
+                <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
+                  <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center border-t border-slate-600/50 pt-2">成长资质</h4>
+                  <AttributeRadarChart summon={summon} />
+                </div>
+                {/* 技能 */}
           <div className="bg-slate-700/70 rounded-lg p-2 shadow-sm">
             <h3 className="text-base font-semibold text-gray-100 mb-2 flex items-center border-b border-slate-600/50 pb-1">
               <i className="fa-solid fa-bolt text-purple-400 mr-1 text-sm"></i>
@@ -883,6 +966,9 @@ const SummonInfo = ({
                 })}
               </div>
             </ul>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -930,5 +1016,19 @@ const SummonInfo = ({
     </div>
   );
 };
+
+const TabButton = ({ label, icon, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center px-4 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none ${
+      isActive
+        ? "border-b-2 border-purple-400 text-purple-300"
+        : "border-b-2 border-transparent text-gray-400 hover:text-white"
+    }`}
+  >
+    <i className={`fas ${icon} mr-2`}></i>
+    {label}
+  </button>
+);
 
 export default SummonInfo;

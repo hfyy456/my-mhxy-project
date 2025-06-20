@@ -10,7 +10,8 @@ import { generateUniqueId } from "@/utils/idUtils";
 import { FIVE_ELEMENTS } from "@/config/enumConfig";
 import { getSkillById } from "@/config/skill/skillConfig";
 import { useSummonManager } from "../../../hooks/useSummonManager";
-import summonFusionManager, { FUSION_MATERIALS } from "../../../store/SummonFusionManager";
+import summonFusionManager from "../../../store/SummonFusionManager";
+import { FUSION_MATERIALS } from "../../../config/gachaConfig";
 
 // 动画样式
 const animationStyles = `

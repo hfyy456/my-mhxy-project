@@ -6,6 +6,7 @@ import { useInventoryManager, useEquipmentSlotConfig } from '@/hooks/useInventor
 import inventoryManager from '@/store/InventoryManager';
 import { useSummonManager } from '@/hooks/useSummonManager'; // 使用OOP召唤兽系统
 import { formatEffectDisplay } from '@/utils/equipmentEffectUtils';
+import { summonConfig } from '@/config/summon/summonConfig';
 
 // 已移除 formatAttributeValue 函数，现在使用统一的 formatEffectDisplay
 
@@ -64,8 +65,11 @@ const EquippableItemsModal = ({
   }, [inventoryState, slotType, isOpen]);
 
   const getSummonName = (summonId) => {
-    const summon = allSummons[summonId]; // 使用OOP召唤兽数据
-    return summon ? (summon.nickname || summon.name) : '未知召唤兽';
+    const summon = allSummons[summonId];
+    if (!summon) return '未知召唤兽';
+    // 确保从 summonConfig 获取基础名字
+    const baseName = summonConfig[summon.summonSourceId]?.name || '未知类型';
+    return summon.nickname || baseName;
   };
 
   // 获取当前已装备的物品
@@ -146,7 +150,7 @@ const EquippableItemsModal = ({
               return (
                 <li
                   key={item.id}
-                  onClick={() => onItemSelected(item.id)}
+                  onClick={() => onItemSelected(item)}
                   className={`p-3 ${isEquippedByCurrent ? 'bg-green-800/50' : 'bg-slate-700'} hover:bg-slate-600 rounded-md cursor-pointer transition-all duration-150 border-l-4 border-${itemQualityColorName} relative`}
                 >
                   <div className="absolute top-2 right-2 flex gap-1">

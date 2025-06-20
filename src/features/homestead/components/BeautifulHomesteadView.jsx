@@ -13,6 +13,7 @@ import {
 } from '@/store/slices/enhancedHomesteadSlice';
 import { ENHANCED_BUILDINGS } from '@/config/homestead/enhancedBuildingConfig';
 import { HOMESTEAD_GENERAL_CONFIG } from '@/config/homestead/homesteadConfig';
+import BuildingDetailModal from './BuildingDetailModal';
 
 // 简化的CSS样式，移除动画
 const customStyles = `
@@ -58,7 +59,7 @@ const customStyles = `
   }
 `;
 
-const BeautifulHomesteadView = ({ showToast }) => {
+const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
   const dispatch = useDispatch();
   const plots = useSelector(selectHomesteadPlots);
   const resources = useSelector(selectHomesteadResources);
@@ -168,23 +169,37 @@ const BeautifulHomesteadView = ({ showToast }) => {
   // 处理地块点击
   const handlePlotClick = useCallback((row, col) => {
     const plot = gridLayout[row][col];
+    console.log('--- Plot Click ---');
+    console.log('Clicked plot:', plot);
+    console.log('Current buildings state:', buildings);
     if (!plot) return;
 
     if (selectedBuildingId) {
       handlePlaceBuilding(selectedBuildingId, row, col);
     } else if (plot.buildingId) {
-      // 点击已有建筑，显示建筑信息
+      console.log('Plot has buildingId:', plot.buildingId);
+      console.log('Plot has buildingInstanceId:', plot.buildingInstanceId);
       const building = plot.buildingInstanceId ? buildings[plot.buildingInstanceId] : null;
+      console.log('Found building instance:', building);
       const buildingConfig = ENHANCED_BUILDINGS[plot.buildingId];
+      console.log('Found building config:', buildingConfig);
+      
       if (buildingConfig && building) {
+        console.log('SUCCESS: Conditions met, showing modal.');
         setShowBuildingInfo({
           config: buildingConfig,
           instance: building,
           plot: plot
         });
+      } else {
+        console.log('FAILURE: Conditions not met.');
       }
     }
   }, [gridLayout, selectedBuildingId, handlePlaceBuilding, buildings]);
+
+  const handleCloseModal = useCallback(() => {
+    setShowBuildingInfo(null);
+  }, []);
 
   // 渲染地块
   const renderPlot = useCallback((plot, row, col) => {
@@ -524,61 +539,15 @@ const BeautifulHomesteadView = ({ showToast }) => {
 
         {/* 建筑信息弹窗 - 增加升级功能 */}
         {showBuildingInfo && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="glass-effect rounded-2xl p-6 max-w-md">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-2">{showBuildingInfo.config.icon}</div>
-                <h3 className="text-xl font-bold text-yellow-400">{showBuildingInfo.config.name}</h3>
-              </div>
-              
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-semibold text-blue-300">描述：</span>
-                  <span className="text-gray-300">{showBuildingInfo.config.description}</span>
-                </div>
-                <div>
-                  <span className="font-semibold text-green-300">等级：</span>
-                  <span className="text-yellow-400">{showBuildingInfo.instance.level}</span>
-                  <span className="text-gray-400">/{showBuildingInfo.config.levels.length}</span>
-                </div>
-                <div>
-                  <span className="font-semibold text-purple-300">尺寸：</span>
-                  <span className="text-gray-300">{showBuildingInfo.config.size.width}×{showBuildingInfo.config.size.height}</span>
-                </div>
-                {showBuildingInfo.config.unlocksFeatures && (
-                  <div>
-                    <span className="font-semibold text-orange-300">解锁功能：</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {showBuildingInfo.config.unlocksFeatures.map((feature, idx) => (
-                        <span key={idx} className="text-xs bg-blue-600/30 text-blue-200 px-2 py-1 rounded-full">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-6 flex gap-3">
-                {/* 升级按钮 */}
-                {showBuildingInfo.instance.level < showBuildingInfo.config.levels.length && (
-                  <button
-                    onClick={() => handleBuildingUpgrade(showBuildingInfo.instance.buildingInstanceId)}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl py-2 font-bold transition-all hover-lift"
-                  >
-                    🚀 升级建筑
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => setShowBuildingInfo(null)}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl py-2 font-bold transition-all hover-lift"
-                >
-                  关闭
-                </button>
-              </div>
-            </div>
-          </div>
+          <BuildingDetailModal
+            isOpen={!!showBuildingInfo}
+            onClose={handleCloseModal}
+            buildingInstance={showBuildingInfo.instance}
+            buildingConfig={showBuildingInfo.config}
+            onUpgrade={handleBuildingUpgrade}
+            showToast={showToast}
+            onStartFusion={onOpenSummonHome}
+          />
         )}
 
         {/* 新手教程 */}

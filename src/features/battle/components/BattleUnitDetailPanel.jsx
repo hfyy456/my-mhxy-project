@@ -2,6 +2,13 @@ import React from 'react';
 import { getBuffById } from '@/config/skill/buffConfig';
 import './BattleUnitSprite.css';
 
+const images = import.meta.glob("@/assets/summons/*.png", { eager: true });
+const getSummonSprite = (summonSourceId) => {
+  if (!summonSourceId) return images['/src/assets/summons/default.png']?.default || '';
+  const path = `/src/assets/summons/${summonSourceId}.png`;
+  return images[path]?.default || images['/src/assets/summons/default.png']?.default || '';
+};
+
 // 单位详情面板组件
 const BattleUnitDetailPanel = ({ unit }) => {
   if (!unit) return null;
@@ -48,12 +55,9 @@ const BattleUnitDetailPanel = ({ unit }) => {
         {/* 单位头像 */}
         <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-600 mr-2 flex-shrink-0">
           <img 
-            src={unit.spriteAssetKey ? `/assets/summons/${unit.spriteAssetKey}.png` : '/assets/summons/default.png'} 
+            src={getSummonSprite(unit.spriteAssetKey)} 
             alt={name}
             className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.src = '/assets/summons/default.png';
-            }}
           />
         </div>
         

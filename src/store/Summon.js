@@ -55,9 +55,15 @@ class Summon {
     this.power = 0;
     this.skillSet = data.skillSet || [];
     this.skillLevels = data.skillLevels || {};
+    this.aptitudeRatios = data.aptitudeRatios || {};
     this.createdAt = data.createdAt || Date.now();
     this.updatedAt = data.updatedAt || Date.now();
     this.manager = null;
+
+    if (!data.aptitudeRatios || Object.keys(data.aptitudeRatios).length === 0) {
+      this.calculateAptitudeRatios();
+    }
+
     this.recalculateStats();
   }
 
@@ -275,6 +281,7 @@ class Summon {
       potentialPoints: this.potentialPoints,
       skillSet: [...this.skillSet],
       skillLevels: { ...this.skillLevels },
+      aptitudeRatios: this.aptitudeRatios,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       derivedAttributes: { ...this.derivedAttributes },
@@ -326,6 +333,70 @@ class Summon {
 
   generateId() {
     return generateUniqueId("summon");
+  }
+
+  calculateAptitudeRatios() {
+    const config = this.getConfig();
+    if (!config || !config.basicAttributeRanges) {
+      this.aptitudeRatios = {};
+      return;
+    }
+
+    const ratios = {};
+    for (const attr in config.basicAttributeRanges) {
+      const range = config.basicAttributeRanges[attr];
+      const currentValue = this.innateAttributes[attr] || 0;
+      const min = range.min || 0;
+      const max = range.max || 1;
+
+      if (max - min === 0) {
+        ratios[attr] = 1.0; // 避免除以零
+      } else {
+        // 将资质标准化为 0.5 - 1.5 的范围，平均为1.0
+        const normalizedValue = (currentValue - min) / (max - min); // 0-1范围
+        ratios[attr] = 0.5 + normalizedValue; // 0.5-1.5范围
+      }
+    }
+    this.aptitudeRatios = ratios;
+  }
+
+  refine() {
+    // 重新计算资质
+    this.calculateAptitudeRatios();
+    
+    // 重新计算成长率
+    const config = this.getConfig();
+    this.growthRates = {};
+    if (config.growthRates) {
+      for (const [attr, range] of Object.entries(config.growthRates)) {
+        this.growthRates[attr] = range[0] + Math.random() * (range[1] - range[0]);
+      }
+    }
+    
+    // 重新学习技能
+    this.skillSet = [];
+    if (config.skills) {
+      const availableSkills = [...config.skills];
+      const skillsToLearn = Math.min(availableSkills.length, 1 + Math.floor(this.level / 10)); // Example logic
+      for(let i=0; i<skillsToLearn; i++) {
+        const randomIndex = Math.floor(Math.random() * availableSkills.length);
+        const skillId = availableSkills.splice(randomIndex, 1)[0];
+        if(skillId) {
+          this.learnSkill(skillId);
+        }
+      }
+    }
+
+    // 更新状态并重新计算最终属性
+    this.updatedAt = Date.now();
+    this.recalculateStats();
+    this.notifyChange("refined");
+    return this;
+  }
+
+  clone() {
+    const clonedData = this.toJSON();
+    return new Summon(clonedData);
   }
 }
 

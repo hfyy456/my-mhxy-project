@@ -27,49 +27,62 @@ class EquipmentRelationshipManager extends EventEmitter {
    * 装备物品到召唤兽 (标准方法)
    * @param {string} itemId - 物品ID
    * @param {string} summonId - 召唤兽ID
-   * @returns {boolean} 是否成功
+   * @returns {Promise<Object>} { success: boolean, message?: string, requiresCrossEquipConfirmation?: boolean, details?: object }
    */
   async equip(itemId, summonId) {
     try {
       const item = inventoryManagerInstance.getItemById(itemId);
       if (!item || item.type !== 'equipment') {
-        console.warn(`[ERM] equip: 物品 ${itemId} 不是装备或不存在。`);
-        return false;
+        const message = `物品 ${itemId} 不是装备或不存在。`;
+        console.warn(`[ERM] equip: ${message}`);
+        return { success: false, message };
       }
       const slotType = item.slotType;
       if (!slotType) {
-        console.warn(`[ERM] equip: 物品 ${itemId} 没有 slotType。`);
-        return false;
+        const message = `物品 ${itemId} 没有 slotType。`;
+        console.warn(`[ERM] equip: ${message}`);
+        return { success: false, message };
       }
 
       const summon = summonManagerInstance.getSummonById(summonId);
       if (!summon) {
-        console.warn(`[ERM] equip: 召唤兽 ${summonId} 不存在。`);
-        return false;
+        const message = `召唤兽 ${summonId} 不存在。`;
+        console.warn(`[ERM] equip: ${message}`);
+        return { success: false, message };
       }
 
       console.log(`[ERM] equip: 尝试装备物品 ${itemId} (${slotType}) 到召唤兽 ${summonId}`);
 
-      // 1. 检查物品是否已被其他召唤兽装备 (或者就是当前召唤兽的这个槽位之外的其他槽位，如果一个装备能占多个槽)
       const existingRelation = this.equipmentRelations.get(itemId);
       if (existingRelation) {
         if (existingRelation.summonId === summonId && existingRelation.slotType === slotType) {
-          console.log(`[ERM] equip: 物品 ${itemId} 已装备在召唤兽 ${summonId} 的 ${slotType} 槽位，无需重复操作。`);
-          return true; // 已经是装备状态
+          const message = `物品 ${itemId} 已装备在当前位置。`;
+          console.log(`[ERM] equip: ${message}`);
+          return { success: true, message };
         }
-        console.warn(`[ERM] equip: 物品 ${itemId} 已被召唤兽 ${existingRelation.summonId} 装备在 ${existingRelation.slotType}。先卸下旧的。`);
-        await this.unequip(itemId, existingRelation.summonId); // 使用新的标准卸载
+        
+        // 跨召唤兽装备逻辑
+        return {
+          success: false,
+          requiresCrossEquipConfirmation: true,
+          message: `物品 ${item.name} 已被其他召唤兽装备，是否要更换？`,
+          details: {
+            sourceSummonId: existingRelation.summonId,
+            targetSummonId: summonId,
+            item,
+            sourceSlot: existingRelation.slotType,
+            targetSlot: slotType
+          }
+        };
       }
 
-      // 2. 检查召唤兽目标槽位是否已有其他装备
-      const summonEquipment = this.summonEquipmentIndex.get(summonId) || {};
+      const summonEquipment = this.getSummonEquipment(summonId);
       const existingItemInTargetSlot = summonEquipment[slotType];
-      if (existingItemInTargetSlot && existingItemInTargetSlot !== itemId) {
-        console.log(`[ERM] equip: 召唤兽 ${summonId} 的 ${slotType} 槽位已有装备 ${existingItemInTargetSlot}，先卸下。`);
-        await this.unequip(existingItemInTargetSlot, summonId); // 使用新的标准卸载
+      if (existingItemInTargetSlot) {
+        console.log(`[ERM] equip: 目标槽位已有装备 ${existingItemInTargetSlot}，将自动卸下。`);
+        await this.unequip(existingItemInTargetSlot, summonId);
       }
 
-      // 3. 建立新的装备关系 (只在ERM内部)
       const newRelation = {
         summonId,
         slotType,
@@ -82,17 +95,16 @@ class EquipmentRelationshipManager extends EventEmitter {
       }
       this.summonEquipmentIndex.get(summonId)[slotType] = itemId;
 
-      // 4. 更新召唤兽属性 (Summon类内部的getEquippedItems会从ERM取数据)
       await summon.recalculateStats();
 
-      this.clearCache(itemId, summonId); // 清除ERM内部缓存
+      this.clearCache(itemId, summonId);
       this.emit('item_equipped', { itemId, summonId, slotType, relation: newRelation });
       console.log(`[ERM] equip: 装备成功: ${itemId} (${slotType}) -> ${summonId}`);
-      return true;
+      return { success: true, message: '装备成功' };
 
     } catch (error) {
       console.error('[ERM] equip: 装备失败:', error);
-      return false;
+      return { success: false, message: error.message };
     }
   }
 
@@ -100,19 +112,21 @@ class EquipmentRelationshipManager extends EventEmitter {
    * 从召唤兽卸下装备 (标准方法)
    * @param {string} itemId - 物品ID
    * @param {string} summonId - 召唤兽ID
-   * @returns {boolean} 是否成功
+   * @returns {Promise<Object>} { success: boolean, message?: string }
    */
   async unequip(itemId, summonId) {
     try {
       const relation = this.equipmentRelations.get(itemId);
       if (!relation) {
-        console.warn(`[ERM] unequip: 物品 ${itemId} 未在 ERM 中记录为已装备。`);
-        return false;
+        const message = `物品 ${itemId} 未在 ERM 中记录为已装备。`;
+        console.warn(`[ERM] unequip: ${message}`);
+        return { success: false, message };
       }
 
       if (relation.summonId !== summonId) {
-        console.warn(`[ERM] unequip: 物品 ${itemId} 装备在 ${relation.summonId} 而不是指定的 ${summonId}。`);
-        return false; // 或选择强制从 relation.summonId 卸载？当前严格按参数执行
+        const message = `物品 ${itemId} 装备在 ${relation.summonId} 而不是指定的 ${summonId}。`;
+        console.warn(`[ERM] unequip: ${message}`);
+        return { success: false, message };
       }
       
       const slotType = relation.slotType;
@@ -120,11 +134,9 @@ class EquipmentRelationshipManager extends EventEmitter {
 
       const summon = summonManagerInstance.getSummonById(summonId);
       if (!summon) {
-        console.warn(`[ERM] unequip: 召唤兽 ${summonId} 不存在。`);
-        // 即使召唤兽不存在，如果ERM有记录，也应该清理ERM的状态
+        console.warn(`[ERM] unequip: 召唤兽 ${summonId} 不存在，但仍将清理ERM记录。`);
       }
 
-      // 1. 移除装备关系 (只在ERM内部)
       this.equipmentRelations.delete(itemId);
       const summonEquipmentMap = this.summonEquipmentIndex.get(summonId);
       if (summonEquipmentMap) {
@@ -134,19 +146,18 @@ class EquipmentRelationshipManager extends EventEmitter {
         }
       }
 
-      // 2. 更新召唤兽属性 (如果召唤兽实例存在)
       if (summon) {
         await summon.recalculateStats();
       }
 
-      this.clearCache(itemId, summonId); // 清除ERM内部缓存
+      this.clearCache(itemId, summonId);
       this.emit('item_unequipped', { itemId, summonId, slotType: relation.slotType });
       console.log(`[ERM] unequip: 卸载成功: ${itemId} from ${summonId}`);
-      return true;
+      return { success: true, message: '卸下装备成功' };
 
     } catch (error) {
       console.error('[ERM] unequip: 卸载失败:', error);
-      return false;
+      return { success: false, message: error.message };
     }
   }
   

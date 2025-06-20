@@ -8,6 +8,13 @@ import { summonConfig } from '@/config/summon/summonConfig';
 import { uiText } from '@/config/ui/uiTextConfig';
 import { TOAST_TYPES } from '@/config/enumConfig';
 
+const images = import.meta.glob("@/assets/summons/*.png", { eager: true });
+const getSummonSprite = (summonSourceId) => {
+  if (!summonSourceId) return images['/src/assets/summons/default.png']?.default || '';
+  const path = `/src/assets/summons/${summonSourceId}.png`;
+  return images[path]?.default || images['/src/assets/summons/default.png']?.default || '';
+};
+
 const MAX_SUMMONS_IN_FORMATION = 5;
 
 const FormationSetup = (props) => {
@@ -386,7 +393,7 @@ const FormationSetup = (props) => {
                     {summonIdInCell && (
                       <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%'}}>
                         <img 
-                          src={summonConfig[summonInfo.id]?.icon || '/assets/summons/default.png'} 
+                          src={getSummonSprite(summonInfo.summonSourceId)} 
                           alt="icon" 
                           style={{width:48,height:48,borderRadius:8,marginBottom:4,boxShadow:'0 1px 4px #0004'}} 
                         />

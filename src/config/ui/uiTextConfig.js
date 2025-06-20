@@ -246,6 +246,16 @@ export const uiText = {
     statusTurnedIn: "已完成", // Voltooid
     statusAvailable: "可接取", // Beschikbaar
     // Voeg hier meer quest-gerelateerde teksten toe indien nodig
+  },
+
+  // 召唤兽系统特定文本
+  summonSystem: {
+    mySummons: "我的召唤兽",
+    selectSummonPrompt: "请从左侧列表选择一个召唤兽以查看详情。",
+    summonFusion: "召唤兽融合",
+    enhancedSummonFusion: "增强融合",
+    fusionHistory: "融合历史",
+    refineSummon: "炼妖"
   }
 };
 
