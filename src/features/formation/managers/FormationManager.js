@@ -385,32 +385,57 @@ export class FormationManager {
    */
   loadFromStorage() {
     try {
-      const dataStr = localStorage.getItem(this.storageKey);
-      if (!dataStr) {
+      const storedData = localStorage.getItem(this.storageKey);
+      if (!storedData) {
         return;
       }
 
-      const data = JSON.parse(dataStr);
+      const data = JSON.parse(storedData);
       this.formations.clear();
 
-      // 加载阵型数据
-      if (data.formations) {
-        Object.entries(data.formations).forEach(([id, formationData]) => {
-          const formation = Formation.fromJSON(formationData);
-          this.formations.set(id, formation);
+      // 兼容新格式 (包含 formations 数组或对象和 currentFormationId 的对象)
+      if (typeof data === 'object' && data !== null && data.formations) {
+        const formationsData = data.formations;
+        if (Array.isArray(formationsData)) {
+          formationsData.forEach(formationData => {
+            if (typeof formationData === 'object' && formationData !== null) {
+              const formation = new Formation(formationData);
+              this.formations.set(formation.id, formation);
+            }
+          });
+        } else if (typeof formationsData === 'object' && formationsData !== null) {
+           // 兼容 formations 是对象的情况
+           Object.values(formationsData).forEach(formationData => {
+             if (typeof formationData === 'object' && formationData !== null) {
+              const formation = new Formation(formationData);
+              this.formations.set(formation.id, formation);
+            }
+          });
+        }
+        this.currentFormationId = data.currentFormationId || null;
+      }
+      // 兼容旧格式 (直接是 formations 数组)
+      else if (Array.isArray(data)) {
+        data.forEach(formationData => {
+          if (typeof formationData === 'object' && formationData !== null) {
+            const formation = new Formation(formationData);
+            this.formations.set(formation.id, formation);
+          }
         });
+        if (this.formations.size > 0) {
+          this.currentFormationId = this.formations.keys().next().value;
+        }
       }
 
-      // 恢复当前阵型ID
-      this.currentFormationId = data.currentFormationId;
-      
-      // 验证当前阵型ID是否仍然有效
-      if (this.currentFormationId && !this.formations.has(this.currentFormationId)) {
-        this.currentFormationId = null;
+      // 验证当前ID是否有效
+      if (!this.formations.has(this.currentFormationId)) {
+        this.currentFormationId = this.formations.size > 0
+          ? this.formations.keys().next().value
+          : null;
       }
-
     } catch (error) {
       console.error('从localStorage加载阵型数据失败:', error);
+      // 如果加载失败，进行重置
       this.formations.clear();
       this.currentFormationId = null;
     }

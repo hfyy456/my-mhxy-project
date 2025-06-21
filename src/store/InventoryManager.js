@@ -920,13 +920,11 @@ class InventoryManager extends EventEmitter {
     
     // 修正：使用 sourceId 来匹配新的 ItemFactory 逻辑
     const starterItemDefs = [
-      { sourceId: 'starterHpPotion', quantity: 3 },
-      { sourceId: 'qualityMpPotion', quantity: 2 },
-      { sourceId: 'fineIronSword', quantity: 1, quality: QUALITY_TYPES.RARE },
-      { sourceId: 'legendaryAmulet', quantity: 1, quality: QUALITY_TYPES.LEGENDARY },
-      { sourceId: 'epicExpPill', quantity: 1 },
-      { sourceId: 'refinementStone', quantity: 5 },
-      { sourceId: 'advancedRefinementStone', quantity: 2 }
+      { sourceId: 'smallHpPotion', quantity: 5 },
+      { sourceId: 'smallMpPotion', quantity: 5 },
+      { sourceId: 'fineIronSword', quantity: 1 },
+      { sourceId: 'guiyuanDan', quantity: 3 },
+      { sourceId: 'wangyouCao', quantity: 3 }
     ];
 
     starterItemDefs.forEach(itemDef => {

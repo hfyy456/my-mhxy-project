@@ -331,11 +331,12 @@ class Summon {
     return generateUniqueId("sum");
   }
 
-  refine() {
-    // 重新计算资质
-    this.calculateAptitudeRatios();
-    
-    // 重新计算成长率
+  resetCoreTraits() {
+    // This function is the refactored version of the old `refine` method.
+    // It resets growth rates, skills, and aptitude ratios.
+    // Note: `calculateAptitudeRatios` is not defined in the original code.
+    // this.calculateAptitudeRatios(); 
+
     const config = this.getConfig();
     this.growthRates = {};
     if (config.growthRates) {
@@ -343,31 +344,51 @@ class Summon {
         this.growthRates[attr] = range[0] + Math.random() * (range[1] - range[0]);
       }
     }
-    
-    // 重新学习技能
+
     this.skillSet = [];
+    this.skillLevels = {}; 
     if (config.skills) {
       const availableSkills = [...config.skills];
-      const skillsToLearn = Math.min(availableSkills.length, 1 + Math.floor(this.level / 10)); // Example logic
-      for(let i=0; i<skillsToLearn; i++) {
+      const skillsToLearn = Math.min(availableSkills.length, 1 + Math.floor(this.level / 30));
+      for (let i = 0; i < skillsToLearn; i++) {
         const randomIndex = Math.floor(Math.random() * availableSkills.length);
         const skillId = availableSkills.splice(randomIndex, 1)[0];
-        if(skillId) {
-          this.learnSkill(skillId);
+        if (skillId) {
+          // Use direct manipulation instead of learnSkill to avoid notifications during clone
+          this.skillSet.push(skillId);
+          this.skillLevels[skillId] = 1;
         }
       }
     }
-
-    // 更新状态并重新计算最终属性
-    this.updatedAt = Date.now();
+    
     this.recalculateStats();
-    this.notifyChange("refined");
+    this.notifyChange("core_traits_reset");
     return this;
   }
 
-  clone() {
+  resetPersonality() {
+    // Resets the summon's personality to a new random one.
+    const personalityIds = Object.keys(personalityConfig);
+    const availablePersonalities = personalityIds.filter(id => id !== this.personalityId);
+    if (availablePersonalities.length > 0) {
+      const newPersonalityId = availablePersonalities[Math.floor(Math.random() * availablePersonalities.length)];
+      this.personalityId = newPersonalityId;
+    }
+    this.updatedAt = Date.now();
+    this.recalculateStats();
+    this.notifyChange("personality_reset");
+    return this;
+  }
+
+  clone(forPreview = false) {
     const clonedData = this.toJSON();
-    return new Summon(clonedData);
+    const clonedSummon = new Summon(clonedData);
+    if (forPreview) {
+      clonedSummon.setManager(null); // Avoid notifications on preview clones
+    } else {
+      clonedSummon.setManager(this.manager);
+    }
+    return clonedSummon;
   }
 }
 

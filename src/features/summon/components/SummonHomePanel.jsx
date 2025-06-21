@@ -9,6 +9,7 @@ import { getAttributeDisplayName, getSummonNatureTypeDisplayName, getFiveElement
 import { personalityConfig, getPersonalityDisplayName } from '@/config/summon/personalityConfig';
 import { createCreatureFromTemplate, getFinalGrowthRates } from '@/utils/summonUtils';
 import allSummons from '@/config/summon/allSummons.json';
+import { useInventoryItems, useInventoryActions } from '@/hooks/useInventoryManager';
 
 // Correctly load all summon sprites using Vite's glob import
 const images = import.meta.glob("@/assets/summons/*.png", { eager: true });
@@ -665,111 +666,208 @@ const FusionTab = ({ summonsList, onFusionSuccess, onSelectSummon: onOpenSelecto
 // --- RefiningTab Component ---
 const RefiningTab = ({ summonsList, showToast, onSelectSummon: onOpenSelector, onShowDetails }) => {
   const { updateSummon } = useSummonManager();
+  const allItems = useInventoryItems();
+  const inventoryActions = useInventoryActions();
 
   const [selectedSummon, setSelectedSummon] = useState(null);
-  const [refinedSummon, setRefinedSummon] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [previewSummon, setPreviewSummon] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const originalSummon = selectedSummon;
+  
+  const refiningItems = useMemo(() => {
+    if (!Array.isArray(allItems)) return [];
+    
+    return allItems.filter(item => {
+      // The item from useInventoryItems is already the full item instance
+      return item?.usageType === 'refining';
+    });
+  }, [allItems]);
 
-  const handleRefinePreview = () => {
-    if (!originalSummon) return;
+  const handleSelectItem = (item) => {
+    if (!selectedSummon) {
+      showToast('请先选择一只召唤兽!', 'warning');
+      return;
+    }
+    setSelectedItem(item);
+    
     setIsProcessing(true);
+    // Use the clone method with the forPreview flag
+    const summonToPreview = selectedSummon.clone(true); 
+    const itemData = item; // The item itself is the data
     
-    // 创建一个深拷贝用于洗炼预览
-    const summonToRefine = originalSummon.clone(); 
-    summonToRefine.refine();
-    setRefinedSummon(summonToRefine);
+    if (!itemData || !itemData.usageEffect) {
+        showToast('无效的道具数据!', 'error');
+        setIsProcessing(false);
+        return;
+    }
     
+    switch (itemData.usageEffect) {
+      case 'reset_core_traits':
+        summonToPreview.resetCoreTraits();
+        break;
+      case 'reset_personality':
+        summonToPreview.resetPersonality();
+        break;
+      default:
+        showToast(`未知的道具效果: ${itemData.usageEffect}`, 'error');
+        setIsProcessing(false);
+        return;
+    }
+    
+    setPreviewSummon(summonToPreview);
     setIsProcessing(false);
   };
   
   const handleConfirmRefine = () => {
-    if (!refinedSummon) return;
-    updateSummon(refinedSummon.id, refinedSummon.toJSON());
+    if (!previewSummon || !selectedItem || !selectedSummon) return;
+
+    const itemRemoved = inventoryActions.removeItem(selectedItem.id, 1);
+    if (!itemRemoved) {
+        showToast('道具不足，无法洗炼!', 'error');
+        return;
+    }
+
+    updateSummon(previewSummon.id, previewSummon.toJSON());
+    
     showToast('洗炼成功！属性已更新。', 'success');
-    setSelectedSummon(refinedSummon);
-    setRefinedSummon(null); // 清空预览
+    
+    // After update, find the latest version of the summon from the list
+    const updatedSummon = summonsList.find(s => s.id === previewSummon.id);
+    setSelectedSummon(updatedSummon || null); // Reselect the (now updated) summon
+    setPreviewSummon(null);
+    setSelectedItem(null);
   };
 
-  const handleSelect = (setter) => {
-    setRefinedSummon(null);
+  const handleSelectSummon = (setter) => {
+    setPreviewSummon(null);
+    setSelectedItem(null);
     onOpenSelector(setter);
   }
 
-  const renderAttributes = (summon, comparisonSummon) => {
-    if (!summon) return <div className="text-gray-500">N/A</div>;
-    return (
-      <div className="space-y-2">
-        {Object.entries(summon.derivedAttributes).map(([key, value]) => {
-            const originalValue = comparisonSummon ? comparisonSummon.derivedAttributes[key] : null;
-            const diff = originalValue !== null ? value - originalValue : 0;
-            let color = "text-white";
-            if (diff > 0) color = "text-green-400";
-            if (diff < 0) color = "text-red-400";
+  const renderComparison = (original, preview) => {
+    if (!preview) {
+       return <div className="text-gray-500 text-center col-span-2 pt-16">请选择道具以预览效果</div>;
+    }
+    
+    const itemData = selectedItem; // The selected item itself
+    let comparisonContent;
 
-            return (
-               <div key={key} className="flex justify-between text-sm">
-                 <span className="text-gray-400 capitalize">{key}:</span>
-                 <span className={`font-mono ${color}`}>
-                    {typeof value === 'number' ? value.toFixed(2) : value}
-                    {diff !== 0 && (
-                        <span className="ml-2 text-xs">({diff > 0 ? '+' : ''}{diff.toFixed(2)})</span>
-                    )}
-                </span>
-               </div>
-            )
-        })}
-      </div>
+    switch (itemData?.usageEffect) {
+        case 'reset_core_traits':
+            const originalAttrs = original.derivedAttributes;
+            const previewAttrs = preview.derivedAttributes;
+            const attributesToShow = ['hp', 'mp', 'physicalAttack', 'magicalAttack', 'physicalDefense', 'magicalDefense', 'speed'];
+            comparisonContent = (
+              <>
+                {attributesToShow.map(key => {
+                    const oValue = originalAttrs[key] || 0;
+                    const pValue = previewAttrs[key] || 0;
+                    const diff = pValue - oValue;
+                    let color = "text-white";
+                    if (diff > 0.01) color = "text-green-400";
+                    if (diff < -0.01) color = "text-red-400";
+
+                    return (
+                        <div key={key} className="flex justify-between text-sm">
+                            <span className="text-gray-400 capitalize">{getAttributeDisplayName(key) || key}:</span>
+                            <div className="flex items-center">
+                               <span className={`font-mono ${color}`}>{pValue.toFixed(2)}</span>
+                               {Math.abs(diff) > 0.01 && (
+                                 <span className={`ml-2 text-xs font-mono ${color}`}>({diff > 0 ? '+' : ''}{diff.toFixed(2)})</span>
+                               )}
+                            </div>
+                        </div>
+                    );
+                })}
+              </>
+            );
+            break;
+        
+        case 'reset_personality':
+            const oldPersonality = getPersonalityDisplayName(original.personalityId);
+            const newPersonality = getPersonalityDisplayName(preview.personalityId);
+            comparisonContent = (
+                <div className="text-center space-y-4 py-8">
+                    <div>
+                        <p className="text-gray-400 text-sm">当前性格</p>
+                        <p className="text-2xl font-bold">{oldPersonality}</p>
+                    </div>
+                    <i className="fas fa-arrow-down text-green-400 text-2xl"></i>
+                    <div>
+                        <p className="text-green-400 text-sm">洗炼后性格</p>
+                        <p className="text-2xl font-bold text-green-400">{newPersonality}</p>
+                    </div>
+                </div>
+            );
+            break;
+
+        default:
+            comparisonContent = <p>无预览信息</p>;
+    }
+    
+    return (
+       <div className="bg-gray-700/50 p-4 rounded-lg h-full">
+         <h4 className="text-lg text-green-300 mb-3 text-center">洗炼后预览</h4>
+         <div className="space-y-2">{comparisonContent}</div>
+       </div>
     );
   };
 
+
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-                <h3 className="text-xl text-white mb-4 text-center">选择要洗炼的召唤兽</h3>
-                <SummonCard summon={selectedSummon} onSelect={() => handleSelect(setSelectedSummon)} emptyText="选择召唤兽">
-                    {selectedSummon && (
-                        <div className="mt-6 flex flex-col gap-4 items-center">
-                            {!refinedSummon ? (
-                              <button
-                                onClick={handleRefinePreview}
-                                disabled={!originalSummon || isProcessing}
-                                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded disabled:bg-gray-500 transition-all text-lg font-semibold"
-                              >
-                                {isProcessing ? '处理中...' : '预览洗炼效果'}
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={handleConfirmRefine}
-                                  className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 rounded transition-all text-lg font-semibold"
-                                >
-                                  确认替换
-                                </button>
-                                <button
-                                  onClick={() => setRefinedSummon(null)}
-                                  className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded transition-all text-lg font-semibold"
-                                >
-                                  取消
-                                </button>
-                              </>
-                            )}
+    <div className="p-4 max-w-7xl mx-auto h-full">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full">
+            <div className="md:col-span-3 h-full">
+                <h3 className="text-xl text-white mb-4 text-center">1. 选择召唤兽</h3>
+                <SummonCard 
+                  summon={selectedSummon} 
+                  onSelect={() => handleSelectSummon(setSelectedSummon)} 
+                  emptyText="选择召唤兽" 
+                />
+            </div>
+            <div className="md:col-span-5 h-full flex flex-col">
+                <h3 className="text-xl text-white mb-4 text-center">2. 选择洗炼道具</h3>
+                <div className="bg-black/20 p-4 rounded-lg flex-grow overflow-y-auto">
+                    {refiningItems.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {refiningItems.map(item => {
+                                const isSelected = selectedItem?.id === item.id;
+                                return (
+                                    <div 
+                                      key={item.id}
+                                      onClick={() => handleSelectItem(item)}
+                                      className={`p-3 rounded-lg text-center cursor-pointer border-2 transition-all ${isSelected ? 'bg-yellow-500/20 border-yellow-500' : 'bg-gray-800/80 border-gray-700 hover:border-yellow-600'}`}
+                                    >
+                                        <div className="flex items-center justify-center text-3xl mb-2">
+                                            <i className={`${item.icon} text-yellow-300`}></i>
+                                        </div>
+                                        <p className="font-bold text-white">{item.name}</p>
+                                        <p className="text-sm text-gray-400">数量: {item.quantity}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">
+                           <p>背包中没有可用的洗炼道具</p>
                         </div>
                     )}
-                </SummonCard>
+                </div>
             </div>
-            <div className="md:col-span-2">
-                 <h3 className="text-xl text-white mb-4 text-center">属性对比</h3>
-                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-gray-700/50 p-4 rounded-lg">
-                      <h4 className="text-lg text-yellow-300 mb-3">洗炼前</h4>
-                      {renderAttributes(originalSummon)}
-                    </div>
-                    <div className="bg-gray-700/50 p-4 rounded-lg">
-                      <h4 className="text-lg text-green-300 mb-3">洗炼后</h4>
-                      {renderAttributes(refinedSummon, originalSummon)}
+            <div className="md:col-span-4 h-full flex flex-col">
+                <h3 className="text-xl text-white mb-4 text-center">3. 效果预览与确认</h3>
+                <div className="bg-black/20 p-4 rounded-lg flex-grow flex flex-col justify-between">
+                    {renderComparison(originalSummon, previewSummon)}
+                    <div className="mt-4">
+                        <button
+                          onClick={handleConfirmRefine}
+                          disabled={!previewSummon || isProcessing}
+                          className="w-full px-6 py-4 bg-green-600 hover:bg-green-700 rounded disabled:bg-gray-600 disabled:cursor-not-allowed transition-all text-lg font-semibold shadow-lg hover:shadow-green-500/30"
+                        >
+                          {isProcessing ? '处理中...' : '确认洗炼'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -781,7 +879,7 @@ const RefiningTab = ({ summonsList, showToast, onSelectSummon: onOpenSelector, o
 const SummonGachaResultDetail = ({ summon }) => {
   if (!summon) return null;
 
-  const renderStat = (label, value) => (
+  const Stat = ({ label, value }) => (
     <div className="flex justify-between text-base">
       <span className="text-gray-300">{label}</span>
       <span className="font-mono text-white tracking-wider">{typeof value === 'string' ? value : Math.floor(value)}</span>
@@ -823,13 +921,13 @@ const SummonGachaResultDetail = ({ summon }) => {
           <div className="bg-black/20 p-4 rounded-lg">
               <h4 className="font-semibold text-yellow-300 mb-2 text-center border-b border-gray-700 pb-2">核心属性</h4>
               <div className="space-y-1.5 px-2">
-                  {Object.entries(summon.basicAttributes).map(([key, value]) => renderStat(getAttributeDisplayName(key), value))}
+                  {Object.entries(summon.basicAttributes).map(([key, value]) => <Stat key={key} label={getAttributeDisplayName(key)} value={value} />)}
               </div>
           </div>
           <div className="bg-black/20 p-4 rounded-lg">
               <h4 className="font-semibold text-yellow-300 mb-2 text-center border-b border-gray-700 pb-2">最终成长</h4>
               <div className="space-y-1.5 px-2">
-                  {Object.entries(finalGrowthRates).map(([key, value]) => renderStat(getAttributeDisplayName(key), `${(value * 100).toFixed(1)}%`))}
+                  {Object.entries(finalGrowthRates).map(([key, value]) => <Stat key={key} label={getAttributeDisplayName(key)} value={`${(value * 100).toFixed(1)}%`} />)}
               </div>
           </div>
       </div>
@@ -915,7 +1013,7 @@ const GachaTab = () => {
   };
   
     return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-lg overflow-hidden p-8 transition-all duration-500">
+    <div className="relative w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-lg overflow-hidden p-8 transition-all duration-500 min-h-[60vh] max-w-4xl mx-auto">
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -932,8 +1030,8 @@ const GachaTab = () => {
           100% { transform: scale(1) rotate(360deg); box-shadow: 0 0 60px 15px rgba(168, 85, 247, 0.4); }
         }
          @keyframes reveal {
-          0% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(5); opacity: 0; }
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
         }
       `}</style>
       
@@ -941,9 +1039,9 @@ const GachaTab = () => {
       {alchemyState === 'idle' && renderParticles(50)}
       {alchemyState === 'charging' && renderParticles(150)}
 
-      <div className="z-10 flex flex-col items-center justify-center text-center">
+      <div className="z-10 text-center">
         {alchemyState === 'idle' && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in flex flex-col items-center justify-center">
             <div className="relative w-60 h-60">
               <div className="absolute inset-0 bg-purple-500 rounded-full opacity-30 blur-2xl animate-pulse"></div>
               <div className="absolute inset-0 border-4 border-purple-400/50 rounded-full animate-spin" style={{animationDuration: '20s'}}></div>
@@ -964,7 +1062,7 @@ const GachaTab = () => {
         )}
 
         {alchemyState === 'charging' && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in flex flex-col items-center justify-center">
             <div className="relative w-60 h-60">
               <div className="absolute inset-0 bg-purple-700 rounded-full" style={{ animation: 'charge 3s infinite ease-in-out' }}></div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -977,19 +1075,19 @@ const GachaTab = () => {
         )}
 
         {(alchemyState === 'revealing' || alchemyState === 'result') && resultSummon && (
-          <div className="relative flex items-center justify-center">
+          <div className={`relative flex items-center justify-center ${alchemyState === 'revealing' ? 'h-96' : ''}`}>
             {alchemyState === 'revealing' && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white rounded-full" style={{ animation: 'reveal 1.2s forwards' }}></div>
+              <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full" style={{ animation: 'reveal 1.2s forwards' }}></div>
             )}
             {alchemyState === 'result' && (
-              <div className="animate-fade-in flex flex-col items-center">
+              <div className="animate-fade-in flex flex-col items-center gap-8">
                 <SummonGachaResultDetail summon={resultSummon} />
-        <button
+                <button
                   onClick={handleReset}
-                  className="mt-8 px-10 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors"
-        >
+                  className="px-10 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors"
+                >
                   再次炼妖
-        </button>
+                </button>
               </div>
             )}
           </div>

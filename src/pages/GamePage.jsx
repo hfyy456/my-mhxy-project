@@ -2,11 +2,10 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-21 04:52:57
+ * @LastEditTime: 2025-06-22 05:43:37
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { BattleSystemProvider } from "@/features/battle/providers/BattleSystemProvider";
 
 import BeautifulHomesteadView from "@/features/homestead/components/BeautifulHomesteadView";
 import HomesteadActionBar from "@/features/homestead/components/HomesteadActionBar";
@@ -19,7 +18,6 @@ import QuestLogPanel from "@/features/quests/components/QuestLogPanel";
 import DialoguePanel from "@/features/ui/components/DialoguePanel";
 import NpcPanel from "@/features/npc/components/NpcPanel";
 import FormationSystemModal from "@/features/formation/components/FormationSystemModal";
-import BattleScreen from "@/features/battle/components/BattleScreen";
 import CustomTitleBar from "@/features/ui/components/CustomTitleBar";
 import TowerSystem from "@/features/tower/components/TowerSystem";
 import TowerEntry from "@/features/tower/components/TowerEntry";
@@ -41,12 +39,10 @@ import { uiText } from "@/config/ui/uiTextConfig";
 import { selectIsWorldMapOpen } from "@/store/slices/mapSlice";
 import { selectIsBattleActive } from "@/store/slices/battleSliceSimplified";
 import { useEquipmentRelationship } from "@/hooks/useEquipmentRelationship";
-import { useBattleStateMachine } from "@/features/battle/hooks/useBattleStateMachine";
-import { generateEnemyGroup } from "@/features/battle/utils/enemyGenerator";
+import { generateEnemyGroup } from "@/utils/enemyGenerator";
 import worldMapConfig from "@/config/map/worldMapConfig.json";
 
 import CommonModal from "@/features/ui/components/CommonModal";
-import { current } from "@reduxjs/toolkit";
 import SummonInfo from "@/features/summon/components/SummonInfo";
 
 const GamePageContent = ({
@@ -61,7 +57,6 @@ const GamePageContent = ({
   const dispatch = useDispatch();
   const player = useSelector((state) => state.player);
   const { isFighting } = useSelector((state) => state.battle);
-  const { startBattle, transferControlToEngine } = useBattleStateMachine();
 
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
@@ -285,21 +280,7 @@ const GamePageContent = ({
     );
   };
 
-  const handleStartBattle = (payload) => {
-    console.log("开始启动战斗:", payload);
-
-    // 初始化战斗
-    const initResult = startBattle(payload);
-    console.log("战斗初始化结果:", initResult);
-
-    // 如果初始化成功，转移控制权给引擎
-    if (initResult && initResult.success) {
-      console.log("战斗初始化成功，转移控制权给引擎");
-      transferControlToEngine();
-    } else {
-      console.error("战斗初始化失败:", initResult);
-    }
-  };
+ 
 
   // 测试战斗
   const handleTestBattle = async () => {
@@ -680,9 +661,7 @@ const GamePageContent = ({
 
 const GamePage = (props) => {
   return (
-    <BattleSystemProvider>
       <GamePageContent {...props} />
-    </BattleSystemProvider>
   );
 };
 

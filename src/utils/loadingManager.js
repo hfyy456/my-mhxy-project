@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-06 07:50:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-06 07:37:02
+ * @LastEditTime: 2025-06-22 05:44:08
  */
 
 /**
@@ -157,7 +157,6 @@ class LoadingManager {
    */
   async preloadBattleSystem() {
     const battleModules = [
-      { name: '战斗逻辑', path: '@/features/battle/logic/battleLogic' },
       { name: '敌人配置', path: '@/config/character/enemyConfig' },
       { name: '战斗界面', path: '@/features/battle/components/BattleScreen' }
     ];

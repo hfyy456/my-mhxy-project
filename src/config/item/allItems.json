@@ -281,31 +281,31 @@
     }
   },
   "consumables": {
-    "starterHpPotion": {
-      "id": "starterHpPotion",
-      "name": "新手生命药水",
+    "smallHpPotion": {
+      "id": "smallHpPotion",
+      "name": "小瓶生命药水",
       "type": "consumable",
       "quality": "normal",
-      "description": "恢复50点生命值的基础药水",
+      "description": "恢复少量生命值",
       "icon": "fa-flask",
       "value": 10,
-      "effect": {
-        "type": "heal",
-        "value": 50
-      }
+      "effects": {
+        "hp": 50
+      },
+      "usageEffect": "recover_hp"
     },
-    "qualityMpPotion": {
-      "id": "qualityMpPotion",
-      "name": "品质法力药水",
+    "smallMpPotion": {
+      "id": "smallMpPotion",
+      "name": "小瓶法力药水",
       "type": "consumable",
-      "quality": "rare",
-      "description": "恢复100点法力值的优质药水",
-      "icon": "fa-flask-potion",
-      "value": 25,
-      "effect": {
-        "type": "mp_restore",
-        "value": 100
-      }
+      "quality": "normal",
+      "description": "恢复少量法力值",
+      "icon": "fa-flask",
+      "value": 10,
+      "effects": {
+        "mp": 30
+      },
+      "usageEffect": "recover_mp"
     },
     "epicExpPill": {
       "id": "epicExpPill",
@@ -452,6 +452,43 @@
           "闪避"
         ]
       }
+    },
+    "refiningStonePotion": {
+      "id": "refiningStonePotion",
+      "name": "炼妖石药水",
+      "type": "consumable",
+      "quality": "normal",
+      "description": "恢复少量法力值",
+      "icon": "fa-flask",
+      "value": 10,
+      "effects": {
+        "mp": 30
+      },
+      "usageEffect": "recover_mp"
+    },
+    "guiyuanDan": {
+      "id": "guiyuanDan",
+      "name": "归元丹",
+      "type": "consumable",
+      "description": "神秘丹药，据说能洗去尘俗，使召唤兽回归本源，重塑其成长、资质和技能。",
+      "icon": "fa-solid fa-capsules",
+      "stackable": true,
+      "maxStack": 99,
+      "usageType": "refining",
+      "usageEffect": "reset_core_traits",
+      "target": "summon"
+    },
+    "wangyouCao": {
+      "id": "wangyouCao",
+      "name": "忘忧草",
+      "type": "consumable",
+      "description": "一种能短暂遗忘烦恼的神奇草药，对召唤兽使用，可以改变其根深蒂固的性格。",
+      "icon": "fa-solid fa-leaf",
+      "stackable": true,
+      "maxStack": 99,
+      "usageType": "refining",
+      "usageEffect": "reset_personality",
+      "target": "summon"
     }
   },
   "materials": {
@@ -472,6 +509,15 @@
       "description": "用于炼妖的高级材料",
       "icon": "fa-gem",
       "value": 50
+    },
+    "ironOre": {
+      "id": "ironOre",
+      "name": "铁矿石",
+      "type": "material",
+      "quality": "normal",
+      "description": "用于制作装备的基础材料",
+      "icon": "fa-gem",
+      "value": 10
     }
   }
 }
