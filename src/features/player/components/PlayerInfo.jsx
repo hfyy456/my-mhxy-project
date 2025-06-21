@@ -1,38 +1,42 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { usePlayerManager, usePlayerStatistics } from "@/hooks/usePlayerManager";
+import { usePlayerManager } from "@/hooks/usePlayerManager";
 import {
   selectUnlockProgress,
   selectQualityCounts,
 } from "@/store/slices/summonCatalogSlice";
 import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { qualityConfig } from "@/config/config";
+import { playerLevelConfig } from "@/config/character/playerConfig";
 
 export const PlayerInfo = () => {
   // 标签页状态
   const [activeTab, setActiveTab] = useState('overview');
 
-  // 使用新的玩家管理Hook
-  const {
-    level,
-    experience,
-    statistics,
-    levelInfo,
-    summonStats,
-    inventoryStats,
-    achievementSystem,
-    playerCapabilities,
-    gameTimeStats,
-    gainExperience,
-    error,
-    clearError
-  } = usePlayerManager();
+  // 使用我们新的、干净的玩家管理Hook
+  const { player, manager: playerManager } = usePlayerManager();
 
-  const { formatTime, getStatDisplayName } = usePlayerStatistics();
-  
   // 保留原有的图鉴进度（从Redux）
   const unlockProgress = useSelector(selectUnlockProgress);
   const qualityCounts = useSelector(selectQualityCounts);
+
+  // 从player state中派生出UI所需的数据
+  const expForNextLevel = player.level < playerLevelConfig.maxLevel
+    ? playerLevelConfig.getRequiredExperience(player.level + 1)
+    : player.experience;
+  const expForCurrentLevel = playerLevelConfig.getRequiredExperience(player.level);
+  const progressPercentage = player.level >= playerLevelConfig.maxLevel ? 100 : 
+    ((player.experience - expForCurrentLevel) / (expForNextLevel - expForCurrentLevel)) * 100;
+  
+  const levelInfo = {
+      progressPercentage: progressPercentage,
+      isMaxLevel: player.level >= playerLevelConfig.maxLevel,
+      expToNextLevel: expForNextLevel - player.experience,
+  };
+
+  // TODO: 后续将这些也迁移到对应的Manager
+  const summonStats = { slots: { used: 0, max: player.maxSummons, percentage: 0 }, totalPower: 0, averageLevel: 0, qualityStats: {} };
+  const achievementSystem = { unlockedCount: player.achievements.length, total: 50, progress: (player.achievements.length / 50) * 100 };
 
   // 标签页配置
   const tabs = [
@@ -67,7 +71,7 @@ export const PlayerInfo = () => {
         <div className="bg-slate-800/90 rounded-xl p-4 border border-slate-700/60">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-slate-300">召唤师等级</h3>
-            <span className="text-xl font-bold text-yellow-400">{level}</span>
+            <span className="text-xl font-bold text-yellow-400">{player.level}</span>
           </div>
           <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
             <div
@@ -76,7 +80,7 @@ export const PlayerInfo = () => {
             />
           </div>
           <div className="mt-2 text-xs text-slate-400">
-            {levelInfo.isMaxLevel ? '已满级' : `还需 ${levelInfo.expToNextLevel} 经验`}
+            {levelInfo.isMaxLevel ? '已满级' : `还需 ${levelInfo.expToNextLevel.toLocaleString()} 经验`}
           </div>
         </div>
 
@@ -106,10 +110,10 @@ export const PlayerInfo = () => {
             <i className="fas fa-coins text-yellow-400"></i>
             </div>
           <div className="text-xl font-bold text-yellow-400">
-            {inventoryStats.gold.toLocaleString()}
+            {player.gold.toLocaleString()}
           </div>
           <div className="mt-2 text-xs text-slate-400">
-            背包: {inventoryStats.slots.used}/{inventoryStats.slots.max}
+            背包: 0/{player.maxInventorySlots}
           </div>
         </div>
 
@@ -138,15 +142,15 @@ export const PlayerInfo = () => {
         <h3 className="text-lg font-semibold mb-3 text-slate-100">游戏统计</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-blue-400">{statistics.totalRefinements || 0}</div>
+            <div className="text-2xl font-bold text-blue-400">{player.statistics.totalRefinements || 0}</div>
             <div className="text-xs text-slate-400">炼妖次数</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-400">{statistics.totalSkillBooks || 0}</div>
+            <div className="text-2xl font-bold text-green-400">{player.statistics.totalSkillBooks || 0}</div>
             <div className="text-xs text-slate-400">打书次数</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-purple-400">{statistics.totalEquipmentObtained || 0}</div>
+            <div className="text-2xl font-bold text-purple-400">{player.statistics.totalEquipmentObtained || 0}</div>
             <div className="text-xs text-slate-400">装备获得</div>
           </div>
           <div>
@@ -161,16 +165,16 @@ export const PlayerInfo = () => {
         <h3 className="text-lg font-semibold mb-3 text-slate-100">快速操作</h3>
         <div className="flex gap-3">
           <button
-            onClick={() => gainExperience(100)}
+            onClick={() => playerManager.addExperience(100)}
             className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
           >
             <i className="fas fa-star mr-2"></i>
             获得经验
           </button>
-          {levelInfo.canLevelUp && (
+          {levelInfo.isMaxLevel && (
             <div className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg text-center">
               <i className="fas fa-level-up-alt mr-2"></i>
-              可以升级！
+              已满级
             </div>
           )}
         </div>
@@ -256,7 +260,7 @@ export const PlayerInfo = () => {
             <div className="text-slate-400">已解锁</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green-400">{achievementSystem.available.length}</div>
+            <div className="text-3xl font-bold text-green-400">{achievementSystem.total - achievementSystem.unlockedCount}</div>
             <div className="text-slate-400">可解锁</div>
           </div>
         </div>
@@ -272,16 +276,16 @@ export const PlayerInfo = () => {
       </div>
 
       {/* 可解锁成就提示 */}
-      {achievementSystem.available.length > 0 && (
+      {achievementSystem.total - achievementSystem.unlockedCount > 0 && (
         <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-4">
           <div className="flex items-center">
             <i className="fas fa-star text-green-400 mr-3"></i>
             <div>
               <div className="text-green-300 font-medium">
-                有 {achievementSystem.available.length} 个成就可以解锁！
+                有 {achievementSystem.total - achievementSystem.unlockedCount} 个成就可以解锁！
               </div>
               <div className="text-sm text-green-200">
-                {achievementSystem.available[0]?.title}
+                {/* 这里需要根据实际情况填充成就标题 */}
               </div>
             </div>
           </div>
@@ -302,17 +306,13 @@ export const PlayerInfo = () => {
             <span className="text-purple-400 font-bold">{summonStats.slots.max}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-            <span className="text-slate-300">背包容量</span>
-            <span className="text-green-400 font-bold">{inventoryStats.slots.max}</span>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
             <span className="text-slate-300">最高技能书等级</span>
-            <span className="text-blue-400 font-bold">Lv.{playerCapabilities.maxSkillBookLevel}</span>
+            <span className="text-blue-400 font-bold">Lv.{player.maxSkillBookLevel}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
             <span className="text-slate-300">可炼制品质</span>
             <div className="flex gap-1">
-              {playerCapabilities.availableRefinementQualities.map(quality => (
+              {player.availableRefinementQualities.map(quality => (
                 <span key={quality} className={`px-2 py-1 rounded text-xs bg-quality-${quality} text-white`}>
                   {getQualityDisplayName(quality)}
                 </span>
@@ -324,7 +324,7 @@ export const PlayerInfo = () => {
 
       {/* 状态提示 */}
       <div className="space-y-3">
-        {!playerCapabilities.canSummonMore && (
+        {!player.canSummonMore && (
           <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
             <div className="text-red-300 font-medium mb-2">
               <i className="fas fa-exclamation-triangle mr-2"></i>
@@ -336,7 +336,7 @@ export const PlayerInfo = () => {
           </div>
         )}
 
-        {!playerCapabilities.hasInventorySpace && (
+        {!player.hasInventorySpace && (
           <div className="bg-orange-900/30 border border-orange-500/50 rounded-lg p-4">
             <div className="text-orange-300 font-medium mb-2">
               <i className="fas fa-box mr-2"></i>
@@ -353,19 +353,6 @@ export const PlayerInfo = () => {
 
   return (
     <div className="p-4 max-w-5xl mx-auto">
-      {/* 错误提示 */}
-      {error && (
-        <div className="mb-4 bg-red-900/50 border border-red-500/50 rounded-lg p-3 flex items-center justify-between">
-          <div className="flex items-center">
-            <i className="fas fa-exclamation-triangle text-red-400 mr-2"></i>
-            <span className="text-red-100 text-sm">{error}</span>
-          </div>
-          <button onClick={clearError} className="text-red-400 hover:text-red-300">
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
-      )}
-
       {/* 顶部标题区域 */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-100 mb-1">

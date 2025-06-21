@@ -167,6 +167,18 @@ const homesteadSlice = createSlice({
       return newState;
     }
   },
+  extraReducers: (builder) => {
+    builder.addCase('STATE_HYDRATE', (state, action) => {
+      if (action.payload.homestead) {
+        // 直接调用已有的 setHomesteadState 逻辑
+        return homesteadSlice.caseReducers.setHomesteadState(state, { 
+          payload: action.payload.homestead,
+          type: 'homestead/setHomesteadState'
+        });
+      }
+      return state;
+    });
+  }
 });
 
 export const {

@@ -20,7 +20,7 @@ export const useAppModals = () => {
   const [isMinimapModalOpen, setMinimapModalOpen] = useState(false);
   const [isNpcPanelOpen, setIsNpcPanelOpen] = useState(false);
   const [selectedNpcId, setSelectedNpcId] = useState(null);
-  const [isFormationModalOpen, setIsFormationModalOpen] = useState(false);
+  const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] = useState(false);
   const [isTowerModalOpen, setIsTowerModalOpen] = useState(false);
   const [isHomesteadModalOpen, setIsHomesteadModalOpen] = useState(false);
   const [isSummonEquipmentOpen, setIsSummonEquipmentOpen] = useState(false);
@@ -71,8 +71,8 @@ export const useAppModals = () => {
     setSelectedNpcId(null);
   }, []);
 
-  const openFormationModal = useCallback(() => setIsFormationModalOpen(true), []);
-  const closeFormationModal = useCallback(() => setIsFormationModalOpen(false), []);
+  const openFormationSystemModal = useCallback(() => setIsFormationSystemModalOpen(true), []);
+  const closeFormationSystemModal = useCallback(() => setIsFormationSystemModalOpen(false), []);
 
   const openTowerModal = useCallback(() => {
     // 检查并重置每日数据
@@ -143,9 +143,9 @@ export const useAppModals = () => {
     selectedNpcId,
     openNpcPanelModal,
     closeNpcPanelModal,
-    isFormationModalOpen,
-    openFormationModal,
-    closeFormationModal,
+    isFormationSystemModalOpen,
+    openFormationSystemModal,
+    closeFormationSystemModal,
     isTowerModalOpen,
     openTowerModal,
     closeTowerModal,

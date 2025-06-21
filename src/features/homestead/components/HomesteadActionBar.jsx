@@ -11,7 +11,8 @@ const HomesteadActionBar = ({
   onOpenQuestLog,
   onStartDungeonDemo,
   onOpenFormationSystem,
-  onToggleV3Test
+  onToggleV3Test,
+  onOpenSaveModal
 }) => {
   const unlockedFeatures = useSelector(selectUnlockedFeatures);
 
@@ -103,6 +104,14 @@ const HomesteadActionBar = ({
       onClick: () => onToggleV3Test(true),
       isUnlocked: true,
       gradient: 'from-yellow-500 to-amber-600'
+    },
+    {
+      id: 'save',
+      icon: '💾',
+      label: '保存',
+      onClick: onOpenSaveModal,
+      isUnlocked: true,
+      gradient: 'from-green-500 to-teal-600'
     },
     {
       id: 'settings',

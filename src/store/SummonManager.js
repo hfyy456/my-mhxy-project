@@ -3,6 +3,7 @@
  * 核心设计原则：封装、单一职责
  */
 import { EventEmitter } from "events";
+import playerManagerInstance from "./managers/PlayerManager"; // 修正路径
 
 import {
   
@@ -15,11 +16,22 @@ import Summon, { SummonFactory } from './Summon';
 // 召唤兽管理器 - 管理所有召唤兽实例
 // ===========================================
 class SummonManager extends EventEmitter {
-  constructor(maxSummons = 6) {
+  constructor() {
     super();
     this.summons = {};
     this.currentSummonId = null;
-    this.maxSummons = maxSummons;
+    // 从PlayerManager获取初始值
+    this.maxSummons = playerManagerInstance.getState().maxSummons;
+    
+    // 监听玩家等级变化导致的上限变化
+    this.handleMaxSummonsChange = this.handleMaxSummonsChange.bind(this);
+    playerManagerInstance.on('max_summons_changed', this.handleMaxSummonsChange);
+  }
+
+  handleMaxSummonsChange(newMax) {
+    console.log(`[SummonManager] Received max_summons_changed event. New max: ${newMax}`);
+    this.maxSummons = newMax;
+    this.emit("state_changed", this.getState());
   }
 
   getState() {
@@ -146,6 +158,16 @@ class SummonManager extends EventEmitter {
     return this.summons;
   }
 
+  /**
+   * 重置管理器状态以开始新游戏
+   */
+  reset() {
+    this.summons = {};
+    this.currentSummonId = null;
+    this.emit("state_changed", this.getState());
+    console.log('[SummonManager] 状态已重置。');
+  }
+
   releaseSummon(summonId) {
     const summon = this.getSummonById(summonId);
     if (!summon) {
@@ -177,8 +199,53 @@ class SummonManager extends EventEmitter {
     }
   }
 
+  // ===========================================
+  // 存档/读档接口
+  // ===========================================
+
+  /**
+   * 获取用于存档的召唤兽数据
+   * @returns {object}
+   */
+  getSaveData() {
+    // 直接复用已有的getState逻辑
+    return this.getState();
+  }
+
+  /**
+   * 从存档数据中加载召唤兽状态
+   * @param {object} data - 包含allSummons, currentSummonId等数据的对象
+   */
+  loadSaveData(data) {
+    console.log('[SummonManager] 正在从存档恢复状态:', data);
+    if (!data || !data.allSummons) {
+      console.warn('[SummonManager] 存档中无有效的召唤兽数据，将重置状态。');
+      this.reset();
+      return;
+    }
+
+    // 1. 清空当前状态
+    this.summons = {};
+    
+    // 2. 从数据恢复召唤兽实例
+    Object.values(data.allSummons).forEach(summonJson => {
+      const summon = SummonFactory.fromJSON(summonJson);
+      summon.setManager(this); // 重新关联管理器
+      this.summons[summon.id] = summon;
+    });
+
+    // 3. 恢复当前选中的召唤兽ID
+    this.currentSummonId = data.currentSummonId || null;
+    
+    // 4. 通知UI状态已彻底改变
+    this.emit("state_changed", this.getState());
+    console.log('[SummonManager] 状态恢复成功。');
+  }
+
   destroy() {
     this.removeAllListeners();
+    // 别忘了移除对外部管理器的监听
+    playerManagerInstance.off('max_summons_changed', this.handleMaxSummonsChange);
   }
 }
 

@@ -459,8 +459,21 @@ const enhancedHomesteadSlice = createSlice({
       }
       
       console.log(`Completed upgrade of ${building.buildingId} to level ${building.level}`);
+    },
+
+    setState: (state, action) => {
+      return { ...state, ...action.payload };
     }
   },
+  extraReducers: (builder) => {
+    builder.addCase('STATE_HYDRATE', (state, action) => {
+      if (action.payload.enhancedHomestead) {
+        // 使用 immer，可以直接修改 state
+        return { ...state, ...action.payload.enhancedHomestead };
+      }
+      return state;
+    });
+  }
 });
 
 export const {
@@ -480,6 +493,7 @@ export const {
   instantCompleteAllBuildings,
   upgradeBuildingAction,
   completeBuildingUpgrade,
+  setState
 } = enhancedHomesteadSlice.actions;
 
 // ===== Selectors =====

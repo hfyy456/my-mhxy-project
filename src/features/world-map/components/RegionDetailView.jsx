@@ -7,7 +7,7 @@ import {
   getNodeStatus,
   getAvailableInteractions
 } from '@/config/map/worldMapConfig';
-import { selectPlayerLevel } from '@/store/slices/playerSlice';
+import { usePlayerManager } from '@/hooks/usePlayerManager';
 import CommonModal from '@/features/ui/components/CommonModal';
 
 const RegionDetailView = ({ 
@@ -18,7 +18,8 @@ const RegionDetailView = ({
   onBackToWorldMap 
 }) => {
   const dispatch = useDispatch();
-  const playerLevel = useSelector(selectPlayerLevel);
+  const { player } = usePlayerManager();
+  const playerLevel = player.level;
   const completedQuests = [];
   const inventory = [];
   

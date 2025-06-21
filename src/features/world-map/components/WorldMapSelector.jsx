@@ -4,12 +4,13 @@ import {
   WORLD_REGIONS, 
   checkUnlockConditions
 } from '@/config/map/worldMapConfig';
-import { selectPlayerLevel } from '@/store/slices/playerSlice';
+import { usePlayerManager } from '@/hooks/usePlayerManager';
 import CommonModal from '@/features/ui/components/CommonModal';
 
 const WorldMapSelector = ({ isOpen, onClose, onRegionSelect }) => {
   const dispatch = useDispatch();
-  const playerLevel = useSelector(selectPlayerLevel);
+  const { player } = usePlayerManager();
+  const playerLevel = player.level;
   const completedQuests = []; // 临时数据
   const inventory = []; // 临时数据
   

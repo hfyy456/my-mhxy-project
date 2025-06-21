@@ -6,11 +6,14 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/useToast";
+import saveLoadManager from '@/store/managers/SaveLoadManager';
+import CommonModal from '@/features/ui/components/CommonModal';
 
 const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
   const [toasts, setToasts] = useState([]);
   const [hoveredButton, setHoveredButton] = useState(null);
   const [glowIntensity, setGlowIntensity] = useState(0.5);
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false); // 加载模态框状态
   const { showResult } = useToast(toasts, setToasts);
 
   // 动态光效强度
@@ -22,8 +25,13 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
   }, []);
 
   const handleNewGame = () => {
-    showResult('欢迎来到御灵录！', 'success');
+    saveLoadManager.startNewGame(); // 重置状态
+    showResult('欢迎来到御灵录！新的冒险已经开始。', 'success');
     onStartGame();
+  };
+
+  const handleLoadGameClick = () => {
+    setIsLoadModalOpen(true);
   };
 
   const handleExitGame = () => {
@@ -44,6 +52,16 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
       hoverColor: 'from-amber-600 to-amber-800',
       shadowColor: 'shadow-amber-500/30',
       action: handleNewGame
+    },
+    {
+      id: 'load-game',
+      label: '加载游戏',
+      icon: 'fa-folder-open',
+      description: '继续之前的冒险',
+      color: 'from-sky-500 to-sky-700',
+      hoverColor: 'from-sky-600 to-sky-800',
+      shadowColor: 'shadow-sky-500/30',
+      action: handleLoadGameClick
     },
     {
       id: 'settings',
@@ -214,6 +232,19 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
         </div>
       </div>
 
+      {/* 加载游戏模态框 */}
+      {isLoadModalOpen && (
+        <LoadGameModal
+          isOpen={isLoadModalOpen}
+          onClose={() => setIsLoadModalOpen(false)}
+          onLoadSuccess={() => {
+            setIsLoadModalOpen(false);
+            onStartGame();
+          }}
+          showToast={showToast}
+        />
+      )}
+
       {/* Toast消息 */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
@@ -239,6 +270,81 @@ const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {
         ))}
       </div>
     </div>
+  );
+};
+
+// 加载游戏模态框组件
+const LoadGameModal = ({ isOpen, onClose, onLoadSuccess, showToast }) => {
+  const [slots, setSlots] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      saveLoadManager.getSaveSlots().then(setSlots);
+    }
+  }, [isOpen]);
+
+  const handleLoad = async (index) => {
+    const result = await saveLoadManager.loadGame(index);
+    if (result.success) {
+      showToast("游戏加载成功！", "success");
+      onLoadSuccess();
+    } else {
+      showToast(`加载失败: ${result.message}`, "error");
+    }
+  };
+
+  const formatDate = (isoString) => {
+    if (!isoString) return "空";
+    return new Date(isoString).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <CommonModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="加载游戏"
+    >
+      <div className="p-4 space-y-2">
+        {slots.map((slot, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+          >
+            <div className="text-white">
+              <p className="font-bold">存档 {index + 1}</p>
+              {slot ? (
+                <p className="text-sm text-gray-400">
+                  {slot.playerName} - 等级 {slot.level} - {formatDate(slot.saveTime)}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">空槽位</p>
+              )}
+            </div>
+            {slot ? (
+              <button
+                onClick={() => handleLoad(index)}
+                className="px-4 py-2 text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
+              >
+                加载
+              </button>
+            ) : (
+              <button
+                className="px-4 py-2 text-white bg-gray-600 rounded cursor-not-allowed"
+                disabled
+              >
+                加载
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </CommonModal>
   );
 };
 

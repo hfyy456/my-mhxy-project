@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-22 05:43:37
+ * @LastEditTime: 2025-06-22 05:51:38
  */
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -44,6 +44,9 @@ import worldMapConfig from "@/config/map/worldMapConfig.json";
 
 import CommonModal from "@/features/ui/components/CommonModal";
 import SummonInfo from "@/features/summon/components/SummonInfo";
+
+// 导入存档管理器
+import saveLoadManager from "@/store/managers/SaveLoadManager";
 
 const GamePageContent = ({
   showToast,
@@ -115,9 +118,9 @@ const GamePageContent = ({
     selectedNpcId,
     openNpcPanelModal,
     closeNpcPanelModal,
-    isFormationModalOpen,
-    openFormationModal,
-    closeFormationModal,
+    isFormationSystemModalOpen,
+    openFormationSystemModal,
+    closeFormationSystemModal,
     isTowerModalOpen,
     openTowerModal,
     closeTowerModal,
@@ -156,18 +159,15 @@ const GamePageContent = ({
   const openNpcOOPDemo = () => setIsNpcOOPDemoOpen(true);
   const closeNpcOOPDemo = () => setIsNpcOOPDemoOpen(false);
 
-  // 添加新的阵型系统状态管理
-  const [isFormationSystemModalOpen, setIsFormationSystemModalOpen] =
-    useState(false);
-  const openFormationSystemModal = () => setIsFormationSystemModalOpen(true);
-  const closeFormationSystemModal = () => setIsFormationSystemModalOpen(false);
-
   // 添加战备弹窗状态
   const [showBattlePrep, setShowBattlePrep] = useState(false);
   const [enemyGroup, setEnemyGroup] = useState(null);
 
   // 主题演示模态框
   const [isThemeDemoOpen, setIsThemeDemoOpen] = useState(false);
+
+  // 存档模态框状态
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
@@ -215,74 +215,8 @@ const GamePageContent = ({
   // 装备关系管理
   useEquipmentRelationship();
 
-  // 游戏操作栏组件 - 恢复被误删的组件
-  const GameActionBar = () => {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "10px",
-          padding: "10px",
-          backgroundColor: "rgba(0,0,0,0.7)",
-          borderRadius: "5px",
-        }}
-      >
-        <button
-          onClick={openFormationModal}
-          className="px-3 py-2 text-white bg-theme-dark hover:bg-theme-primary transition-colors rounded"
-        >
-          阵型
-        </button>
-        <button
-          onClick={openTowerModal}
-          className="px-3 py-2 text-white bg-theme-primary hover:bg-theme-primary/80 transition-colors rounded"
-        >
-          封妖塔
-        </button>
-        <button
-          onClick={onStartDungeonDemo}
-          className="px-3 py-2 text-white bg-theme-secondary hover:bg-theme-secondary/80 transition-colors rounded"
-        >
-          副本
-        </button>
-        <button
-          onClick={() => {
-            openHomesteadModal();
-          }}
-          className="px-3 py-2 text-white bg-dreamyPurple-300 hover:bg-dreamyPurple-300/80 transition-colors rounded"
-        >
-          家园
-        </button>
-        <button
-          onClick={openInventoryOOPModal}
-          className="px-3 py-2 text-white bg-dreamyPurple-500 hover:bg-dreamyPurple-500/80 transition-colors rounded"
-        >
-          背包OOP
-        </button>
-        <button
-          onClick={openConfigManager}
-          className="px-3 py-2 text-white bg-theme-primary hover:bg-theme-primary/80 transition-colors rounded"
-        >
-          配置管理
-        </button>
-        {/* 我们需要一个按钮来打开召唤兽界面，这里暂时添加到旧的操作栏中 */}
-        <button
-          onClick={openSummonModal}
-          className="px-3 py-2 text-white bg-dreamyPurple-400 hover:bg-dreamyPurple-400/80 transition-colors rounded"
-        >
-          召唤兽
-        </button>
-      </div>
-    );
-  };
+  // 游戏操作栏组件 - GameActionBar 已被移除
 
- 
-
-  // 测试战斗
   const handleTestBattle = async () => {
     const regionId = "dongsheng_region";
     const regionConfig = worldMapConfig[regionId];
@@ -339,6 +273,7 @@ const GamePageContent = ({
 
   const handleSelectSummon = (summonId) => {
     selectSummon(summonId);
+    showToast(`已选择召唤兽: ${summonId}`, "info");
   };
 
   // 如果游戏未初始化，显示加载提示
@@ -357,9 +292,12 @@ const GamePageContent = ({
       <div className="flex-1 relative overflow-hidden">
         {!isBattleActive && (
           <>
-            <BeautifulHomesteadView showToast={showToast} onOpenSummonHome={openSummonHomePanel} />
+            <BeautifulHomesteadView
+              showToast={showToast}
+              onOpenSummonHome={openSummonHomePanel}
+              onOpenConfigManager={() => setIsConfigManagerOpen(true)}
+            />
             <DialoguePanel />
-            <GameActionBar /> {/* 渲染恢复的操作栏 */}
             {/* Action Bar */}
             {!isWorldMapOpen && (
               <HomesteadActionBar
@@ -374,7 +312,8 @@ const GamePageContent = ({
                 onOpenMinimap={openMinimapModal}
                 onOpenNpcPanel={openNpcPanelModal}
                 onStartDungeonDemo={onStartDungeonDemo}
-                onOpenFormationSystem={openFormationModal}
+                onOpenFormationSystem={openFormationSystemModal}
+                onOpenSaveModal={() => setIsSaveModalOpen(true)}
                 player={player}
               />
             )}
@@ -627,24 +566,13 @@ const GamePageContent = ({
           type="success"
         />
 
-        {isConfigManagerOpen && (
-          <CommonModal
-            isOpen={isConfigManagerOpen}
-            onClose={closeConfigManager}
-            title="配置管理器"
-          >
-            <ConfigManager />
-          </CommonModal>
-        )}
-
-        {isNpcOOPDemoOpen && (
-          <CommonModal
-            isOpen={isNpcOOPDemoOpen}
-            onClose={closeNpcOOPDemo}
-            title={uiText.summonManagement}
-          >
-            <NpcOOPDemo />
-          </CommonModal>
+        {/* 存档模态框 */}
+        {isSaveModalOpen && (
+          <SaveGameModal
+            isOpen={isSaveModalOpen}
+            onClose={() => setIsSaveModalOpen(false)}
+            showToast={showToast}
+          />
         )}
 
         {/* 战备弹窗 */}
@@ -656,6 +584,74 @@ const GamePageContent = ({
         />
       </div>
     </div>
+  );
+};
+
+// 存档模态框组件
+const SaveGameModal = ({ isOpen, onClose, showToast }) => {
+  const [slots, setSlots] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      saveLoadManager.getSaveSlots().then(setSlots);
+    }
+  }, [isOpen]);
+
+  const handleSave = async (index) => {
+    const result = await saveLoadManager.saveGame(index);
+    if (result.success) {
+      showToast("游戏已保存！", "success");
+      onClose();
+    } else {
+      showToast(`保存失败: ${result.message}`, "error");
+    }
+    // 重新加载槽位信息
+    saveLoadManager.getSaveSlots().then(setSlots);
+  };
+
+  const formatDate = (isoString) => {
+    if (!isoString) return "空";
+    return new Date(isoString).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <CommonModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="保存游戏"
+    >
+      <div className="p-4 space-y-2">
+        {slots.map((slot, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+          >
+            <div className="text-white">
+              <p className="font-bold">存档 {index + 1}</p>
+              {slot ? (
+                <p className="text-sm text-gray-400">
+                  {slot.playerName} - 等级 {slot.level} - {formatDate(slot.saveTime)}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">空槽位</p>
+              )}
+            </div>
+            <button
+              onClick={() => handleSave(index)}
+              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+            >
+              保存
+            </button>
+          </div>
+        ))}
+      </div>
+    </CommonModal>
   );
 };
 

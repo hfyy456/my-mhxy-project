@@ -545,8 +545,10 @@ class InventoryManager extends EventEmitter {
     super();
     this.items = new Map(); // 存储所有物品实例，以物品ID为键
     this.slots = new Map(); // 模拟背包格子，格子索引 -> 物品ID
-    this.gold = 0;
     this.capacity = initialCapacity; // 背包容量
+    this.isLoading = false;
+    this.error = null;
+    this.autoSaveTimeout = null;
 
     // 初始化插槽
     this.initializeSlots();
@@ -580,9 +582,9 @@ class InventoryManager extends EventEmitter {
       slots,
       items: itemsArray,
       capacity: this.capacity,
-      gold: this.gold,
-      usedSlots: this.items.size,
-      availableSlots: this.capacity - this.items.size,
+      usedSlots: this.getUsedSlotsCount(),
+      availableSlots: this.capacity - this.getUsedSlotsCount(),
+      isLoading: this.isLoading,
     };
   }
 
@@ -824,30 +826,9 @@ class InventoryManager extends EventEmitter {
     return Array.from(this.items.values());
   }
 
-  // 添加金币
-  addGold(amount) {
-    if (amount > 0) {
-      this.gold += amount;
-      this.emit('gold_changed', this.gold);
-      this.emit('inventory_changed', this.getState());
-      console.log(`[InventoryManager] 添加金币: ${amount}，当前金币: ${this.gold}`);
-    }
-  }
-
-  // 移除金币
-  removeGold(amount) {
-    if (amount > 0 && this.gold >= amount) {
-      this.gold -= amount;
-      this.emit('gold_changed', this.gold);
-      this.emit('inventory_changed', this.getState());
-      console.log(`[InventoryManager] 移除金币: ${amount}，剩余金币: ${this.gold}`);
-      return true;
-    }
-    return false;
-  }
-
   // 扩展背包容量
   expandCapacity(additionalSlots) {
+    if (typeof additionalSlots !== 'number' || additionalSlots <= 0) return;
     const oldCapacity = this.capacity;
     this.capacity += additionalSlots;
     
@@ -932,10 +913,40 @@ class InventoryManager extends EventEmitter {
       this.addItem(itemDef);
     });
 
-    // 添加初始金币
-    this.addGold(1000);
-
     console.log('[InventoryManager] 新手物品添加完成');
+  }
+
+  // ===========================================
+  // 存档/读档接口
+  // ===========================================
+  
+  /**
+   * 获取用于存档的背包数据
+   * @returns {object}
+   */
+  getSaveData() {
+    console.log('[InventoryManager] getSaveData called (placeholder)');
+    // 后续实现：
+    // const items = Array.from(this.items.values()).map(item => item.toJSON());
+    // return { items, gold: this.gold, capacity: this.capacity };
+    return { status: 'unimplemented' }; // 占位符
+  }
+  
+  /**
+   * 从存档数据中加载背包状态
+   * @param {object} data - 包含items, gold, capacity的存档数据
+   */
+  loadSaveData(data) {
+    console.log('[InventoryManager] loadSaveData called with:', data);
+    // 后续实现：
+    // this.items.clear();
+    // data.items.forEach(itemData => {
+    //   const item = ItemFactory.fromJSON(itemData);
+    //   this.items.set(item.id, item);
+    // });
+    // this.gold = data.gold || 0;
+    // this.capacity = data.capacity || 100;
+    // this.emit("state_loaded", this.getState());
   }
 }
 
