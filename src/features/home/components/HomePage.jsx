@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/useToast";
-import saveLoadManager from '@/store/managers/SaveLoadManager';
+import { saveLoadManagerInstance as saveLoadManager } from '@/store/managers';
 import CommonModal from '@/features/ui/components/CommonModal';
 
 const HomePage = ({ onStartGame, onOpenSettings, showToast }) => {

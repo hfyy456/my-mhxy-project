@@ -14,8 +14,6 @@ import dialogueReducer from '@/store/slices/dialogueSlice';
 import formationReducer from '@/store/slices/formationSlice';
 import battleReducer from '@/store/slices/battleSliceSimplified';
 import towerReducer from '@/store/slices/towerSlice';
-import homesteadReducer from '@/store/slices/homesteadSlice'; // 导入 homesteadReducer
-import enhancedHomesteadReducer from '@/store/slices/enhancedHomesteadSlice'; // 导入增强家园系统
 
 const store = configureStore({
   reducer: {
@@ -28,8 +26,6 @@ const store = configureStore({
     formation: formationReducer,
     battle: battleReducer,
     tower: towerReducer,
-    homestead: homesteadReducer, // 注册 homesteadReducer
-    enhancedHomestead: enhancedHomesteadReducer, // 注册增强家园系统
   },
 });
 

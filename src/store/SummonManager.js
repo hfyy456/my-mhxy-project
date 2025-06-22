@@ -20,18 +20,33 @@ class SummonManager extends EventEmitter {
     super();
     this.summons = {};
     this.currentSummonId = null;
-    // 从PlayerManager获取初始值
-    this.maxSummons = playerManagerInstance.getState().maxSummons;
+    this.maxSummons = 5; // 提供一个临时的默认值
+    this.playerManager = null;
+  }
+
+  /**
+   * 初始化管理器并注入依赖
+   * @param {object} playerManager 
+   */
+  initialize(playerManager) {
+    this.playerManager = playerManager;
+    // 从PlayerManager获取真实初始值
+    this.maxSummons = this.playerManager.getState().maxSummons;
     
     // 监听玩家等级变化导致的上限变化
     this.handleMaxSummonsChange = this.handleMaxSummonsChange.bind(this);
-    playerManagerInstance.on('max_summons_changed', this.handleMaxSummonsChange);
+    this.playerManager.on('max_summons_changed', this.handleMaxSummonsChange);
+    console.log('[SummonManager] Initialized with PlayerManager.');
   }
 
   handleMaxSummonsChange(newMax) {
     console.log(`[SummonManager] Received max_summons_changed event. New max: ${newMax}`);
     this.maxSummons = newMax;
     this.emit("state_changed", this.getState());
+    // 别忘了移除对外部管理器的监听
+    if (this.playerManager) {
+      this.playerManager.off('max_summons_changed', this.handleMaxSummonsChange);
+    }
   }
 
   getState() {
@@ -245,9 +260,14 @@ class SummonManager extends EventEmitter {
   destroy() {
     this.removeAllListeners();
     // 别忘了移除对外部管理器的监听
-    playerManagerInstance.off('max_summons_changed', this.handleMaxSummonsChange);
+    if (this.playerManager) {
+      this.playerManager.off('max_summons_changed', this.handleMaxSummonsChange);
+    }
+  }
+
+  emitChange() {
+    this.emit('change', this.getState());
   }
 }
 
-const summonManagerInstance = new SummonManager();
-export default summonManagerInstance;
+export default SummonManager;

@@ -4,7 +4,7 @@
  */
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import summonManager from '@/store/SummonManager';
+import { summonManagerInstance as summonManager } from '@/store/managers';
 
 /**
  * 主要的召唤兽管理Hook

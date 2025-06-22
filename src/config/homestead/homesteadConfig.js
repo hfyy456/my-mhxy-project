@@ -13,12 +13,12 @@ export const HOMESTEAD_GENERAL_CONFIG = {
   HOMESTEAD_MAX_LEVEL: 10, // 家园本身的最大等级
   // 家园系统内使用的资源
   HOMESTEAD_RESOURCES: {
-    WOOD: { id: 'wood', name: '木材', icon: 'path/to/wood_icon.png' },
-    STONE: { id: 'stone', name: '石料', icon: 'path/to/stone_icon.png' },
-    HERB: { id: 'herb', name: '草药', icon: 'path/to/herb_icon.png' },
-    ORE: { id: 'ore', name: '矿石', icon: 'path/to/ore_icon.png' },
-    ESSENCE: { id: 'essence', name: '精粹', icon: 'path/to/essence_icon.png' }, // 用于炼金/打造
-    GOLD: { id: 'gold', name: '金币', icon: 'path/to/gold_icon.png' }, // 通用货币
+    WOOD: { id: 'wood', name: '木材', icon: 'path/to/wood_icon.png', initialValue: 500 },
+    STONE: { id: 'stone', name: '石料', icon: 'path/to/stone_icon.png', initialValue: 500 },
+    HERB: { id: 'herb', name: '草药', icon: 'path/to/herb_icon.png', initialValue: 100 },
+    ORE: { id: 'ore', name: '矿石', icon: 'path/to/ore_icon.png', initialValue: 100 },
+    ESSENCE: { id: 'essence', name: '精粹', icon: 'path/to/essence_icon.png', initialValue: 50 }, // 用于炼金/打造
+    GOLD: { id: 'gold', name: '金币', icon: 'path/to/gold_icon.png', initialValue: 2000 }, // 通用货币
   },
 };
 

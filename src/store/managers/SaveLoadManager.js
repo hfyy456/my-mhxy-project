@@ -6,12 +6,6 @@
  * 3. 提供统一的存档、读档、获取存档列表的接口。
  */
 import { EventEmitter } from 'events';
-
-// 导入其他管理器的单例
-import inventoryManagerInstance from '../InventoryManager';
-import summonManagerInstance from '../SummonManager';
-import playerManagerInstance from './PlayerManager'; // 导入PlayerManager
-// import npcManagerInstance from './NpcManager'; // 未来会用到
 import store from '../index'; // 导入Redux store
 
 const MAX_SAVE_SLOTS = 5;
@@ -23,6 +17,24 @@ class SaveLoadManager extends EventEmitter {
     if (!this.electronStore) {
       console.warn('[SaveLoadManager] Electron Store API 未找到。存档功能将不可用。');
     }
+
+    // 依赖将在 initialize 方法中注入
+    this.playerManager = null;
+    this.summonManager = null;
+    this.inventoryManager = null;
+    this.homesteadManager = null;
+  }
+
+  /**
+   * 初始化并注入依赖
+   * @param {{playerManager: object, summonManager: object, inventoryManager: object, homesteadManager: object}} managers 
+   */
+  initialize({ playerManager, summonManager, inventoryManager, homesteadManager }) {
+    this.playerManager = playerManager;
+    this.summonManager = summonManager;
+    this.inventoryManager = inventoryManager;
+    this.homesteadManager = homesteadManager;
+    console.log('[SaveLoadManager] Initialized with all managers.');
   }
 
   /**
@@ -116,9 +128,10 @@ class SaveLoadManager extends EventEmitter {
    */
   startNewGame() {
     console.log('[SaveLoadManager] 开始新游戏，正在重置状态...');
-    // inventoryManagerInstance.reset();
-    summonManagerInstance.reset();
-    playerManagerInstance.reset(); // 重置玩家状态
+    // this.inventoryManager.reset();
+    this.summonManager.reset();
+    this.playerManager.reset();
+    this.homesteadManager.reset();
     // store.dispatch({ type: 'game/reset' });
     this.emit('new_game_started');
   }
@@ -131,24 +144,26 @@ class SaveLoadManager extends EventEmitter {
     console.log('[SaveLoadManager] 正在收集所有游戏状态...');
     
     // --- 在此逐一实现各模块的数据收集 ---
-    const playerData = playerManagerInstance.getSaveData();
-    // const inventoryData = inventoryManagerInstance.getSaveData();
-    const summonData = summonManagerInstance.getSaveData();
+    const playerData = this.playerManager.getSaveData();
+    // const inventoryData = this.inventoryManager.getSaveData();
+    const summonData = this.summonManager.getSaveData();
+    const homesteadData = this.homesteadManager.getSaveData();
     
-    // 不再从Redux获取player state
-    const { quests, tower, homestead, map, formation } = store.getState();
+    // 不再从Redux获取player state, homestead state
+    const { quests, tower, map, formation } = store.getState();
 
     return {
       managers: {
         player: playerData,
         // inventory: inventoryData, // 占位
         summon: summonData,
+        homestead: homesteadData,
       },
       redux: {
         // player state 已被移除
+        // homestead state 已被移除
         quests,
         tower,
-        homestead,
         map,
         formation,
       },
@@ -166,11 +181,14 @@ class SaveLoadManager extends EventEmitter {
 
     // --- 在此逐一实现各模块的数据恢复 ---
     if (gameState.managers?.player) {
-      playerManagerInstance.loadSaveData(gameState.managers.player);
+      this.playerManager.loadSaveData(gameState.managers.player);
     }
-    // inventoryManagerInstance.loadSaveData(gameState.managers.inventory);
+    // this.inventoryManager.loadSaveData(gameState.managers.inventory);
     if (gameState.managers?.summon) {
-      summonManagerInstance.loadSaveData(gameState.managers.summon);
+      this.summonManager.loadSaveData(gameState.managers.summon);
+    }
+    if (gameState.managers?.homestead) {
+      this.homesteadManager.loadSaveData(gameState.managers.homestead);
     }
     
     // 恢复Redux状态
@@ -186,5 +204,4 @@ class SaveLoadManager extends EventEmitter {
   }
 }
 
-const saveLoadManagerInstance = new SaveLoadManager();
-export default saveLoadManagerInstance; 
+export default SaveLoadManager; 

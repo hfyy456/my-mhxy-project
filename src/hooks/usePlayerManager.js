@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import playerManagerInstance from '@/store/managers/PlayerManager';
+import { playerManagerInstance } from '@/store/managers';
 
 /**
  * usePlayerManager Hook
@@ -22,7 +22,7 @@ export const usePlayerManager = () => {
       playerManagerInstance.off('state_changed', handleStateChange);
     };
   }, []);
-
+  
   return {
     player: playerState,
     manager: playerManagerInstance,

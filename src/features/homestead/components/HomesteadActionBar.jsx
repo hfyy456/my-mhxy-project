@@ -1,6 +1,5 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
-import { selectUnlockedFeatures } from '@/store/slices/enhancedHomesteadSlice';
+import { useHomesteadManager } from '@/hooks/useHomesteadManager';
 
 const HomesteadActionBar = ({ 
   onOpenSummonSystem,
@@ -12,9 +11,10 @@ const HomesteadActionBar = ({
   onStartDungeonDemo,
   onOpenFormationSystem,
   onToggleV3Test,
-  onOpenSaveModal
+  onOpenSaveModal,
 }) => {
-  const unlockedFeatures = useSelector(selectUnlockedFeatures);
+  const { homesteadState } = useHomesteadManager();
+  const { unlockedFeatures } = homesteadState;
 
   const actionButtons = [
     {

@@ -7,7 +7,6 @@ import {
   useInventoryManager,
   useInventoryActions,
   useInventorySlots,
-  useGold,
   useInventoryCapacity,
   useInventoryDragDrop,
   useEquipmentSlotConfig
@@ -18,6 +17,7 @@ import { EQUIPMENT_SLOT_TYPES } from '@/config/enumConfig';
 import { uiText, getAttributeDisplayName, getQualityDisplayName } from '@/config/ui/uiTextConfig';
 import { useEquipmentRelationship, useItemEquipmentStatus, useSummonEquipmentStatus } from '../../../hooks/useEquipmentRelationship';
 import { formatEffectDisplay } from '@/utils/equipmentEffectUtils';
+import { usePlayerManager } from '../../../hooks/usePlayerManager';
 
 // 背包格子组件
 function InventorySlot({ slotIndex, item, onSlotClick, onDragStart, onDragEnd, isDragTarget, isSelected }) {
@@ -383,15 +383,13 @@ function ItemDetails({ item, onUse, onEquip, onSplit, onUnequip, getSummonExisti
 
 // 金币显示组件
 function GoldDisplay() {
-  const { gold } = useGold();
+  const { player } = usePlayerManager();
+  const goldAmount = player?.resources?.gold || 0;
 
   return (
-    <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-lg shadow-lg p-3">
-      <div className="flex items-center justify-center gap-2">
-        <span className="text-2xl">💰</span>
-        <span className="text-xl font-bold text-yellow-50">{gold.toLocaleString()}</span>
-        <span className="text-yellow-100 font-medium">金币</span>
-      </div>
+    <div className="bg-neutral-800 border-2 border-neutral-600 rounded-lg p-2 flex items-center justify-between shadow-inner">
+      <span className="text-yellow-400 font-bold text-lg">💰 金币</span>
+      <span className="text-white font-mono text-lg">{goldAmount.toLocaleString()}</span>
     </div>
   );
 }

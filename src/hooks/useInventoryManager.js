@@ -3,7 +3,7 @@
  * 支持与Redux并行运行，实现渐进式迁移
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import inventoryManager from '../store/InventoryManager';
+import { inventoryManagerInstance as inventoryManager } from '@/store/managers';
 import { EQUIPMENT_SLOT_TYPES } from '@/config/enumConfig';
 
 // 基础背包状态Hook
@@ -181,43 +181,6 @@ export function useInventoryItems() {
   }, []);
 
   return items;
-}
-
-// 金币Hook
-export function useGold() {
-  const [gold, setGold] = useState(inventoryManager.getState().gold);
-
-  useEffect(() => {
-    const handleGoldChange = (newGold) => {
-      setGold(newGold);
-    };
-
-    const handleInventoryChange = (newState) => {
-      setGold(newState.gold);
-    };
-
-    inventoryManager.on('gold_changed', handleGoldChange);
-    inventoryManager.on('inventory_changed', handleInventoryChange);
-    
-    return () => {
-      inventoryManager.off('gold_changed', handleGoldChange);
-      inventoryManager.off('inventory_changed', handleInventoryChange);
-    };
-  }, []);
-
-  const addGold = useCallback((amount) => {
-    inventoryManager.addGold(amount);
-  }, []);
-
-  const removeGold = useCallback((amount) => {
-    return inventoryManager.removeGold(amount);
-  }, []);
-
-  return {
-    gold,
-    addGold,
-    removeGold
-  };
 }
 
 // 背包容量Hook

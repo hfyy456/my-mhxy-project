@@ -950,9 +950,7 @@ class InventoryManager extends EventEmitter {
   }
 }
 
-// 导出单例实例和所有类
-export const inventoryManager = new InventoryManager();
-export default inventoryManager;
+export default InventoryManager;
 
 // 导出所有类供外部使用
 export { 

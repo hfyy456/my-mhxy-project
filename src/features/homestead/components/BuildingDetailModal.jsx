@@ -1,7 +1,7 @@
 import React from 'react';
 import { ENHANCED_BUILDINGS } from '@/config/homestead/enhancedBuildingConfig';
 import { BUILDINGS as LEGACY_BUILDINGS } from '@/config/config'; // Import legacy config
-import { useSelector } from 'react-redux';
+import { useHomesteadManager } from '@/hooks/useHomesteadManager';
 
 const BuildingDetailModal = ({ 
   isOpen, 
@@ -11,7 +11,8 @@ const BuildingDetailModal = ({
   onStartRefining,
   onUpgrade,
 }) => {
-  const unlockedFeatures = useSelector(state => state.enhancedHomestead.unlockedFeatures.summonCenterFeatures) || [];
+  const { homesteadState } = useHomesteadManager();
+  const unlockedFeatures = homesteadState?.unlockedFeatures?.summonCenterFeatures || [];
 
   if (!isOpen || !buildingInstance) return null;
 

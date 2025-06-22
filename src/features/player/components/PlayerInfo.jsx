@@ -15,7 +15,7 @@ export const PlayerInfo = () => {
 
   // 使用我们新的、干净的玩家管理Hook
   const { player, manager: playerManager } = usePlayerManager();
-
+  
   // 保留原有的图鉴进度（从Redux）
   const unlockProgress = useSelector(selectUnlockProgress);
   const qualityCounts = useSelector(selectQualityCounts);
@@ -110,7 +110,7 @@ export const PlayerInfo = () => {
             <i className="fas fa-coins text-yellow-400"></i>
             </div>
           <div className="text-xl font-bold text-yellow-400">
-            {player.gold.toLocaleString()}
+            {(player.resources.gold || 0).toLocaleString()}
           </div>
           <div className="mt-2 text-xs text-slate-400">
             背包: 0/{player.maxInventorySlots}

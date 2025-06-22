@@ -4,6 +4,7 @@
  */
 import { EventEmitter } from 'events';
 import { playerBaseConfig, playerLevelConfig } from '@/config/character/playerConfig';
+import { HOMESTEAD_GENERAL_CONFIG } from '@/config/homestead/homesteadConfig'; // 修正导入路径
 
 class PlayerManager extends EventEmitter {
   constructor() {
@@ -17,7 +18,7 @@ class PlayerManager extends EventEmitter {
   reset() {
     this.level = playerBaseConfig.initialLevel;
     this.experience = playerBaseConfig.initialExperience;
-    this.gold = playerBaseConfig.initialGold || 0;
+    this.resources = {}; // 家园资源
     this.achievements = [];
     this.statistics = {
       totalRefinements: 0,
@@ -25,6 +26,11 @@ class PlayerManager extends EventEmitter {
       totalEquipmentObtained: 0,
     };
     
+    // 初始化家园资源
+    Object.values(HOMESTEAD_GENERAL_CONFIG.HOMESTEAD_RESOURCES).forEach(resourceConfig => {
+      this.resources[resourceConfig.id] = resourceConfig.initialValue || 0;
+    });
+
     // 派生属性
     this.maxSummons = playerBaseConfig.getMaxSummonsByLevel(this.level);
     this.maxInventorySlots = playerBaseConfig.getMaxInventorySlotsByLevel(this.level);
@@ -71,26 +77,99 @@ class PlayerManager extends EventEmitter {
   }
 
   /**
-   * 增加金钱
-   * @param {number} amount - 要增加的数量
+   * 增加金钱 - [已废弃, 请使用 addResource('gold', amount)]
+   * @deprecated
    */
   addGold(amount) {
-    if (amount <= 0) return;
-    this.gold += amount;
+    this.addResource('gold', amount);
+  }
+
+  /**
+   * 减少金钱 - [已废弃, 请使用 spendResource('gold', amount)]
+   * @deprecated
+   */
+  removeGold(amount) {
+    return this.spendResource('gold', amount);
+  }
+
+  // --- 家园资源管理 ---
+
+  /**
+   * 增加指定资源
+   * @param {string} resourceId - 资源ID (e.g., 'wood')
+   * @param {number} amount - 增加的数量
+   */
+  addResource(resourceId, amount) {
+    if (amount <= 0 || this.resources[resourceId] === undefined) return;
+    this.resources[resourceId] += amount;
+    this.emit('state_changed', this.getState());
+  }
+  
+  /**
+   * 批量增加资源
+   * @param {Array<{resource: string, amount: number}>} resourcesToAdd
+   */
+  addResources(resourcesToAdd = []) {
+     resourcesToAdd.forEach(({ resource, amount }) => {
+      if (amount > 0 && this.resources[resource] !== undefined) {
+        this.resources[resource] += amount;
+      }
+    });
     this.emit('state_changed', this.getState());
   }
 
   /**
-   * 减少金钱
-   * @param {number} amount - 要减少的数量
+   * 消耗指定资源
+   * @param {string} resourceId - 资源ID
+   * @param {number} amount - 消耗的数量
    * @returns {boolean} - 是否成功
    */
-  removeGold(amount) {
-    if (amount <= 0 || this.gold < amount) {
+  spendResource(resourceId, amount) {
+    if (amount <= 0 || !this.hasEnoughResource(resourceId, amount)) {
       return false;
     }
-    this.gold -= amount;
+    this.resources[resourceId] -= amount;
     this.emit('state_changed', this.getState());
+    return true;
+  }
+  
+  /**
+   * 检查单一资源是否足够
+   * @param {string} resourceId 
+   * @param {number} amount 
+   * @returns {boolean}
+   */
+  hasEnoughResource(resourceId, amount) {
+    return this.resources[resourceId] !== undefined && this.resources[resourceId] >= amount;
+  }
+
+  /**
+   * 检查一系列资源成本是否足够
+   * @param {Array<{resource: string, amount: number}>} costs - 成本数组
+   * @returns {boolean}
+   */
+  hasEnoughResources(costs = []) {
+    return costs.every(cost => this.hasEnoughResource(cost.resource, cost.amount));
+  }
+
+  /**
+   * 消耗一系列资源
+   * @param {Array<{resource: string, amount: number}>} costs - 成本数组
+   * @returns {boolean} - 是否成功
+   */
+  spendResources(costs = []) {
+    if (!this.hasEnoughResources(costs)) {
+      return false;
+    }
+    
+    costs.forEach(cost => {
+      this.spendResource(cost.resource, cost.amount);
+    });
+
+    // Note: spendResource already emits state_changed.
+    // To avoid multiple events, we could refactor them to not emit
+    // and emit a single event here. For now, this is acceptable.
+    
     return true;
   }
 
@@ -125,7 +204,7 @@ class PlayerManager extends EventEmitter {
     return {
       level: this.level,
       experience: this.experience,
-      gold: this.gold,
+      resources: { ...this.resources },
       maxSummons: this.maxSummons,
       maxInventorySlots: this.maxInventorySlots,
       achievements: [...this.achievements],
@@ -145,7 +224,7 @@ class PlayerManager extends EventEmitter {
     return {
       level: this.level,
       experience: this.experience,
-      gold: this.gold,
+      resources: this.resources,
       achievements: this.achievements,
       statistics: this.statistics,
     };
@@ -160,13 +239,15 @@ class PlayerManager extends EventEmitter {
 
     this.level = data.level || playerBaseConfig.initialLevel;
     this.experience = data.experience || 0;
-    this.gold = data.gold || 0;
+    this.resources = data.resources || {};
+    
+    // 向下兼容，如果旧存档有独立的gold字段，则合并它
+    if (data.gold && !this.resources.gold) {
+        this.resources.gold = data.gold;
+    }
+
     this.achievements = data.achievements || [];
-    this.statistics = data.statistics || {
-      totalRefinements: 0,
-      totalSkillBooks: 0,
-      totalEquipmentObtained: 0,
-    };
+    this.statistics = data.statistics || {};
 
     // 重新计算派生属性
     this.maxSummons = playerBaseConfig.getMaxSummonsByLevel(this.level);
@@ -177,7 +258,18 @@ class PlayerManager extends EventEmitter {
     // 读档后也需要通知其他管理器
     this.emit('max_summons_changed', this.maxSummons);
   }
+
+  // ===========================================
+  // 调试接口
+  // ===========================================
+  debug_fillAllResources() {
+    Object.keys(this.resources).forEach(resourceId => {
+      this.resources[resourceId] = 999999;
+    });
+    console.log('[PlayerManager] [Debug] All resources (including gold) have been filled.');
+    this.emit('state_changed', this.getState());
+  }
 }
 
-const playerManagerInstance = new PlayerManager();
-export default playerManagerInstance; 
+// 导出 PlayerManager 类
+export default PlayerManager; 

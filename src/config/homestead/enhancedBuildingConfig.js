@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 05:51:32
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-20 06:14:52
+ * @LastEditTime: 2025-06-22 08:34:52
  */
 // src/config/homestead/enhancedBuildingConfig.js
 import { HOMESTEAD_GENERAL_CONFIG } from './homesteadConfig';
@@ -43,6 +43,7 @@ export const ENHANCED_BUILDINGS = {
     icon: '🏛️',
     maxLevel: 10,
     isRequired: true, // 必须建筑
+    limit: 1, // 数量上限为1
     levels: [
       { 
         level: 1, 
@@ -91,6 +92,7 @@ export const ENHANCED_BUILDINGS = {
     texture: 'buildings/general_store.png',
     icon: '🏪',
     maxLevel: 5,
+    limit: 1, // 数量上限为1
     requires: [{ buildingId: 'town_hall', minLevel: 1 }],
     levels: [
       { 
@@ -122,6 +124,7 @@ export const ENHANCED_BUILDINGS = {
     texture: 'buildings/equipment_shop.png',
     icon: '⚔️',
     maxLevel: 5,
+    limit: 1, // 数量上限为1
     requires: [{ buildingId: 'town_hall', minLevel: 2 }],
     levels: [
       { 
@@ -169,9 +172,10 @@ export const ENHANCED_BUILDINGS = {
           { 
             type: UNLOCK_TYPES.RESOURCE_GENERATOR, 
             data: { 
+              capacity: 400,
               resources: [
-                { resource: HOMESTEAD_RESOURCES.ORE.id, amountPerHour: 50 },
-                { resource: HOMESTEAD_RESOURCES.STONE.id, amountPerHour: 30 }
+                { resource: HOMESTEAD_RESOURCES.ORE.id, amountPerHour: 500 },
+                { resource: HOMESTEAD_RESOURCES.STONE.id, amountPerHour: 300 }
               ]
             } 
           }
@@ -189,10 +193,11 @@ export const ENHANCED_BUILDINGS = {
           { 
             type: UNLOCK_TYPES.RESOURCE_GENERATOR, 
             data: { 
+              capacity: 800,
               resources: [
-                { resource: HOMESTEAD_RESOURCES.ORE.id, amountPerHour: 80 },
-                { resource: HOMESTEAD_RESOURCES.STONE.id, amountPerHour: 50 },
-                { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amountPerHour: 5 }
+                { resource: HOMESTEAD_RESOURCES.ORE.id, amountPerHour: 800 },
+                { resource: HOMESTEAD_RESOURCES.STONE.id, amountPerHour: 500 },
+                { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amountPerHour: 50 }
               ]
             } 
           }
@@ -222,8 +227,9 @@ export const ENHANCED_BUILDINGS = {
           { 
             type: UNLOCK_TYPES.RESOURCE_GENERATOR, 
             data: { 
+              capacity: 800,
               resources: [
-                { resource: HOMESTEAD_RESOURCES.WOOD.id, amountPerHour: 100 }
+                { resource: HOMESTEAD_RESOURCES.WOOD.id, amountPerHour: 1000 }
               ]
             } 
           }
@@ -254,7 +260,7 @@ export const ENHANCED_BUILDINGS = {
             type: UNLOCK_TYPES.RESOURCE_GENERATOR, 
             data: { 
               resources: [
-                { resource: HOMESTEAD_RESOURCES.HERB.id, amountPerHour: 40 }
+                { resource: HOMESTEAD_RESOURCES.HERB.id, amountPerHour: 400 }
               ]
             } 
           }
@@ -492,38 +498,55 @@ export const ENHANCED_BUILDINGS = {
         level: 1,
         buildCost: [
           { resource: HOMESTEAD_RESOURCES.WOOD.id, amount: 250 },
-          { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amount: 50 },
-          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 1500 }
+          { resource: HOMESTEAD_RESOURCES.STONE.id, amount: 250 },
+          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 1200 },
         ],
-        buildTimeSeconds: 360,
+        buildTimeSeconds: 480,
         unlocks: [
           {
             type: UNLOCK_TYPES.SUMMON_CENTER,
             data: {
-              features: ['fusion', 'synthesis'] // 解锁融合与合成
-            }
-          }
-        ]
+              features: ['fusion', 'purification'], // 解锁融合和洗练
+            },
+          },
+        ],
       },
+    ],
+  },
+
+  summon_altar: {
+    id: 'summon_altar',
+    name: '召唤祭坛',
+    category: BUILDING_CATEGORIES.RESOURCE_PRODUCTION,
+    description: '周期性地产生召唤所需的灵气精华',
+    size: { width: 2, height: 2 },
+    texture: 'buildings/summon_altar.png',
+    icon: '🔮',
+    maxLevel: 5,
+    requires: [{ buildingId: 'town_hall', minLevel: 3 }],
+    levels: [
       {
-        level: 2,
+        level: 1,
         buildCost: [
-          { resource: HOMESTEAD_RESOURCES.WOOD.id, amount: 500 },
+          { resource: HOMESTEAD_RESOURCES.STONE.id, amount: 400 },
           { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amount: 100 },
-          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 3000 }
+          { resource: HOMESTEAD_RESOURCES.GOLD.id, amount: 1500 },
         ],
-        buildTimeSeconds: 720,
+        buildTimeSeconds: 600,
         unlocks: [
-          {
-            type: UNLOCK_TYPES.SUMMON_CENTER,
+          { 
+            type: UNLOCK_TYPES.RESOURCE_GENERATOR,
             data: {
-              features: ['refining'] // 解锁洗练
+              capacity: 1000,
+              resources: [
+                { resource: HOMESTEAD_RESOURCES.ESSENCE.id, amountPerHour: 200 }
+              ]
             }
           }
         ]
       }
     ]
-  },
+  }
 };
 
 // 建筑放置规则

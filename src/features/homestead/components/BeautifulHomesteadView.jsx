@@ -1,16 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import {
-  selectHomesteadPlots,
-  selectHomesteadResources,
-  selectHomesteadBuildings,
-  startBuildingConstruction,
-  selectActiveHomesteadTimers,
-  fillAllResources,
-  instantCompleteAllBuildings,
-  upgradeBuildingAction,
-  completeBuildingConstruction
-} from '@/store/slices/enhancedHomesteadSlice';
+import { useHomesteadManager } from '@/hooks/useHomesteadManager';
+import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { ENHANCED_BUILDINGS } from '@/config/homestead/enhancedBuildingConfig';
 import { HOMESTEAD_GENERAL_CONFIG } from '@/config/homestead/homesteadConfig';
 import BuildingDetailModal from './BuildingDetailModal';
@@ -22,6 +12,21 @@ const customStyles = `
     100% { background-position: 200% 0; }
   }
   
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .slide-in-from-right {
+    animation: slide-in-from-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  }
+
   @keyframes bounce-in {
     0% { transform: scale(0.3); opacity: 0; }
     50% { transform: scale(1.05); }
@@ -60,11 +65,11 @@ const customStyles = `
 `;
 
 const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
-  const dispatch = useDispatch();
-  const plots = useSelector(selectHomesteadPlots);
-  const resources = useSelector(selectHomesteadResources);
-  const buildings = useSelector(selectHomesteadBuildings);
-  const activeTimers = useSelector(selectActiveHomesteadTimers);
+  const { homesteadState, homesteadManager } = useHomesteadManager();
+  const { plots, buildings, activeTimers } = homesteadState;
+
+  const { player, manager: playerManager } = usePlayerManager();
+  const resources = player?.resources || {};
 
   const [selectedBuildingId, setSelectedBuildingId] = useState(null);
   const [showBuildingPanel, setShowBuildingPanel] = useState(false);
@@ -83,16 +88,16 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
       activeTimers.forEach(timer => {
         if (timer.completesAt <= now) {
           if (timer.type === 'CONSTRUCTION') {
-            dispatch(completeBuildingConstruction({ buildingInstanceId: timer.buildingInstanceId }));
+            homesteadManager.completeBuildingConstruction(timer.buildingInstanceId);
+          } else if (timer.type === 'UPGRADE') {
+            homesteadManager.completeBuildingUpgrade(timer.buildingInstanceId);
           }
         }
-        // 注意：不直接修改timer.remainingTime，因为它可能是只读的
-        // remainingTime应该在渲染时实时计算
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTimers, dispatch]);
+  }, [activeTimers, homesteadManager]);
 
   // 创建网格
   const gridLayout = useMemo(() => {
@@ -148,23 +153,32 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
       }
     }
 
-    dispatch(startBuildingConstruction({ 
+    //直接调用管理器方法
+    const result = homesteadManager.startBuildingConstruction({ 
       plotId: plotIds[0], 
       buildingId,
       occupiedPlots: plotIds 
-    }));
+    });
 
-    setShowBuildingPanel(false);
-    setSelectedBuildingId(null);
-    showToast?.(`🎉 开始建造${building.name}！`, 'success');
-  }, [dispatch, canPlaceBuilding, gridLayout, showToast]);
+    if (result.success) {
+      setShowBuildingPanel(false);
+      setSelectedBuildingId(null);
+      showToast?.(`🎉 开始建造${building.name}！`, 'success');
+    } else {
+      showToast?.(`❌ ${result.message}`, 'error');
+    }
+  }, [homesteadManager, canPlaceBuilding, gridLayout, showToast]);
 
   // 处理建筑升级
   const handleBuildingUpgrade = useCallback((buildingInstanceId) => {
-    dispatch(upgradeBuildingAction({ buildingInstanceId }));
+    const result = homesteadManager.startBuildingUpgrade(buildingInstanceId);
+    if (result.success) {
+      showToast?.('🚀 建筑升级开始！', 'success');
+    } else {
+      showToast?.(`❌ ${result.message}`, 'error');
+    }
     setShowBuildingInfo(null);
-    showToast?.('🚀 建筑升级开始！', 'success');
-  }, [dispatch, showToast]);
+  }, [homesteadManager, showToast]);
 
   // 处理地块点击
   const handlePlotClick = useCallback((row, col) => {
@@ -201,15 +215,29 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
     setShowBuildingInfo(null);
   }, []);
 
+  const handleOpenBuildingPanel = () => {
+    const townHallExists = Object.values(buildings).some(b => b.buildingId === 'town_hall' && b.status !== 'constructing');
+    if (!townHallExists && Object.keys(buildings).length > 0) {
+      showToast?.('需要先完成城镇大厅的建造才能解锁更多建筑！', 'warning');
+      return;
+    }
+    setShowBuildingPanel(true);
+  };
+
+  const availableBuildings = useMemo(() => {
+    return homesteadManager.getAllBuildingsWithUnlockStatus();
+  }, [homesteadState, homesteadManager]);
+
   // 渲染地块
   const renderPlot = useCallback((plot, row, col) => {
     if (!plot) {
       return (
         <div
           key={`empty-${row}-${col}`}
-          className="w-20 h-20 border border-gray-700 bg-gray-900/50 rounded-lg flex items-center justify-center opacity-30 hover-lift"
+          onClick={handleOpenBuildingPanel}
+          className="w-20 h-20 border-2 border-dashed border-gray-600 bg-gray-800/50 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-700/70 hover:border-green-500 transition-all duration-300 cursor-pointer hover-lift"
         >
-          <span className="text-gray-600 text-xs">×</span>
+          <span className="text-3xl font-thin">+</span>
         </div>
       );
     }
@@ -217,6 +245,10 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
     const isHovered = hoveredPlotId === plot.plotId;
     const building = plot.buildingInstanceId ? buildings[plot.buildingInstanceId] : null;
     const buildingConfig = building ? ENHANCED_BUILDINGS[building.buildingId] : null;
+    
+    // 获取此建筑的资源生成器信息
+    const generator = building ? homesteadState.resourceGenerators?.find(g => g.buildingInstanceId === building.buildingInstanceId) : null;
+    const uncollectedAmount = generator ? Math.floor(Object.values(generator.uncollectedAmounts).reduce((sum, val) => sum + val, 0)) : 0;
     
     const isConstructing = building && building.level === 0;
     const timer = activeTimers?.find(t => t.buildingInstanceId === plot.buildingInstanceId);
@@ -344,11 +376,26 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
             </div>
           </div>
         )}
+
+        {/* 待收取资源提示 */}
+        {uncollectedAmount > 0 && (
+          <div 
+            className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-lg cursor-pointer animate-bounce z-10"
+            onClick={(e) => {
+              e.stopPropagation(); // 阻止事件冒泡到父元素
+              const result = homesteadManager.collectResourcesFromBuilding(building.buildingInstanceId);
+              if (result.success) {
+                const collectedTotal = Object.values(result.collected).reduce((sum, val) => sum + Math.floor(val), 0);
+                showToast?.(`💰 成功收集 ${collectedTotal} 资源!`, 'success');
+              }
+            }}
+          >
+            💰
+          </div>
+        )}
       </div>
     );
-  }, [hoveredPlotId, buildings, activeTimers, selectedBuildingId, canPlaceBuilding, handlePlotClick]);
-
-  const availableBuildings = Object.values(ENHANCED_BUILDINGS);
+  }, [hoveredPlotId, buildings, activeTimers, selectedBuildingId, canPlaceBuilding, handlePlotClick, homesteadState.resourceGenerators, showToast]);
 
   const resourceIcons = {
     gold: '💰', wood: '🪵', stone: '🪨', herb: '🌿', ore: '⛏️', essence: '✨'
@@ -459,52 +506,90 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
           </div>
         </div>
 
-        {/* 悬浮建筑工坊 */}
+        {/* 建筑选择面板 */}
         {showBuildingPanel && (
-          <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-40">
-            <div className="w-80 glass-effect rounded-2xl border border-white/20 overflow-hidden flex flex-col shadow-2xl" style={{ maxHeight: '70vh' }}>
+          <div className="fixed right-4 top-16 z-40 slide-in-from-right">
+            <div className="w-80 glass-effect rounded-2xl border border-white/20 overflow-hidden flex flex-col shadow-2xl" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
               <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-4">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-xl font-bold">🏗️ 建筑工坊</h3>
                     <p className="text-sm opacity-90 mt-1">选择要建造的建筑</p>
                   </div>
-                  <button
-                    onClick={() => setShowBuildingPanel(false)}
-                    className="text-white hover:bg-white/20 rounded-lg p-2 transition-all"
-                  >
+                  <button onClick={() => setShowBuildingPanel(false)} className="text-white hover:bg-white/20 rounded-lg p-2 transition-all">
                     ❌
                   </button>
                 </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-4 space-y-3">
-                  {availableBuildings.map(building => (
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {availableBuildings.map(({ config, isUnlocked, reason, canAfford }) => {
+                  const isSelected = selectedBuildingId === config.id;
+                  const level1Config = config.levels[0];
+
+                  // 决定卡片的可交互性和样式
+                  const isInteractable = isUnlocked && canAfford;
+                  let cardClass = 'p-3 rounded-lg transition-all border-2 hover-lift relative ';
+                  
+                  if (!isUnlocked) {
+                    cardClass += 'bg-black/40 border-gray-600/50 opacity-60 cursor-not-allowed';
+                  } else if (!canAfford) {
+                    cardClass += 'glass-effect border-red-500/50 opacity-80 cursor-not-allowed';
+                  } else if (isSelected) {
+                    cardClass += 'bg-gradient-to-r from-yellow-500 to-orange-500 border-yellow-400 cursor-pointer';
+                  } else {
+                    cardClass += 'glass-effect border-white/20 hover:border-white/40 cursor-pointer';
+                  }
+
+                  return (
                     <div
-                      key={building.id}
-                      className={`p-4 rounded-xl cursor-pointer transition-all border-2 hover-lift ${
-                        selectedBuildingId === building.id
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500 border-yellow-400'
-                          : 'glass-effect border-white/20 hover:border-white/40'
-                      }`}
-                      onClick={() => setSelectedBuildingId(
-                        selectedBuildingId === building.id ? null : building.id
-                      )}
+                      key={config.id}
+                      onClick={() => {
+                        if (isInteractable) {
+                          setSelectedBuildingId(isSelected ? null : config.id);
+                        } else if (!isUnlocked) {
+                          showToast?.(reason, 'error');
+                        } else if (!canAfford) {
+                          showToast?.('资源不足!', 'error');
+                        }
+                      }}
+                      className={cardClass}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="text-3xl">{building.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-base mb-1">{building.name}</div>
-                          <div className="text-sm text-gray-300 mb-2 line-clamp-2">{building.description}</div>
-                          <div className="text-xs glass-effect text-blue-300 px-2 py-1 rounded-full inline-block">
-                            📐 {building.size.width}×{building.size.height}
+                        <div className="text-2xl pt-1">{config.icon}</div>
+                        <div className="flex-1 min-w-0 relative">
+                          <div className="font-bold text-base">{config.name}</div>
+                          <div className="text-xs text-gray-300 mb-2 line-clamp-2">{config.description}</div>
+                          
+                          <div className="space-y-1">
+                            {level1Config.buildCost.map(({ resource, amount }) => {
+                                const playerAmount = resources[resource] || 0;
+                                const hasEnough = playerAmount >= amount;
+                                return (
+                                  <div key={resource} className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-300">{HOMESTEAD_GENERAL_CONFIG.HOMESTEAD_RESOURCES[resource.toUpperCase()]?.name || resource}</span>
+                                    <span className={`font-mono ${hasEnough ? 'text-green-300' : 'text-red-400'}`}>
+                                      {playerAmount} / {amount}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                           </div>
                         </div>
                       </div>
+                      
+                      {/* 锁定或资源不足的覆盖提示 */}
+                      {!isUnlocked && (
+                        <div className="absolute inset-0 bg-black/60 rounded-lg flex flex-col items-center justify-center">
+                          <span className="text-3xl" role="img" aria-label="locked">🔒</span>
+                          <span className="text-xs text-red-300 font-semibold mt-1 text-center px-1">
+                            {reason}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -523,16 +608,16 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
             </button>
             
             <button
-              onClick={() => dispatch(fillAllResources())}
+              onClick={() => playerManager.debug_fillAllResources()}
               className="px-4 py-2 glass-effect hover:bg-purple-500/30 rounded-xl hover-lift text-sm border border-white/20"
             >
               💰 满资源
             </button>
             <button
-              onClick={() => dispatch(instantCompleteAllBuildings())}
+              onClick={() => homesteadManager.debug_instantCompleteAll()}
               className="px-4 py-2 glass-effect hover:bg-orange-500/30 rounded-xl hover-lift text-sm border border-white/20"
             >
-              ⚡ 完成建造
+              ⚡️ 瞬间完成
             </button>
           </div>
         </div>
