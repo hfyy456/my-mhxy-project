@@ -2,7 +2,7 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-06-07 03:15:00
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-22 05:51:38
+ * @LastEditTime: 2025-06-23 08:59:02
  */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -47,7 +47,7 @@ import CommonModal from "@/features/ui/components/CommonModal";
 import SummonInfo from "@/features/summon/components/SummonInfo";
 
 // 导入存档管理器
-import saveLoadManager from "@/store/managers/SaveLoadManager";
+import { saveLoadManagerInstance as saveLoadManager } from "@/store/managers";
 
 const GamePageContent = ({
   showToast,
@@ -137,6 +137,9 @@ const GamePageContent = ({
     isSummonHomePanelOpen,
     openSummonHomePanel,
     closeSummonHomePanel,
+    isSaveModalOpen,
+    openSaveModal,
+    closeSaveModal,
   } = useAppModals();
 
   const isWorldMapOpen = useSelector(selectIsWorldMapOpen);
@@ -166,8 +169,6 @@ const GamePageContent = ({
   // 主题演示模态框
   const [isThemeDemoOpen, setIsThemeDemoOpen] = useState(false);
 
-  // 存档模态框状态
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   // 监听背包初始化完成 - 只在游戏初始化后
   useEffect(() => {
@@ -254,64 +255,78 @@ const GamePageContent = ({
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gray-800 text-white font-sans">
-      <CustomTitleBar onSaveClick={() => setIsSaveModalOpen(true)} />
 
-      <main className="w-full h-full">
-        {!isBattleActive && (
-          <>
-            <BeautifulHomesteadView onOpenConfigManager={openConfigManager} />
-            <div className="absolute top-20 left-4 z-20">
-               <ResourceProductionOverview showToast={showToast} />
-            </div>
-            <DialoguePanel />
-            {!isWorldMapOpen && (
-              <HomesteadActionBar
-                onOpenSummonModal={openSummonHomePanel}
-                onOpenInventoryModal={openInventoryOOPModal}
-                onOpenIncubatorModal={openIncubatorModal}
-                onOpenPlayerInfo={openPlayerInfoModal}
-                onOpenSettings={openSettingsModal}
-                onOpenQuestLogModal={openQuestLogModal}
-                onOpenFormationSystem={openFormationSystemModal}
-                onOpenTowerModal={openTowerModal}
-                onOpenHomesteadModal={openHomesteadModal}
-                onOpenBattleTest={handleTestBattle}
-                onOpenThemeDemo={() => setIsThemeDemoOpen(true)}
-                onOpenConfigManager={openConfigManager}
+      <div className="flex-grow overflow-hidden flex">
+        {/* 主要游戏内容区域 */}
+        <main className="flex-grow flex flex-col">
+          {!isBattleActive && (
+            <>
+              <BeautifulHomesteadView 
+                showToast={showToast}
+                onOpenSummonHome={openSummonHomePanel}
               />
-            )}
-            
-            {!isWorldMapOpen && !isBattleActive && (
-              <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
-                <button
-                  onClick={openNpcOOPDemo}
-                  className="px-3 py-2 text-white bg-theme-primary rounded"
-                >
-                  NPC系统
-                </button>
-                <button
-                  onClick={() => setIsThemeDemoOpen(true)}
-                  className="px-3 py-2 text-white bg-dreamyPurple-300 hover:bg-dreamyPurple-300/80 transition-colors rounded"
-                >
-                  主题演示
-                </button>
+              <div className="absolute top-20 left-4 z-20">
+                 <ResourceProductionOverview showToast={showToast} />
               </div>
-            )}
-            {isNpcPanelOpen && (
-              <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanelModal} />
-            )}
-          </>
-        )}
-      </main>
-      
-      {isSummonHomePanelOpen && (
-        <SummonHomePanel
-          onClose={closeSummonHomePanel}
-          onSelectSummon={handleSelectSummon}
-          showToast={showToast}
-        />
-      )}
+              <DialoguePanel />
+              {!isWorldMapOpen && (
+                <HomesteadActionBar
+                  onOpenSummonSystem={openSummonModal}
+                  onOpenInventory={openInventoryOOPModal}
+                  onOpenIncubatorModal={openIncubatorModal}
+                  onOpenPlayerInfo={openPlayerInfoModal}
+                  onOpenSettings={openSettingsModal}
+                  onOpenQuestLogModal={openQuestLogModal}
+                  onOpenFormationSystem={openFormationSystemModal}
+                  onOpenTowerModal={openTowerModal}
+                  onOpenHomesteadModal={openHomesteadModal}
+                  onOpenBattleTest={handleTestBattle}
+                  onOpenThemeDemo={() => setIsThemeDemoOpen(true)}
+                  onOpenConfigManager={openConfigManager}
+                  onOpenSaveModal={openSaveModal}
+                />
+              )}
+              
+              {!isWorldMapOpen && !isBattleActive && (
+                <div className="absolute bottom-4 left-4 z-20 flex space-x-2">
+                  <button
+                    onClick={openNpcOOPDemo}
+                    className="px-3 py-2 text-white bg-theme-primary rounded"
+                  >
+                    NPC系统
+                  </button>
+                  <button
+                    onClick={() => setIsThemeDemoOpen(true)}
+                    className="px-3 py-2 text-white bg-dreamyPurple-300 hover:bg-dreamyPurple-300/80 transition-colors rounded"
+                  >
+                    主题演示
+                  </button>
+                </div>
+              )}
+              {isNpcPanelOpen && (
+                <NpcPanel npcId={selectedNpcId} onClose={closeNpcPanelModal} />
+              )}
+            </>
+          )}
+        </main>
+      </div>
 
+    
+        
+  {/* 召唤兽之家功能面板 */}
+  {isSummonHomePanelOpen && (
+            <div className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center">
+                <SummonHomePanel
+                  isOpen={isSummonHomePanelOpen}
+                  onClose={closeSummonHomePanel}
+                  onFusionSuccess={(newSummon) => {
+                    showToast(`成功融合出新的召唤兽: ${newSummon.name || '未知'}!`, "success");
+                  }}
+                  onSelectSummon={handleSelectSummon}
+                  showToast={showToast}
+                />
+            </div>
+          )}
       {isInventoryOOPOpen && (
         <InventoryModal
           isOpen={isInventoryOOPOpen}
@@ -364,15 +379,6 @@ const GamePageContent = ({
         <TowerSystem onClose={closeTowerModal} />
       </CommonModal>
 
-      <CommonModal
-        isOpen={isHomesteadModalOpen}
-        onClose={closeHomesteadModal}
-        title="家园管理"
-        containerClassName="max-w-6xl"
-      >
-        <BeautifulHomesteadView isModalView={true} />
-      </CommonModal>
-      
       <WorldMapModal />
 
       <CommonModal
@@ -392,11 +398,14 @@ const GamePageContent = ({
         />
       )}
 
-      <SaveGameModal
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        showToast={showToast}
-      />
+         {/* 存档模态框 */}
+         {isSaveModalOpen && (
+          <SaveGameModal
+            isOpen={isSaveModalOpen}
+            onClose={closeSaveModal}
+            showToast={showToast}
+          />
+        )}
 
       <CommonModal
         isOpen={isThemeDemoOpen}
@@ -408,31 +417,42 @@ const GamePageContent = ({
       </CommonModal>
 
       {/* For legacy or specific modals if any */}
-      {isSummonModalOpen && (
-        <SummonSystem isOpen={isSummonModalOpen} onClose={closeSummonModal} />
-      )}
+      <CommonModal 
+        isOpen={isSummonModalOpen} 
+        onClose={closeSummonModal}
+        title="召唤兽系统"
+        containerClassName="max-w-7xl h-full"
+      >
+        <SummonSystem />
+      </CommonModal>
+
+   
     </div>
   );
 };
 
 const SaveGameModal = ({ isOpen, onClose, showToast }) => {
-  const [saveSlots, setSaveSlots] = useState([null, null, null]);
+  const [saveSlots, setSaveSlots] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      const allMetadata = saveLoadManager.getAllSaveMetadata();
-      setSaveSlots(allMetadata);
+      const fetchMetadata = async () => {
+        const slots = await saveLoadManager.getSaveSlots();
+        setSaveSlots(slots);
+      };
+      fetchMetadata();
     }
   }, [isOpen]);
 
   const handleSave = async (index) => {
-    try {
-      await saveLoadManager.saveGame(index);
-      showToast(`游戏已保存到栏位 ${index + 1}`, "success");
-      const allMetadata = saveLoadManager.getAllSaveMetadata();
-      setSaveSlots(allMetadata);
-    } catch (error) {
-      showToast(`保存失败: ${error.message}`, "error");
+    const result = await saveLoadManager.saveGame(index);
+    if (result.success) {
+      showToast('存档成功！', 'success');
+      // 重新加载存档信息
+      const slots = await saveLoadManager.getSaveSlots();
+      setSaveSlots(slots);
+    } else {
+      showToast(`存档失败: ${result.message}`, 'error');
     }
   };
 

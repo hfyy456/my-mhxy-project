@@ -27,23 +27,19 @@ export const useAppModals = () => {
   const [isSummonOOPDemoOpen, setIsSummonOOPDemoOpen] = useState(false);
   const [isFusionModalOpen, setIsFusionModalOpen] = useState(false);
   const [isSummonHomePanelOpen, setIsSummonHomePanelOpen] = useState(false);
-
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const openSummonModal = useCallback(() => {
     if (summons.length > 0) {
       if (!currentSummon) {
-        // 使用OOP系统设置当前召唤兽
         manager.setCurrentSummon(summons[0].id);
-      }
-    } else {
-      if (currentSummon) {
-        manager.setCurrentSummon(null);
       }
     }
     setIsSummonModalOpen(true);
   }, [manager, summons, currentSummon]);
 
   const closeSummonModal = useCallback(() => setIsSummonModalOpen(false), []);
-  
+  const openSaveModal = useCallback(() => setIsSaveModalOpen(true), []);
+  const closeSaveModal = useCallback(() => setIsSaveModalOpen(false), []);
   const openInventoryOOPModal = useCallback(() => setIsInventoryOOPOpen(true), []);
   const closeInventoryOOPModal = useCallback(() => setIsInventoryOOPOpen(false), []);
 
@@ -165,5 +161,8 @@ export const useAppModals = () => {
     isSummonHomePanelOpen,
     openSummonHomePanel,
     closeSummonHomePanel,
+    isSaveModalOpen,
+    openSaveModal,
+    closeSaveModal,
   };
 }; 

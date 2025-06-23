@@ -44,12 +44,18 @@ class SaveLoadManager extends EventEmitter {
   async getSaveSlots() {
     if (!this.electronStore) return new Array(MAX_SAVE_SLOTS).fill(null);
 
+    console.log('[SaveLoadManager] Reading all save slots...');
     const slots = [];
     for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
-      const slotId = `slot_${i}`;
-      const saveData = await this.electronStore.get(`save_${slotId}`);
+      const key = `save_slot_${i}`;
+      console.log(`[SaveLoadManager] Reading key: ${key}`);
+      const saveData = await this.electronStore.get(key);
+      if (saveData) {
+        console.log(`[SaveLoadManager] Found data for key ${key}:`, saveData.metadata);
+      }
       slots.push(saveData ? saveData.metadata : null);
     }
+    console.log('[SaveLoadManager] Finished reading slots. Result:', slots);
     return slots;
   }
 
@@ -73,14 +79,16 @@ class SaveLoadManager extends EventEmitter {
         metadata: {
           slotId: `slot_${slotIndex + 1}`,
           saveTime: new Date().toISOString(),
-          playerName: currentState.redux.player.name || '英雄',
-          level: currentState.redux.player.level || 1,
+          playerName: currentState.managers.player.name || '英雄',
+          level: currentState.managers.player.level || 1,
           playtime: '0h 1m', // 占位
         },
         gameState: currentState,
       };
 
-      await this.electronStore.set(`save_slot_${slotIndex + 1}`, saveData);
+      const key = `save_slot_${slotIndex + 1}`;
+      console.log(`[SaveLoadManager] Writing to key: ${key} with data:`, saveData);
+      await this.electronStore.set(key, saveData);
       
       console.log(`[SaveLoadManager] 存档成功:`, saveData);
       this.emit('saved', { slotIndex });

@@ -1101,7 +1101,7 @@ const GachaTab = () => {
 const SummonHomePanel = ({ isOpen, onClose, onFusionSuccess, showToast, onSelectSummon }) => {
   const [activeTab, setActiveTab] = useState('fusion');
   const { allSummons: rawSummonsList } = useSummonManager();
-  
+    console.log('rawSummonsList', rawSummonsList);
   const summonsList = useMemo(() => {
     if (!rawSummonsList) return [];
     if (Array.isArray(rawSummonsList)) return rawSummonsList;

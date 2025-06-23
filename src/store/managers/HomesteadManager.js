@@ -49,13 +49,22 @@ class HomesteadManager extends EventEmitter {
   initialize(playerManager) {
     this.playerManager = playerManager;
     this.reset();
+
     // 注册资源更新任务到全局计时器
     chronographInstance.registerTask(
       'homestead-resource-update', 
       () => this.#updateResourceGenerators(), 
-      1000 // 每1秒更新一次
+      1000 // 每秒一次
     );
-    console.log('[HomesteadManager] Initialized with PlayerManager and registered resource task.');
+
+    // 注册建筑完成检查任务
+    chronographInstance.registerTask(
+      'homestead-completion-check',
+      () => this.#checkBuildingCompletion(),
+      1000 // 每秒一次
+    );
+
+    console.log('[HomesteadManager] Initialized and registered tasks with Chronograph.');
   }
 
   /**
@@ -151,6 +160,7 @@ class HomesteadManager extends EventEmitter {
     const completesAt = Date.now() + levelConfig.buildTimeSeconds * 1000;
 
     this.buildings[buildingInstanceId] = {
+      id: buildingInstanceId,
       buildingId,
       level: 0, // 0 表示建造中
       status: BUILDING_STATUS.CONSTRUCTING, // 设置状态为建造中
@@ -220,6 +230,24 @@ class HomesteadManager extends EventEmitter {
     console.log(`Building ${building.buildingId} (Instance: ${buildingInstanceId}) construction completed. Now level 1.`);
     this.emit('state_changed', this.getState());
     return { success: true, message: 'Construction completed.' };
+  }
+
+  /**
+   * 私有方法，由计时器调用，检查所有活动计时器的状态
+   */
+  #checkBuildingCompletion() {
+    const now = Date.now();
+    const completedTimers = this.activeTimers.filter(timer => timer.completesAt <= now);
+    
+    if (completedTimers.length > 0) {
+      completedTimers.forEach(timer => {
+        if (timer.type === 'CONSTRUCTION') {
+          this.completeBuildingConstruction(timer.buildingInstanceId);
+        } else if (timer.type === 'UPGRADE') {
+          this.completeBuildingUpgrade(timer.buildingInstanceId);
+        }
+      });
+    }
   }
 
   /**
@@ -570,22 +598,30 @@ class HomesteadManager extends EventEmitter {
   // ===========================================
   startBuildingUpgrade(buildingInstanceId) {
     const building = this.buildings[buildingInstanceId];
+
+    // 诊断日志：打印出建筑的当前状态
+    if (building) {
+      console.log(`[Manager] Upgrade Check: Building ${buildingInstanceId} has status: '${building.status}'`);
+    }
+
     if (!building || building.status !== BUILDING_STATUS.IDLE) {
       return { success: false, message: 'Building is not idle or not found.' };
     }
 
     const buildingConfig = ENHANCED_BUILDINGS[building.buildingId];
     const nextLevel = building.level + 1;
-    if (!buildingConfig.levels[nextLevel -1]) {
+    
+    const nextLevelConfig = buildingConfig.levels.find(l => l.level === nextLevel);
+
+    if (!nextLevelConfig) {
        return { success: false, message: 'No more levels to upgrade.' };
     }
-    const nextLevelConfig = buildingConfig.levels[nextLevel - 1];
     
-    // 检查并花费资源
-    if (!this.playerManager.hasEnoughResources(nextLevelConfig.upgradeCost)) {
+    // 检查并花费资源 - 修正错误的 cost 字段
+    if (!this.playerManager.hasEnoughResources(nextLevelConfig.buildCost)) {
       return { success: false, message: 'Not enough resources for upgrade.' };
     }
-    this.playerManager.spendResources(nextLevelConfig.upgradeCost);
+    this.playerManager.spendResources(nextLevelConfig.buildCost);
 
     // 设置升级状态和计时器
     building.status = BUILDING_STATUS.UPGRADING; // 设置状态为升级中
@@ -630,19 +666,31 @@ class HomesteadManager extends EventEmitter {
     return { success: true, message: `Upgrade to level ${building.level} complete.` };
   }
 
+  getBuildingById(buildingInstanceId) {
+    return this.buildings[buildingInstanceId];
+  }
 
   // ===========================================
   // 调试接口
   // ===========================================
   debug_instantCompleteAll() {
-    [...this.activeTimers].forEach(timer => {
+    // 创建一个计时器的副本进行迭代，因为完成函数会修改原始数组
+    const timersToComplete = [...this.activeTimers];
+    
+    timersToComplete.forEach(timer => {
       if (timer.type === 'CONSTRUCTION') {
+        // 调用正确的完成函数，而不是手动修改状态
         this.completeBuildingConstruction(timer.buildingInstanceId);
       } else if (timer.type === 'UPGRADE') {
         this.completeBuildingUpgrade(timer.buildingInstanceId);
       }
     });
-    console.log('[HomesteadManager] DEBUG: All timers completed.');
+
+    // 完成函数会自动移除计时器，这里可以清空以确保万无一失
+    this.activeTimers = [];
+
+    console.log(`[HomesteadManager] Instantly completed ${timersToComplete.length} tasks.`);
+    this.emit('state_changed', this.getState());
   }
 }
 

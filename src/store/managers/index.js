@@ -1,3 +1,9 @@
+/*
+ * @Author: Sirius 540363975@qq.com
+ * @Date: 2025-06-23 04:22:29
+ * @LastEditors: Sirius 540363975@qq.com
+ * @LastEditTime: 2025-06-23 08:20:23
+ */
 /**
  * 管理器中心 (Manager Hub)
  * 
@@ -13,6 +19,7 @@ import SummonManager from '../SummonManager';
 import InventoryManager from '../InventoryManager';
 import SaveLoadManager from './SaveLoadManager';
 import chronographInstance from '@/utils/Chronograph';
+import NpcManager from './NpcManager';
 
 // 1. 实例化没有依赖或作为依赖源的管理器
 const playerManagerInstance = new PlayerManager();
@@ -20,6 +27,7 @@ const summonManagerInstance = new SummonManager();
 const inventoryManagerInstance = new InventoryManager();
 const homesteadManagerInstance = new HomesteadManager();
 const saveLoadManagerInstance = new SaveLoadManager();
+const npcManagerInstance = new NpcManager();
 
 // 2. 执行依赖注入和初始化
 // 注意顺序：被依赖的要先初始化
@@ -36,6 +44,7 @@ saveLoadManagerInstance.initialize({
   summonManager: summonManagerInstance,
   inventoryManager: inventoryManagerInstance,
   homesteadManager: homesteadManagerInstance,
+  npc: npcManagerInstance,
 });
 
 // 将 saveLoadManager 也纳入统一导出
@@ -45,6 +54,7 @@ const managers = {
   summonManager: summonManagerInstance,
   inventoryManager: inventoryManagerInstance,
   saveLoadManager: saveLoadManagerInstance,
+  npcManager: npcManagerInstance,
 };
 
 // 导出所有管理器的单例
@@ -54,6 +64,7 @@ export {
   summonManagerInstance,
   inventoryManagerInstance,
   saveLoadManagerInstance,
+  npcManagerInstance,
 };
 
 export default managers; 

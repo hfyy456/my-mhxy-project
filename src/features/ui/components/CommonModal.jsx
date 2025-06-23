@@ -18,7 +18,8 @@ const CommonModal = ({
   centerContent = false,
   fullScreen = false,
   hideCloseButton = false,
-  padding = "px-6 pt-6 pb-4"
+  padding = "px-6 pt-6 pb-4",
+  zIndex = "z-50"
 }) => {
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -65,7 +66,7 @@ const CommonModal = ({
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center z-50 bg-slate-900/70 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      className={`fixed inset-0 flex items-center justify-center bg-slate-900/70 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${zIndex}`}
       onClick={handleOverlayClick} 
     >
       <div 

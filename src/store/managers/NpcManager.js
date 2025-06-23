@@ -695,31 +695,12 @@ class NpcManager extends EventEmitter {
    * 销毁管理器
    */
   destroy() {
-    console.log("[NpcManager] 正在销毁NPC管理器...");
-    
-    // 清理所有NPC
-    this.npcs.forEach(npc => {
-      npc.removeAllListeners();
-    });
-    this.npcs.clear();
-    
-    // 清理模板
+    this.resetAllNpcs();
     this.templates.clear();
-    
-    // 清理索引
-    this.assignmentIndex.dungeons.clear();
-    this.assignmentIndex.nodes.clear();
-    this.assignmentIndex.quests.clear();
-    this.assignmentIndex.homesteads.clear();
-    this.assignmentIndex.events.clear();
-    
-    // 清理交互
-    this.activeInteractions.clear();
-    
-    // 移除所有监听器
     this.removeAllListeners();
     
-    console.log("[NpcManager] NPC管理器已销毁");
+    this.emit("manager_destroyed");
+    console.log("[NpcManager] 管理器已销毁");
   }
 }
 
@@ -730,4 +711,4 @@ class NpcManager extends EventEmitter {
 const npcManagerInstance = new NpcManager();
 
 export { NpcManager, NpcFactory, npcManagerInstance };
-export default npcManagerInstance; 
+export default NpcManager; 

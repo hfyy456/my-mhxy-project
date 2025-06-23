@@ -26,7 +26,7 @@ const customStyles = `
   .slide-in-from-right {
     animation: slide-in-from-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
   }
-
+  
   @keyframes bounce-in {
     0% { transform: scale(0.3); opacity: 0; }
     50% { transform: scale(1.05); }
@@ -80,24 +80,6 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
   // 扩大网格到12x10
   const GRID_SIZE_X = 12;
   const GRID_SIZE_Y = 10;
-
-  // 定期更新计时器
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      activeTimers.forEach(timer => {
-        if (timer.completesAt <= now) {
-          if (timer.type === 'CONSTRUCTION') {
-            homesteadManager.completeBuildingConstruction(timer.buildingInstanceId);
-          } else if (timer.type === 'UPGRADE') {
-            homesteadManager.completeBuildingUpgrade(timer.buildingInstanceId);
-          }
-        }
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeTimers, homesteadManager]);
 
   // 创建网格
   const gridLayout = useMemo(() => {
@@ -161,9 +143,9 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
     });
 
     if (result.success) {
-      setShowBuildingPanel(false);
-      setSelectedBuildingId(null);
-      showToast?.(`🎉 开始建造${building.name}！`, 'success');
+    setShowBuildingPanel(false);
+    setSelectedBuildingId(null);
+    showToast?.(`🎉 开始建造${building.name}！`, 'success');
     } else {
       showToast?.(`❌ ${result.message}`, 'error');
     }
@@ -171,13 +153,25 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
 
   // 处理建筑升级
   const handleBuildingUpgrade = useCallback((buildingInstanceId) => {
-    const result = homesteadManager.startBuildingUpgrade(buildingInstanceId);
-    if (result.success) {
-      showToast?.('🚀 建筑升级开始！', 'success');
-    } else {
-      showToast?.(`❌ ${result.message}`, 'error');
+    console.log(`[View] Attempting to upgrade building: ${buildingInstanceId}`);
+    try {
+      const result = homesteadManager.startBuildingUpgrade(buildingInstanceId);
+      console.log('[View] Result from startBuildingUpgrade:', result);
+
+      if (result && result.success) {
+        console.log('[View] Upgrade started successfully.');
+        showToast?.('🚀 建筑升级开始！', 'success');
+      } else {
+        const errorMessage = result ? result.message : 'An unknown error occurred during upgrade.';
+        console.error(`[View] Upgrade failed: ${errorMessage}`);
+        alert(`升级失败: ${errorMessage}`); // 使用 alert 确保消息可见
+      }
+    } catch (error) {
+      console.error('[View] An exception was thrown during startBuildingUpgrade:', error);
+      alert(`升级时发生严重错误: ${error.message}`); // 显示异常信息
+    } finally {
+      setShowBuildingInfo(null);
     }
-    setShowBuildingInfo(null);
   }, [homesteadManager, showToast]);
 
   // 处理地块点击
@@ -215,6 +209,11 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
     setShowBuildingInfo(null);
   }, []);
 
+  const isFusionUnlocked = useMemo(() => 
+    homesteadState.unlockedFeatures?.summonCenterFeatures?.includes('fusion') || false,
+    [homesteadState.unlockedFeatures]
+  );
+
   const handleOpenBuildingPanel = () => {
     const townHallExists = Object.values(buildings).some(b => b.buildingId === 'town_hall' && b.status !== 'constructing');
     if (!townHallExists && Object.keys(buildings).length > 0) {
@@ -230,172 +229,105 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
 
   // 渲染地块
   const renderPlot = useCallback((plot, row, col) => {
-    if (!plot) {
+    // 这是一个后备，理论上gridLayout中不应该有null
+    if (!plot) { 
+      return null;
+    }
+
+    // 正确的逻辑第一步：如果是大型建筑的次要地块，则不渲染它
+    if (plot.isSecondary) {
+      return null;
+    }
+
+    const building = plot.buildingInstanceId ? buildings[plot.buildingInstanceId] : null;
+    const buildingConfig = building ? ENHANCED_BUILDINGS[building.buildingId] : null;
+
+    // 正确的逻辑第二步：如果地块上有建筑，则渲染建筑
+    if (building && buildingConfig) {
+      const { width, height } = buildingConfig.size;
+      const timer = activeTimers.find(t => t.buildingInstanceId === building.id);
+      
+      let progressOverlay = null;
+
+      // 升级或建造中的UI叠加层
+      if ((building.status === 'constructing' || building.status === 'upgrading') && timer) {
+        const isUpgrading = building.status === 'upgrading';
+        const totalTime = (timer.completesAt - (building.startedAt || Date.now())) || 1;
+        const elapsedTime = Date.now() - (building.startedAt || Date.now());
+        const progress = Math.min(100, (elapsedTime / totalTime) * 100);
+        const remainingTime = Math.max(0, Math.ceil((timer.completesAt - Date.now()) / 1000));
+        
+        progressOverlay = (
+          <div className="absolute inset-0 bg-gray-900 rounded-lg bg-opacity-80 flex flex-col items-center justify-center text-white p-1 text-center pointer-events-none">
+            <span className="text-xs font-bold leading-tight">{buildingConfig.name}</span>
+            <span className={`text-xs mt-1 ${isUpgrading ? 'text-purple-400' : 'text-yellow-400'}`}>
+              {isUpgrading ? `升级至 Lv.${building.upgradingTo}` : '建造中...'}
+            </span>
+            <span className="text-sm font-mono mt-1">{remainingTime}s</span>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-600 rounded-b-lg overflow-hidden">
+              <div className={`h-full ${isUpgrading ? 'bg-purple-500' : 'bg-green-500'}`} style={{ width: `${progress}%` }}></div>
+            </div>
+          </div>
+        );
+      }
+
+      const generator = homesteadState.resourceGenerators?.find(g => g.buildingInstanceId === building.id);
+      const uncollectedAmount = generator ? Math.floor(Object.values(generator.uncollectedAmounts).reduce((sum, val) => sum + val, 0)) : 0;
+
       return (
         <div
-          key={`empty-${row}-${col}`}
-          onClick={handleOpenBuildingPanel}
-          className="w-20 h-20 border-2 border-dashed border-gray-600 bg-gray-800/50 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-700/70 hover:border-green-500 transition-all duration-300 cursor-pointer hover-lift"
+          key={plot.plotId}
+          className="relative transition-transform duration-200 ease-out hover-lift cursor-pointer"
+          style={{ gridColumnEnd: `span ${width}`, gridRowEnd: `span ${height}` }}
+          onClick={() => handlePlotClick(row, col)}
         >
-          <span className="text-3xl font-thin">+</span>
+          <img src={buildingConfig.image} alt={buildingConfig.name} className="w-full h-full object-cover rounded-lg shadow-md" />
+          {building.level > 0 && (
+            <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              <span>Lv. {building.level}</span>
+            </div>
+          )}
+          {progressOverlay}
+          {uncollectedAmount > 0 && building.status === 'idle' && (
+            <div 
+              className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-lg cursor-pointer animate-bounce z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                const result = homesteadManager.collectResourcesFromBuilding(building.id);
+                if (result.success) {
+                  const collectedTotal = Object.values(result.collected).reduce((sum, val) => sum + Math.floor(val), 0);
+                  showToast?.(`💰 成功收集 ${collectedTotal} 资源!`, 'success');
+                }
+              }}
+            >
+              💰
+            </div>
+          )}
         </div>
       );
     }
-
-    const isHovered = hoveredPlotId === plot.plotId;
-    const building = plot.buildingInstanceId ? buildings[plot.buildingInstanceId] : null;
-    const buildingConfig = building ? ENHANCED_BUILDINGS[building.buildingId] : null;
     
-    // 获取此建筑的资源生成器信息
-    const generator = building ? homesteadState.resourceGenerators?.find(g => g.buildingInstanceId === building.buildingInstanceId) : null;
-    const uncollectedAmount = generator ? Math.floor(Object.values(generator.uncollectedAmounts).reduce((sum, val) => sum + val, 0)) : 0;
-    
-    const isConstructing = building && building.level === 0;
-    const timer = activeTimers?.find(t => t.buildingInstanceId === plot.buildingInstanceId);
+    // 正确的逻辑第三步：如果地块为空，则渲染可建造的空地
+    const clickHandler = selectedBuildingId ? () => handlePlotClick(row, col) : handleOpenBuildingPanel;
     const canPlace = selectedBuildingId ? canPlaceBuilding(selectedBuildingId, row, col) : false;
-
-    // 检查是否是大型建筑的非主格子
-    const isSecondaryCell = plot.buildingId && plot.isSecondary;
-    if (isSecondaryCell) {
-      return null; // 不渲染次要格子
-    }
-
-    // 计算建筑尺寸用于合并显示
-    let cellWidth = 'w-20';
-    let cellHeight = 'h-20';
-    let gridSpan = '';
-    
-    if (buildingConfig && building) {
-      const { width, height } = buildingConfig.size;
-      if (width === 3 && height === 3) {
-        cellWidth = 'w-60'; // 3 * 20 = 60
-        cellHeight = 'h-60';
-        gridSpan = 'col-span-3 row-span-3';
-      } else if (width === 2 && height === 2) {
-        cellWidth = 'w-40'; // 2 * 20 = 40  
-        cellHeight = 'h-40';
-        gridSpan = 'col-span-2 row-span-2';
-      } else if (width === 2 || height === 2) {
-        if (width === 2) {
-          cellWidth = 'w-40';
-          gridSpan = 'col-span-2';
-        }
-        if (height === 2) {
-          cellHeight = 'h-40';
-          gridSpan += ' row-span-2';
-        }
-      }
-    }
-
-    let classes = `${cellWidth} ${cellHeight} border-2 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 relative overflow-hidden shadow-lg hover-lift ${gridSpan}`;
-    
-    if (plot.buildingId) {
-      if (isConstructing) {
-        classes += " bg-gradient-to-br from-yellow-400 to-orange-500 border-yellow-300";
-      } else {
-        classes += " bg-gradient-to-br from-blue-400 to-purple-500 border-blue-300";
-      }
-    } else {
-      classes += " bg-gradient-to-br from-green-100 to-emerald-200 border-green-300 hover:border-green-400";
-    }
-
-    if (isHovered) {
-      classes += " ring-4 ring-white/50 scale-105";
-    }
-
-    if (selectedBuildingId && canPlace) {
-      classes += " ring-2 ring-blue-400 ring-opacity-60";
-    }
-
-    // 实时计算剩余时间
-    const now = Date.now();
-    const remainingTime = timer ? Math.max(0, timer.completesAt - now) : 0;
-    const remainingSeconds = timer ? Math.ceil(remainingTime / 1000) : 0;
-    
-    // 计算进度条进度
-    const totalTime = timer ? (timer.completesAt - timer.startedAt) : 0;
-    const elapsedTime = timer ? (now - timer.startedAt) : 0;
-    const countdownProgress = timer && totalTime > 0 ? 
-      Math.min(100, Math.max(0, (elapsedTime / totalTime) * 100)) : 0;
 
     return (
       <div
-        key={plot.plotId}
-        className={classes}
-        onClick={() => handlePlotClick(row, col)}
-        onMouseEnter={() => setHoveredPlotId(plot.plotId)}
-        onMouseLeave={() => setHoveredPlotId(null)}
+        key={`empty-${plot.plotId}`}
+        onClick={clickHandler}
+        className={`w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center transition-all duration-300 cursor-pointer hover-lift relative
+          ${selectedBuildingId ? (canPlace ? 'bg-green-800/50 border-green-500' : 'bg-red-800/50 border-red-500') : 'bg-gray-800/50 border-gray-600 hover:bg-gray-700/70'}`
+        }
       >
-        {/* 地块内容 */}
-        <div className="text-center">
-          {plot.buildingId ? (
-            <>
-              <div className="text-2xl mb-1">{buildingConfig?.icon || '🏠'}</div>
-              <div className="text-xs font-semibold truncate px-1 max-w-full">
-                {buildingConfig?.name}
-              </div>
-              {building && building.level > 0 && (
-                <div className="text-xs text-yellow-300 font-bold">
-                  Lv.{building.level}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="text-2xl mb-1">🌱</div>
-              <div className="text-xs text-emerald-700 font-semibold">空地</div>
-            </>
-          )}
-        </div>
-
-        {/* 悬停提示 */}
-        {isHovered && (
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap z-10">
-            <div className="text-center">
-              <div className="font-bold">{plot.buildingId ? buildingConfig?.name : '空地'}</div>
-              {selectedBuildingId && (
-                <div className="text-xs mt-1">
-                  {canPlace ? '✅ 可建造' : '❌ 不可建造'}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 建造倒计时遮罩 */}
-        {isConstructing && timer && (
-          <div 
-            className="countdown-mask"
-            style={{
-              background: `conic-gradient(from 0deg, transparent ${countdownProgress * 3.6}deg, rgba(0,0,0,0.8) ${countdownProgress * 3.6}deg)`
-            }}
-          >
-            <div className="text-center text-white">
-              <div className="text-lg font-bold">{remainingSeconds}s</div>
-              <div className="text-xs opacity-80">建造中</div>
-            </div>
-          </div>
-        )}
-
-        {/* 待收取资源提示 */}
-        {uncollectedAmount > 0 && (
-          <div 
-            className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-lg cursor-pointer animate-bounce z-10"
-            onClick={(e) => {
-              e.stopPropagation(); // 阻止事件冒泡到父元素
-              const result = homesteadManager.collectResourcesFromBuilding(building.buildingInstanceId);
-              if (result.success) {
-                const collectedTotal = Object.values(result.collected).reduce((sum, val) => sum + Math.floor(val), 0);
-                showToast?.(`💰 成功收集 ${collectedTotal} 资源!`, 'success');
-              }
-            }}
-          >
-            💰
+        <span className="text-3xl font-thin text-gray-400">+</span>
+        {selectedBuildingId && (
+          <div className={`absolute bottom-1 text-xs font-semibold ${canPlace ? 'text-green-300' : 'text-red-300'}`}>
+            {canPlace ? '可放置' : '不可放置'}
           </div>
         )}
       </div>
     );
-  }, [hoveredPlotId, buildings, activeTimers, selectedBuildingId, canPlaceBuilding, handlePlotClick, homesteadState.resourceGenerators, showToast]);
+  }, [homesteadState, buildings, activeTimers, handlePlotClick, showToast, homesteadManager, handleOpenBuildingPanel, selectedBuildingId, canPlaceBuilding]);
 
   const resourceIcons = {
     gold: '💰', wood: '🪵', stone: '🪨', herb: '🌿', ore: '⛏️', essence: '✨'
@@ -627,11 +559,17 @@ const BeautifulHomesteadView = ({ showToast, onOpenSummonHome }) => {
           <BuildingDetailModal
             isOpen={!!showBuildingInfo}
             onClose={handleCloseModal}
-            buildingInstance={showBuildingInfo.instance}
             buildingConfig={showBuildingInfo.config}
+            buildingInstance={showBuildingInfo.instance}
             onUpgrade={handleBuildingUpgrade}
-            showToast={showToast}
-            onStartFusion={onOpenSummonHome}
+            isFusionUnlocked={isFusionUnlocked}
+            onStartFusion={() => {
+              if (onOpenSummonHome) {
+                console.log('onOpenSummonHome', onOpenSummonHome);
+                onOpenSummonHome();
+              }
+              handleCloseModal();
+            }}
           />
         )}
 

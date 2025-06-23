@@ -9,7 +9,7 @@ import CommonModal from "@/features/ui/components/CommonModal";
 
 const ConfirmDialog = ({ isOpen, onConfirm, onCancel }) => {
   return (
-    <CommonModal isOpen={isOpen} onClose={onCancel} title="技能替换确认">
+    <CommonModal isOpen={isOpen} onClose={onCancel} title="技能替换确认" zIndex="z-[999]">
       <div className="max-w-md w-full mx-auto text-center">
         <p className="text-gray-300 mb-6 text-base">
           当前召唤兽技能已满。是否替换一个技能？
