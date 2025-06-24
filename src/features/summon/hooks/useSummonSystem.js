@@ -31,7 +31,6 @@ export const useSummonSystem = (toasts, setToasts) => {
 
   // 使用useState为所有模态框状态创建状态变量
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isSummonCatalogModalOpen, setIsSummonCatalogModalOpen] = useState(false);
   // Removing other modal states if they were tied to old gameManager actions
   // const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   // const [isSkillCatalogModalOpen, setIsSkillCatalogModalOpen] = useState(false);
@@ -52,8 +51,6 @@ export const useSummonSystem = (toasts, setToasts) => {
     showResult,
     isHistoryModalOpen,
     setIsHistoryModalOpen,
-    isSummonCatalogModalOpen,
-    setIsSummonCatalogModalOpen,
     // Actions like handleRefineMonster, etc., are now part of SummonSystem.jsx component logic
   };
 }; 

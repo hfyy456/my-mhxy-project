@@ -16,18 +16,21 @@
  */
 import { EventEmitter } from "events";
 import { generateUniqueId } from "@/utils/idUtils";
-import { EQUIPMENT_SLOT_TYPES, QUALITY_TYPES } from "@/config/enumConfig";
+import { EQUIPMENT_SLOT_TYPES, QUALITY_TYPES, ITEM_TYPES } from "@/config/enumConfig";
 import summonManager from './SummonManager'; // 直接导入SummonManager单例
-import { ITEM_BASE_CONFIG } from "@/config/item/inventoryConfig";
+import allItems from "@/config/item/allItems.json";
 import { applyQualityToEquipment, generateRandomQuality } from "@/config/item/equipmentConfig";
 
 // ===========================================
 // 辅助函数和常量
 // ===========================================
-const FLATTENED_ITEM_CONFIG = Object.values(ITEM_BASE_CONFIG)
-  .flatMap(category => Object.values(category))
+// 兼容当前 allItems.json 结构的展平逻辑
+const FLATTENED_ITEM_CONFIG = Object.values(allItems)
+  .flatMap(category => typeof category === 'object' ? Object.values(category) : [])
   .reduce((acc, item) => {
-    acc[item.id] = item;
+    if (item && item.id) {
+      acc[item.id] = item;
+    }
     return acc;
   }, {});
 
@@ -193,6 +196,7 @@ class Equipment extends Item {
     super({
       ...data,
       type: "equipment",
+      category: ITEM_TYPES.EQUIPMENT, // 确保类别正确
       stackable: false, // 装备不可堆叠
       maxStack: 1
     });
@@ -293,96 +297,90 @@ class Consumable extends Item {
   constructor(data) {
     super({
       ...data,
-      type: "consumable",
-      stackable: true, // 消耗品可堆叠
-      maxStack: data.maxStack || 99
+      type: "consumable", // 兼容旧的type字段
+      category: ITEM_TYPES.CONSUMABLE,
+      stackable: data.maxStack > 1,
     });
-    
-    // 消耗品特有属性
-    this.useEffect = data.useEffect || data.effect || {}; // 使用效果
-    this.cooldown = data.cooldown || 0; // 使用冷却时间
-    this.lastUsed = data.lastUsed || 0; // 上次使用时间
+    this.effects = data.effects || []; // 保存效果配置
   }
 
   // 重写use方法 - 消耗品逻辑
   use(target = null) {
-    if (this.quantity <= 0) {
-      console.log(`${this.name}数量不足`);
+    console.log(`[InventoryManager/Consumable] Using item: ${this.name}`);
+    if (!target) {
+      console.warn("No target specified for consumable.");
+      // 如果没有目标，默认是玩家自己？这部分逻辑需要和PlayerManager结合
+      // target = playerManager.getPlayer();
+    }
+    
+    const success = this.applyUseEffect(target);
+    
+    if (success) {
+      console.log(`Effect of ${this.name} applied successfully.`);
+      this.removeQuantity(1); // 消耗一个
+      // 如果数量为0，会自动从背包中移除
+      if (this.quantity <= 0) {
+        this.removeFromInventory();
+      }
+      return true;
+    } else {
+      console.error(`Failed to apply effect of ${this.name}.`);
       return false;
     }
-
-    // 检查冷却时间
-    const now = Date.now();
-    if (now - this.lastUsed < this.cooldown) {
-      console.log(`${this.name}冷却中，剩余${this.cooldown - (now - this.lastUsed)}ms`);
-      return false;
-    }
-
-    // 消耗一个物品
-    this.removeQuantity(1);
-    this.lastUsed = now;
-
-    // 执行使用效果
-    this.applyUseEffect(target);
-    
-    console.log(`使用了${this.name}，剩余数量：${this.quantity}`);
-    
-    // 如果用完了，从背包中移除
-    if (this.quantity <= 0) {
-      this.removeFromInventory();
-    }
-    
-    return true;
   }
 
   getIcon() {
     const icons = {
       potion: "🧪",
-      food: "🍖",
+      food: "🍔",
       scroll: "📜",
-      medicine: "💊"
     };
-    return icons[this.subType] || "🎁";
+    return icons[this.subType] || "💊";
   }
 
   // 应用使用效果
   applyUseEffect(target) {
-    console.log(`[${this.name}] 对目标${target?.name || target || '无'}应用效果:`, this.useEffect);
-    
-    // 触发效果事件
-    if (this.inventory) {
-      this.inventory.emit('consumable_used', {
-        consumable: this,
-        target,
-        effects: this.useEffect
-      });
+    // 这里是效果处理核心，后续需要与PlayerManager/SummonManager集成
+    if (this.effects.length === 0) {
+      console.warn(`Item ${this.name} has no effects to apply.`);
+      return false; // 没有效果也算是一种"失败"
     }
 
-    // 执行具体效果逻辑
-    if (this.useEffect.heal && target) {
-      console.log(`${target.name || target}回复${this.useEffect.heal}生命值`);
-    }
-    if (this.useEffect.mana && target) {
-      console.log(`${target.name || target}回复${this.useEffect.mana}魔法值`);
-    }
+    console.log(`Applying effects of ${this.name} to target:`, target);
+    this.effects.forEach(effect => {
+      switch (effect.type) {
+        case 'HEAL_HP':
+          console.log(`Healing HP by ${effect.amount} for target.`);
+          // target.attributes.hp += effect.amount;
+          break;
+        case 'HEAL_MP':
+          console.log(`Restoring MP by ${effect.amount} for target.`);
+          // target.attributes.mp += effect.amount;
+          break;
+        case 'GRANT_BUFF':
+          console.log(`Granting buff ${effect.buffId} to target.`);
+          // buffManager.addBuff(target, effect.buffId);
+          break;
+        default:
+          console.warn(`Unknown effect type: ${effect.type}`);
+      }
+    });
+
+    return true; // 假设效果总是成功应用
   }
 
   // 获取消耗品详细信息
   getDetailedInfo() {
     return {
       ...super.getDetailedInfo(),
-      useEffect: { ...this.useEffect },
-      cooldown: this.cooldown,
-      lastUsed: this.lastUsed
+      effects: { ...this.effects },
     };
   }
 
   toJSON() {
     return {
       ...super.toJSON(),
-      useEffect: { ...this.useEffect },
-      cooldown: this.cooldown,
-      lastUsed: this.lastUsed,
+      effects: { ...this.effects },
     };
   }
 }
@@ -395,8 +393,8 @@ class Material extends Item {
     super({
       ...data,
       type: "material",
-      stackable: true,
-      maxStack: data.maxStack || 999
+      category: ITEM_TYPES.MATERIAL,
+      stackable: data.maxStack > 1,
     });
     
     // 材料特有属性
@@ -442,14 +440,11 @@ class QuestItem extends Item {
     super({
       ...data,
       type: "quest",
+      category: ITEM_TYPES.QUEST,
       stackable: false,
       maxStack: 1,
-      value: 0 // 任务道具通常没有商店价值
     });
-    
-    // 任务道具特有属性
-    this.questId = data.questId || "";
-    this.isKeyItem = data.isKeyItem || false;
+    this.questId = data.questId || null; // 关联的任务ID
   }
 
   // 重写use方法 - 任务道具逻辑
@@ -472,7 +467,6 @@ class QuestItem extends Item {
     return {
       ...super.toJSON(),
       questId: this.questId,
-      isKeyItem: this.isKeyItem,
     };
   }
 }
@@ -482,41 +476,22 @@ class QuestItem extends Item {
 // ===========================================
 class ItemFactory {
   static createItem(data) {
-    if (!data || !data.sourceId) {
-      console.error("[ItemFactory] 关键错误: 物品数据无效或缺少 sourceId", data);
-      return null;
-    }
-
-    const baseItemConfig = FLATTENED_ITEM_CONFIG[data.sourceId];
-    if (!baseItemConfig) {
-      console.error(`[ItemFactory] 关键错误: 找不到ID为 ${data.sourceId} 的基础物品定义。`, data);
-      return null;
-    }
-
-    let finalItemData = { ...baseItemConfig, ...data };
-
-    // 如果是装备，需要特殊处理品质
-    if (finalItemData.type === 'equipment') {
-      const quality = data.quality || generateRandomQuality();
-      // applyQualityToEquipment 返回一个完整的装备对象，我们需要合并它
-      const equipmentWithQuality = applyQualityToEquipment(baseItemConfig, quality);
-      finalItemData = { ...equipmentWithQuality, ...data, quality };
-    }
-
-    const itemType = finalItemData.type;
-
-    switch (itemType) {
-      case 'equipment':
-        return new Equipment(finalItemData);
-      case 'consumable':
-        return new Consumable(finalItemData);
-      case 'material':
-        return new Material(finalItemData);
-      case 'quest':
-        return new QuestItem(finalItemData);
+    const config = FLATTENED_ITEM_CONFIG[data.sourceId || data.id] || {};
+    const itemData = { ...config, ...data };
+    
+    // 使用 category 字段来决定创建哪个类的实例
+    switch (itemData.category) {
+      case ITEM_TYPES.EQUIPMENT:
+        return new Equipment(itemData);
+      case ITEM_TYPES.CONSUMABLE:
+        return new Consumable(itemData);
+      case ITEM_TYPES.MATERIAL:
+        return new Material(itemData);
+      case ITEM_TYPES.QUEST:
+        return new QuestItem(itemData);
       default:
-        console.warn(`[ItemFactory] 未知的物品类型: ${itemType}`);
-        return new Item(finalItemData);
+        console.warn(`[ItemFactory] Unknown item category: "${itemData.category}" for item ID "${itemData.id}". Falling back to base Item.`);
+        return new Item(itemData); // 默认为基础物品
     }
   }
 
@@ -544,13 +519,12 @@ class InventoryManager extends EventEmitter {
   constructor(initialCapacity = 100) {
     super();
     this.items = new Map(); // 存储所有物品实例，以物品ID为键
-    this.slots = new Map(); // 模拟背包格子，格子索引 -> 物品ID
+    this.slots = new Array(initialCapacity).fill(null);
     this.capacity = initialCapacity; // 背包容量
     this.isLoading = false;
     this.error = null;
     this.autoSaveTimeout = null;
 
-    // 初始化插槽
     this.initializeSlots();
 
     console.log('[InventoryManager] 背包管理器初始化完成（无持久化）');

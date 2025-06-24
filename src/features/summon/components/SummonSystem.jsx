@@ -74,10 +74,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
     historyList,
     isHistoryModalOpen,
     setIsHistoryModalOpen,
-    isSummonCatalogModalOpen,
-    setIsSummonCatalogModalOpen,
   } = useSummonSystem(toasts, setToasts);
 
+  const [isSummonCatalogModalOpen, setIsSummonCatalogModalOpen] = useState(false);
   const [isEquipmentSelectorOpen, setIsEquipmentSelectorOpen] = useState(false);
   const [selectedSlotForEquipping, setSelectedSlotForEquipping] = useState(null);
   const [isSkillEditorOpen, setIsSkillEditorOpen] = useState(false);
@@ -239,9 +238,9 @@ const SummonSystem = ({ toasts, setToasts }) => {
 
   return (
     <div className="flex h-full bg-gray-800 text-white">
-      <div className="w-1/4 p-4 overflow-y-auto bg-gray-900">
-        <h2 className="text-xl font-bold mb-4">{uiText.summonSystem.mySummons} ({summonsList.length}/{maxSummons})</h2>
-        <div className="space-y-2">
+      <div className="w-1/4 p-4 bg-gray-900 flex flex-col">
+        <h2 className="text-xl font-bold mb-4 flex-shrink-0">{uiText.summonSystem.mySummons} ({summonsList.length}/{maxSummons})</h2>
+        <div className="space-y-2 flex-grow overflow-y-auto">
           {/* Summon List Items */}
           {summonsList.length > 0 ? (
             summonsList.map(summon => (
@@ -259,7 +258,7 @@ const SummonSystem = ({ toasts, setToasts }) => {
             </div>
           )}
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2 flex-shrink-0">
           <button
             onClick={() => setIsSummonCatalogModalOpen(true)}
             className="w-full bg-gray-700 px-4 py-2 rounded hover:bg-gray-600"
@@ -305,15 +304,13 @@ const SummonSystem = ({ toasts, setToasts }) => {
       </div>
 
       {/* Modals */}
+      {isHistoryModalOpen && <HistoryModal history={historyList} onClose={() => setIsHistoryModalOpen(false)} />}
       {isSummonCatalogModalOpen && (
         <SummonCatalog
+          isOpen={isSummonCatalogModalOpen}
           onClose={() => setIsSummonCatalogModalOpen(false)}
-          allSummons={Object.values(summonConfig)}
-          ownedSummonIds={summonsList.map(s => s.summonSourceId)}
-          onSummonSelected={(summonId) => console.log('Summon selected:', summonId)}
         />
       )}
-
       {isEquipmentSelectorOpen && (
         <EquippableItemsModal
           isOpen={isEquipmentSelectorOpen}

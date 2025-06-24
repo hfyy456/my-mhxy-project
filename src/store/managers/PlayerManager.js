@@ -25,6 +25,7 @@ class PlayerManager extends EventEmitter {
       totalSkillBooks: 0,
       totalEquipmentObtained: 0,
     };
+    this.discoveredSummons = new Set(); // 存储已发现的召唤兽ID
     
     // 初始化家园资源
     Object.values(HOMESTEAD_GENERAL_CONFIG.HOMESTEAD_RESOURCES).forEach(resourceConfig => {
@@ -37,6 +38,23 @@ class PlayerManager extends EventEmitter {
     
     console.log('[PlayerManager] Player state has been reset.');
     this.emit('state_changed', this.getState());
+  }
+
+  /**
+   * 发现一个新的召唤兽，用于图鉴系统
+   * @param {string} summonId - 召唤兽的模板ID
+   * @returns {boolean} - 如果是新发现的，返回true
+   */
+  discoverSummon(summonId) {
+    if (!summonId || this.discoveredSummons.has(summonId)) {
+      return false;
+    }
+    
+    this.discoveredSummons.add(summonId);
+    console.log(`[PlayerManager] New summon discovered: ${summonId}`);
+    this.emit('discovered_new_summon', summonId);
+    this.emit('state_changed', this.getState()); // 通知状态变更
+    return true;
   }
 
   /**
@@ -209,6 +227,7 @@ class PlayerManager extends EventEmitter {
       maxInventorySlots: this.maxInventorySlots,
       achievements: [...this.achievements],
       statistics: { ...this.statistics },
+      discoveredSummons: [...this.discoveredSummons], // 返回数组副本
     };
   }
   
@@ -227,6 +246,7 @@ class PlayerManager extends EventEmitter {
       resources: this.resources,
       achievements: this.achievements,
       statistics: this.statistics,
+      discoveredSummons: [...this.discoveredSummons], // 保存为数组
     };
   }
 
@@ -248,6 +268,7 @@ class PlayerManager extends EventEmitter {
 
     this.achievements = data.achievements || [];
     this.statistics = data.statistics || {};
+    this.discoveredSummons = new Set(data.discoveredSummons || []); // 从数组加载到Set
 
     // 重新计算派生属性
     this.maxSummons = playerBaseConfig.getMaxSummonsByLevel(this.level);

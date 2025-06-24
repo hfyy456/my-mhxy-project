@@ -4,6 +4,7 @@
  */
 import { EventEmitter } from "events";
 import playerManagerInstance from "./managers/PlayerManager"; // 修正路径
+import allSummonsConfig from "@/config/summon/allSummons.json";
 
 import {
   
@@ -22,6 +23,13 @@ class SummonManager extends EventEmitter {
     this.currentSummonId = null;
     this.maxSummons = 5; // 提供一个临时的默认值
     this.playerManager = null;
+    this.allSummonTemplates = this.loadAllSummonTemplates();
+  }
+
+  loadAllSummonTemplates() {
+    return Object.entries(allSummonsConfig).map(([id, templateData]) => {
+      return { ...templateData, id };
+    });
   }
 
   /**
@@ -54,6 +62,7 @@ class SummonManager extends EventEmitter {
       allSummons: Object.fromEntries(
         Object.entries(this.summons).map(([id, summon]) => [id, summon.toJSON()])
       ),
+      allSummonTemplates: this.allSummonTemplates,
       currentSummonId: this.currentSummonId,
       maxSummons: this.maxSummons,
     };

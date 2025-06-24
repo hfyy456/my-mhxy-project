@@ -16,13 +16,14 @@ import { useSummonManager } from "@/hooks/useSummonManager";
 import { summonConfig } from "@/config/summon/summonConfig";
 import { playerBaseConfig } from "@/config/character/playerConfig";
 import { useToast } from "@/hooks/useToast";
-import { unlockSummon } from '@/store/slices/summonCatalogSlice';
+import { usePlayerManager } from "@/hooks/usePlayerManager";
 
 export const Incubator = ({ toasts, setToasts }) => {
   const dispatch = useDispatch();
   const incubatingEggs = useSelector(selectIncubatingEggs);
   const completedEggs = useSelector(selectCompletedEggs);
   const { allSummons, createSummon } = useSummonManager();
+  const { player, manager: playerManager } = usePlayerManager();
   const [selectedEgg, setSelectedEgg] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [eggToCancel, setEggToCancel] = useState(null);
@@ -73,7 +74,7 @@ export const Incubator = ({ toasts, setToasts }) => {
   };
 
   const handleCompleteIncubation = (eggId) => {
-    const playerLevel = 1; // 这里需要从玩家状态中获取实际等级
+    const playerLevel = player.level || 1; // 从玩家状态中获取实际等级
     const currentSummonCount = Object.keys(allSummons).length;
     
     const action = dispatch(completeIncubation({ 
@@ -105,11 +106,8 @@ export const Incubator = ({ toasts, setToasts }) => {
         const summonData = summonConfig[summonType];
         const qualityDisplayName = getQualityDisplayName(summonQuality);
         
-        // 解锁图鉴
-        dispatch(unlockSummon({ 
-          summonSourceId: summonType, 
-          quality: summonQuality 
-        }));
+        // 使用PlayerManager解锁图鉴
+        playerManager.discoverSummon(summonType);
         
         showResult(`恭喜！获得了一只${qualityDisplayName}品质的${summonData.name}！`, "success");
       } else {

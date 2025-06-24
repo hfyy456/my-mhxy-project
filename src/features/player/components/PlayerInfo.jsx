@@ -1,10 +1,6 @@
-import React, { useState } from "react";
-import { useSelector } from "react-redux";
+import React, { useState, useMemo } from "react";
 import { usePlayerManager } from "@/hooks/usePlayerManager";
-import {
-  selectUnlockProgress,
-  selectQualityCounts,
-} from "@/store/slices/summonCatalogSlice";
+import { useSummonManager } from "@/hooks/useSummonManager";
 import { getQualityDisplayName } from "@/config/ui/uiTextConfig";
 import { qualityConfig } from "@/config/config";
 import { playerLevelConfig } from "@/config/character/playerConfig";
@@ -15,10 +11,31 @@ export const PlayerInfo = () => {
 
   // 使用我们新的、干净的玩家管理Hook
   const { player, manager: playerManager } = usePlayerManager();
-  
-  // 保留原有的图鉴进度（从Redux）
-  const unlockProgress = useSelector(selectUnlockProgress);
-  const qualityCounts = useSelector(selectQualityCounts);
+  const { allSummonTemplates } = useSummonManager();
+
+  // 从 PlayerManager 和 SummonManager 派生图鉴数据
+  const { unlockProgress, qualityCounts } = useMemo(() => {
+    const discovered = new Set(player.discoveredSummons || []);
+    const total = allSummonTemplates.length;
+    const unlocked = discovered.size;
+    
+    const qualityCounts = allSummonTemplates.reduce((acc, summon) => {
+      if (discovered.has(summon.id)) {
+        const quality = summon.quality || 'normal';
+        acc[quality] = (acc[quality] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    return {
+      unlockProgress: {
+        unlocked,
+        total,
+        percentage: total > 0 ? (unlocked / total) * 100 : 0,
+      },
+      qualityCounts,
+    };
+  }, [player.discoveredSummons, allSummonTemplates]);
 
   // 从player state中派生出UI所需的数据
   const expForNextLevel = player.level < playerLevelConfig.maxLevel
@@ -208,11 +225,10 @@ export const PlayerInfo = () => {
       <div className="bg-slate-800/90 rounded-xl p-6 border border-slate-700/60">
         <h3 className="text-lg font-semibold mb-4 text-slate-100">品质分布</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {qualityConfig.names.map((qualityKey) => {
+          {Object.keys(qualityConfig.names).map((qualityKey) => {
             const count = qualityCounts[qualityKey] || 0;
-            const ownedCount = summonStats.qualityStats[qualityKey] || 0;
             const qualityDisplayName = getQualityDisplayName(qualityKey);
-            const colorClass = `bg-quality-${qualityKey}`;
+            const colorClass = qualityConfig.bgColors[qualityKey] || 'bg-slate-500';
 
             return (
               <div key={qualityKey} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
@@ -220,7 +236,7 @@ export const PlayerInfo = () => {
                   <div className={`w-3 h-3 rounded-full ${colorClass} mr-2`}></div>
                   <span className="text-slate-300 text-sm">{qualityDisplayName}</span>
                 </div>
-                <span className="text-slate-400 text-sm">{ownedCount}只</span>
+                <span className="text-slate-400 text-sm">{count}只</span>
               </div>
             );
           })}

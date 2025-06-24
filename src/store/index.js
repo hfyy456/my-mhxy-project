@@ -6,7 +6,6 @@
  */
 import { configureStore } from '@reduxjs/toolkit';
 import incubatorReducer from '@/store/slices/incubatorSlice';
-import summonCatalogReducer from '@/store/slices/summonCatalogSlice';
 import questReducer from '@/store/slices/questSlice';
 import mapReducer from '@/store/slices/mapSlice';
 import npcReducer from '@/store/slices/npcSlice';
@@ -18,7 +17,6 @@ import towerReducer from '@/store/slices/towerSlice';
 const store = configureStore({
   reducer: {
     incubator: incubatorReducer,
-    summonCatalog: summonCatalogReducer,
     quests: questReducer,
     map: mapReducer,
     npcs: npcReducer,

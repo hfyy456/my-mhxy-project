@@ -2,15 +2,15 @@
  * @Author: Sirius 540363975@qq.com
  * @Date: 2025-05-17 03:08:02
  * @LastEditors: Sirius 540363975@qq.com
- * @LastEditTime: 2025-06-06 06:47:15
+ * @LastEditTime: 2025-06-07 05:25:18
  */
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useSelector, useDispatch } from "react-redux";
 
 // 使用图鉴系统和OOP召唤兽系统
 import { useSummonManager } from "../../../hooks/useSummonManager";
-import { summonConfig, qualityConfig } from "@/config/config";
+import { usePlayerManager } from "@/hooks/usePlayerManager";
+import { summonConfig } from "@/config/config";
 import { skillConfig } from "@/config/skill/skillConfig";
 import { FIVE_ELEMENT_COLORS, SUMMON_NATURE_CONFIG } from "@/config/enumConfig";
 import {
@@ -20,12 +20,6 @@ import {
   getQualityDisplayName,
   getSummonNatureTypeDisplayName,
 } from "@/config/ui/uiTextConfig";
-import {
-  selectUnlockedSummons,
-  selectUnlockProgress,
-  setFavorite,
-  unlockSummon,
-} from "../../../store/slices/summonCatalogSlice";
 
 // 加载召唤兽图片
 const images = import.meta.glob("@/assets/summons/*.png", {
@@ -211,7 +205,7 @@ const SummonDetailModal = ({
                   {Object.entries(summon.growthRates || {}).map(
                     ([attr, value]) => (
                       <div
-                        key={attr}
+                        key={`growth-${attr}`}
                         className="flex justify-between items-center"
                       >
                         <span className="text-slate-400">
@@ -235,7 +229,7 @@ const SummonDetailModal = ({
                   {Object.entries(summon.basicAttributeRanges || {}).map(
                     ([attr, range]) => (
                       <div
-                        key={attr}
+                        key={`range-${attr}`}
                         className="flex justify-between items-center"
                       >
                         <span className="text-slate-400">
@@ -256,17 +250,33 @@ const SummonDetailModal = ({
                   初始技能
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {summon.initialSkills?.map((skillId) => {
+                  {(summon.guaranteedInitialSkills || []).map((skillId) => {
                     const skill = skillConfig.find((s) => s.id === skillId);
                     return (
                       <span
-                        key={skillId}
+                        key={`gskill-${skillId}`}
+                        title={skill?.description || '必带技能'}
+                        className="px-3 py-1 text-sm font-medium rounded-full bg-yellow-600 text-yellow-900"
+                      >
+                        {isUnlocked ? skill?.name || skillId : "???"}
+                      </span>
+                    );
+                  })}
+                  {(summon.initialSkillPool || []).map((skillId, index) => {
+                    const skill = skillConfig.find((s) => s.id === skillId);
+                    return (
+                      <span
+                        key={`pskill-${skillId}-${index}`}
+                        title={skill?.description || '可能携带的技能'}
                         className="px-3 py-1 text-sm font-medium rounded-full bg-sky-700 text-sky-100"
                       >
                         {isUnlocked ? skill?.name || skillId : "???"}
                       </span>
                     );
-                  }) || <span className="text-slate-400">无初始技能</span>}
+                  })}
+                  {(!summon.guaranteedInitialSkills && !summon.initialSkillPool) && (
+                    <span className="text-slate-400">无初始技能</span>
+                  )}
                 </div>
               </div>
 
@@ -301,121 +311,62 @@ const SummonDetailModal = ({
 };
 
 const SummonCatalog = ({ isOpen, onClose }) => {
-  const dispatch = useDispatch();
-  const unlockedSummons = useSelector(selectUnlockedSummons);
-  const unlockProgress = useSelector(selectUnlockProgress);
-  const favoriteSummons = useSelector(
-    (state) => state.summonCatalog.favoriteSummons || []
-  );
+  const { allSummonTemplates = [], ...summonManagerRest } = useSummonManager();
+  const { player: playerState, manager: playerManager } = usePlayerManager();
+  const unlockedSummons = useMemo(() => new Set(playerState.discoveredSummons || []), [playerState.discoveredSummons]);
+
+  const [selectedSummonId, setSelectedSummonId] = useState(null);
+  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
   
-  // 使用OOP召唤兽管理系统
-  const { manager } = useSummonManager();
-
-  // 筛选状态
-  const [filters, setFilters] = useState({
-    type: "all",
-    quality: "all",
-    element: "all",
-    onlyUnlocked: false,
-    onlyFavorites: false,
-    searchText: "",
+  // 收藏状态暂时移至本地管理
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const savedFavorites = localStorage.getItem('summon_catalog_favorites');
+      return savedFavorites ? new Set(JSON.parse(savedFavorites)) : new Set();
+    } catch (error) {
+      return new Set();
+    }
   });
 
-  // 详细视图状态
-  const [detailModal, setDetailModal] = useState({
-    isOpen: false,
-    summonSourceId: null,
-  });
+  const unlockedCount = unlockedSummons.size;
+  const totalCount = allSummonTemplates.length;
+  const unlockProgress = totalCount > 0 ? (unlockedCount / totalCount) * 100 : 0;
 
-  // 获取所有召唤兽条目
-  const summonEntries = Object.entries(summonConfig);
-
-  // 筛选后的召唤兽
-  const filteredSummons = useMemo(() => {
-    return summonEntries.filter(([summonSourceId, summon]) => {
-      // 类型筛选
-      if (filters.type !== "all" && summon.type !== filters.type) {
-        return false;
-      }
-
-      // 品质筛选
-      if (filters.quality !== "all" && summon.quality !== filters.quality) {
-        return false;
-      }
-
-      // 五行筛选
-      if (filters.element !== "all" && summon.fiveElement !== filters.element) {
-        return false;
-      }
-
-      // 仅显示已解锁
-      if (filters.onlyUnlocked && !unlockedSummons[summonSourceId]) {
-        return false;
-      }
-
-      // 仅显示收藏
-      if (filters.onlyFavorites && !favoriteSummons.includes(summonSourceId)) {
-        return false;
-      }
-
-      // 文本搜索
-      if (
-        filters.searchText &&
-        !summon.name.toLowerCase().includes(filters.searchText.toLowerCase())
-      ) {
-        return false;
-      }
-
-      return true;
+  // 调试用：解锁所有图鉴
+  const unlockAllForDebug = () => {
+    allSummonTemplates.forEach(template => {
+      playerManager.discoverSummon(template.id);
     });
-  }, [summonEntries, filters, unlockedSummons, favoriteSummons]);
-
-  // 获取唯一的类型、品质、五行列表
-  const uniqueTypes = [
-    ...new Set(summonEntries.map(([_, summon]) => summon.type)),
-  ];
-  const uniqueQualities = [
-    ...new Set(
-      summonEntries.map(([_, summon]) => summon.quality).filter(Boolean)
-    ),
-  ];
-  const uniqueElements = [
-    ...new Set(summonEntries.map(([_, summon]) => summon.fiveElement)),
-  ];
+  };
 
   const handleSelectSummon = (summonSourceId) => {
-    // 使用OOP系统创建召唤兽实例
-    const result = manager.createSummon(summonSourceId);
-
-    if (result) {
-      // 解锁图鉴
-      if (!unlockedSummons[summonSourceId]) {
-        const summonInfo = summonConfig[summonSourceId];
-        dispatch(
-          unlockSummon({
-            summonSourceId,
-            quality: summonInfo.quality || "normal",
-          })
-        );
-      }
-
-      onClose();
-    } else {
-      console.error("创建召唤兽失败");
+    const summon = allSummonTemplates.find((s) => s.id === summonSourceId);
+    if (summon) {
+      openDetailModal(summonSourceId);
     }
   };
 
   const openDetailModal = (summonSourceId) => {
-    setDetailModal({ isOpen: true, summonSourceId });
+    setSelectedSummonId(summonSourceId);
+    setDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    setDetailModal({ isOpen: false, summonSourceId: null });
+    setDetailModalOpen(false);
+    setSelectedSummonId(null);
   };
 
   const toggleFavorite = (summonSourceId) => {
-    const isFavorite = favoriteSummons.includes(summonSourceId);
-    dispatch(setFavorite({ summonSourceId, isFavorite: !isFavorite }));
+    setFavorites(prevFavorites => {
+      const newFavorites = new Set(prevFavorites);
+      if (newFavorites.has(summonSourceId)) {
+        newFavorites.delete(summonSourceId);
+      } else {
+        newFavorites.add(summonSourceId);
+      }
+      localStorage.setItem('summon_catalog_favorites', JSON.stringify([...newFavorites]));
+      return newFavorites;
+    });
   };
 
   if (!isOpen) return null;
@@ -423,7 +374,7 @@ const SummonCatalog = ({ isOpen, onClose }) => {
   // 处理ESC键关闭主模态框
   React.useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !detailModal.isOpen) {
+      if (event.key === 'Escape' && !isDetailModalOpen) {
         onClose();
       }
     };
@@ -435,11 +386,11 @@ const SummonCatalog = ({ isOpen, onClose }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, detailModal.isOpen, onClose]);
+  }, [isOpen, isDetailModalOpen, onClose]);
 
   // 处理主模态框背景点击关闭
   const handleMainBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !detailModal.isOpen) {
+    if (e.target === e.currentTarget && !isDetailModalOpen) {
       onClose();
     }
   };
@@ -455,335 +406,159 @@ const SummonCatalog = ({ isOpen, onClose }) => {
       onClick={handleMainBackdropClick}
     >
       <div 
-        className="bg-theme-modal rounded-xl w-full max-w-7xl max-h-[88vh] overflow-hidden shadow-2xl shadow-purple-500/30 flex flex-col"
+        className="relative bg-theme-modal rounded-xl w-full max-w-7xl max-h-[90vh] flex flex-col shadow-2xl"
         onClick={handleMainContentClick}
       >
-        <div className="flex justify-between items-center p-5 border-b border-slate-700">
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center p-4 border-b border-slate-700">
           <h2 className="text-2xl font-bold text-purple-300">召唤兽图鉴</h2>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="text-slate-400">
-                总进度:{" "}
-                <span className="text-white font-semibold">
-                  {unlockProgress.unlocked}/{unlockProgress.total}
-                </span>{" "}
-                ({unlockProgress.percentage.toFixed(1)}%)
-              </div>
-              <div className="h-4 w-px bg-slate-600"></div>
-              <div className="flex items-center gap-3">
-                {/* 品质统计 */}
-                {qualityConfig.names.map((quality) => {
-                  const totalOfQuality = summonEntries.filter(
-                    ([_, summon]) => summon.quality === quality
-                  ).length;
-                  const unlockedOfQuality = summonEntries.filter(
-                    ([summonSourceId, summon]) =>
-                      summon.quality === quality &&
-                      unlockedSummons[summonSourceId]
-                  ).length;
-
-                  if (totalOfQuality === 0) return null;
-
-                  return (
-                    <div key={quality} className="flex items-center gap-1">
-                      <div
-                        className={`w-3 h-3 rounded-full ${qualityConfig.bgColors[quality]}`}
-                      ></div>
-                      <span className="text-xs text-slate-400">
-                        {unlockedOfQuality}/{totalOfQuality}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <button onClick={unlockAllForDebug} className="text-xs px-2 py-1 bg-yellow-600 rounded">调试：解锁全部</button>
+            <button
+              className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-full"
+              onClick={onClose}
+              aria-label="Close catalog"
+            >
+              <i className="fas fa-times text-xl"></i>
+            </button>
           </div>
-          <button
-            className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-full"
-            onClick={onClose}
-            aria-label="Close catalog"
-          >
-            <i className="fas fa-times text-xl"></i>
-          </button>
         </div>
 
-        {/* 筛选器区域 */}
-        <div className="p-4 border-b border-slate-700 bg-slate-700/60 space-y-3">
-          {/* 搜索框 */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-              <input
-                type="text"
-                placeholder="搜索召唤兽名称..."
-                value={filters.searchText}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    searchText: e.target.value,
-                  }))
-                }
-                className="w-full pl-10 pr-4 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-400"
-              />
-            </div>
+        {/* 主内容区 */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {allSummonTemplates.map((summon) => {
+              const isUnlocked = unlockedSummons.has(summon.id);
+              const imageUrl =
+                images[`/src/assets/summons/${summon.id}.png`]?.default ||
+                images["/src/assets/summons/default.png"]?.default;
 
-            {/* 快速筛选按钮 */}
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    onlyUnlocked: !prev.onlyUnlocked,
-                  }))
-                }
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filters.onlyUnlocked
-                    ? "bg-purple-600 text-white"
-                    : "bg-slate-600 text-slate-300 hover:bg-slate-500"
-                }`}
-              >
-                <i className="fas fa-unlock mr-1"></i>
-                已解锁
-              </button>
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    onlyFavorites: !prev.onlyFavorites,
-                  }))
-                }
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filters.onlyFavorites
-                    ? "bg-yellow-600 text-white"
-                    : "bg-slate-600 text-slate-300 hover:bg-slate-500"
-                }`}
-              >
-                <i className="fas fa-star mr-1"></i>
-                收藏
-              </button>
-
-              {/* 开发者调试按钮 */}
-              {process.env.NODE_ENV === "development" && (
-                <button
-                  onClick={() => {
-                    // 解锁所有召唤兽用于测试
-                    Object.entries(summonConfig).forEach(
-                      ([summonSourceId, summon]) => {
-                        if (!unlockedSummons[summonSourceId]) {
-                          dispatch(
-                            unlockSummon({
-                              summonSourceId,
-                              quality: summon.quality || "normal",
-                            })
-                          );
-                        }
-                      }
-                    );
-                  }}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-500 transition-colors"
-                  title="开发者测试：解锁所有召唤兽"
+              return (
+                <div
+                  key={summon.id}
+                  className="group bg-slate-700/70 rounded-lg p-3 shadow-lg hover:shadow-purple-500/30 transition-all duration-300 transform hover:-translate-y-1 flex flex-col border border-slate-600 hover:border-purple-400/80 relative"
                 >
-                  <i className="fas fa-key mr-1"></i>
-                  解锁全部
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 详细筛选 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 类型筛选 */}
-            <select
-              value={filters.type}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, type: e.target.value }))
-              }
-              className="bg-slate-600 border border-slate-500 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400"
-            >
-              <option value="all">所有类型</option>
-              {uniqueTypes.map((type) => (
-                <option key={type} value={type}>
-                  {getPetTypeDisplayName(type)}
-                </option>
-              ))}
-            </select>
-
-            {/* 品质筛选 */}
-            <select
-              value={filters.quality}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, quality: e.target.value }))
-              }
-              className="bg-slate-600 border border-slate-500 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400"
-            >
-              <option value="all">所有品质</option>
-              {uniqueQualities.map((quality) => (
-                <option key={quality} value={quality}>
-                  {getQualityDisplayName(quality)}
-                </option>
-              ))}
-            </select>
-
-            {/* 五行筛选 */}
-            <select
-              value={filters.element}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, element: e.target.value }))
-              }
-              className="bg-slate-600 border border-slate-500 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400"
-            >
-              <option value="all">所有五行</option>
-              {uniqueElements.map((element) => (
-                <option key={element} value={element}>
-                  {getFiveElementDisplayName(element)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* 召唤兽网格 */}
-        <div className="overflow-y-auto p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(88vh-240px)]">
-          {filteredSummons.length === 0 && (
-            <div className="col-span-full text-center py-10">
-              <p className="text-slate-400 text-lg">未找到符合条件的召唤兽。</p>
-            </div>
-          )}
-
-          {filteredSummons.map(([summonSourceId, summon]) => {
-            const imageUrl =
-              (summonSourceId &&
-                images[`/src/assets/summons/${summonSourceId}.png`]?.default) ||
-              images["/src/assets/summons/default.png"]?.default;
-
-            const isUnlocked = !!unlockedSummons[summonSourceId];
-            const isFavorite = favoriteSummons.includes(summonSourceId);
-            const typeColorClass = summon.color
-              ? `border-${summon.color}`
-              : "border-slate-500";
-
-            return (
-              <div
-                key={summonSourceId}
-                className="group bg-slate-700/70 rounded-lg p-3 shadow-lg hover:shadow-purple-500/30 transition-all duration-300 transform hover:-translate-y-1 flex flex-col border border-slate-600 hover:border-purple-400/80 relative"
-              >
-                {/* 收藏按钮 */}
-                {isUnlocked && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(summonSourceId);
-                    }}
-                    className={`absolute top-2 right-2 p-1 rounded-full transition-colors z-10 ${
-                      isFavorite
-                        ? "text-yellow-400 hover:text-yellow-300"
-                        : "text-slate-400 hover:text-yellow-400"
-                    }`}
-                    title={isFavorite ? "取消收藏" : "添加收藏"}
-                  >
-                    <i className={`fas fa-star text-sm`}></i>
-                  </button>
-                )}
-
-                {/* 解锁状态指示器 */}
-                {!isUnlocked && (
-                  <div className="absolute top-2 left-2 bg-slate-800 rounded-full p-1">
-                    <i className="fas fa-lock text-slate-400 text-xs"></i>
-                  </div>
-                )}
-
-                <div className="flex items-start mb-2">
-                  <div
-                    className={`w-16 h-16 flex-shrink-0 mr-3 bg-slate-600/50 rounded-md flex items-center justify-center overflow-hidden border-2 ${typeColorClass} transition-colors duration-300 cursor-pointer`}
-                    onClick={() => openDetailModal(summonSourceId)}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={summon.name}
-                      className={`w-full h-full object-contain transition-transform duration-300 group-hover:scale-105 ${
-                        !isUnlocked ? "filter grayscale opacity-50" : ""
-                      }`}
-                      onError={(e) => {
-                          e.target.src =
-                          images["/src/assets/summons/default.png"]?.default;
+                  {/* 收藏按钮 */}
+                  {isUnlocked && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(summon.id);
                       }}
-                    />
-                  </div>
-
-                  <div className="flex-grow min-w-0">
-                    <h3
-                      className="text-sm font-semibold text-purple-300 mb-1 truncate cursor-pointer hover:text-purple-200"
-                      title={summon.name}
-                      onClick={() => openDetailModal(summonSourceId)}
+                      className={`absolute top-2 right-2 p-1 rounded-full transition-colors z-10 ${
+                        favorites.has(summon.id)
+                          ? "text-yellow-400 hover:text-yellow-300"
+                          : "text-slate-400 hover:text-yellow-400"
+                      }`}
+                      title={favorites.has(summon.id) ? "取消收藏" : "添加收藏"}
                     >
-                      {isUnlocked ? summon.name : "???"}
-                    </h3>
-                    <div className="space-y-1">
-                      <span
-                        className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${
-                          summon.color?.split("-")[0]
-                        }-600 text-${summon.color?.split("-")[0]}-100`}
+                      <i className={`fas fa-star text-sm`}></i>
+                    </button>
+                  )}
+
+                  {/* 解锁状态指示器 */}
+                  {!isUnlocked && (
+                    <div className="absolute top-2 left-2 bg-slate-800 rounded-full p-1">
+                      <i className="fas fa-lock text-slate-400 text-xs"></i>
+                    </div>
+                  )}
+
+                  <div className="flex items-start mb-2">
+                    <div
+                      className={`w-16 h-16 flex-shrink-0 mr-3 bg-slate-600/50 rounded-md flex items-center justify-center overflow-hidden border-2 ${
+                        summon.color
+                          ? `border-${summon.color}`
+                          : "border-slate-500"
+                      } transition-colors duration-300 cursor-pointer`}
+                      onClick={() => openDetailModal(summon.id)}
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={summon.name}
+                        className={`w-full h-full object-contain transition-transform duration-300 group-hover:scale-105 ${
+                          !isUnlocked ? "filter grayscale opacity-50" : ""
+                        }`}
+                        onError={(e) => {
+                          e.target.src =
+                            images["/src/assets/summons/default.png"]?.default;
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex-grow min-w-0">
+                      <h3
+                        className="text-sm font-semibold text-purple-300 mb-1 truncate cursor-pointer hover:text-purple-200"
+                        title={summon.name}
+                        onClick={() => openDetailModal(summon.id)}
                       >
-                        {isUnlocked
-                          ? getPetTypeDisplayName(summon.type)
-                          : "???"}
-                      </span>
-                      {summon.quality && isUnlocked && (
+                        {isUnlocked ? summon.name : "???"}
+                      </h3>
+                      <div className="space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-${
+                            summon.color?.split("-")[0]
+                          }-600 text-${summon.color?.split("-")[0]}-100`}
+                        >
+                          {isUnlocked
+                            ? getPetTypeDisplayName(summon.type)
+                            : "???"}
+                        </span>
+                        {summon.quality && isUnlocked && (
                           <span 
-                          className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ml-1 ${
-                            qualityConfig.bgColors?.[summon.quality] ||
-                            "bg-slate-600"
+                            className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ml-1 ${
+                              qualityConfig.bgColors?.[summon.quality] ||
+                              "bg-slate-600"
                             } ${
-                            qualityConfig.textColors?.[summon.quality] ||
-                            "text-slate-100"
+                              qualityConfig.textColors?.[summon.quality] ||
+                              "text-slate-100"
                             }`}
                           >
-                          {getQualityDisplayName(summon.quality)}
+                            {getQualityDisplayName(summon.quality)}
                           </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col flex-grow">
-                  <p className="text-xs text-slate-400 line-clamp-2 mb-2 flex-shrink-0">
-                    {isUnlocked ? summon.background : "获得后解锁详细信息"}
-                  </p>
-
-                  <div className="mt-auto pt-2 space-y-2">
-                    {isUnlocked && (
-                      <div className="flex flex-wrap gap-1">
-                        <span
-                          className={`inline-block px-1.5 py-0.5 text-xs rounded-full ${
-                            FIVE_ELEMENT_COLORS[summon.fiveElement] ||
-                            "bg-gray-500 text-white"
-                          }`}
-                        >
-                          {getFiveElementDisplayName(summon.fiveElement)}
-                              </span>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleSelectSummon(summonSourceId)}
-                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium py-1.5 px-2 rounded transition-colors"
-                      >
-                        {isUnlocked ? "选择" : "获得"}
-                      </button>
-                      <button
-                        onClick={() => openDetailModal(summonSourceId)}
-                        className="bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium py-1.5 px-2 rounded transition-colors"
-                        title="查看详情"
-                            >
-                        <i className="fas fa-info"></i>
-                      </button>
+                  <div className="flex flex-col flex-grow">
+                    <p className="text-xs text-slate-400 line-clamp-2 mb-2 flex-shrink-0">
+                      {isUnlocked ? summon.background : "获得后解锁详细信息"}
+                    </p>
+
+                    <div className="mt-auto pt-2 space-y-2">
+                      {isUnlocked && (
+                        <div className="flex flex-wrap gap-1">
+                          <span
+                            className={`inline-block px-1.5 py-0.5 text-xs rounded-full ${
+                              FIVE_ELEMENT_COLORS[summon.fiveElement] ||
+                              "bg-gray-500 text-white"
+                            }`}
+                          >
+                            {getFiveElementDisplayName(summon.fiveElement)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSelectSummon(summon.id)}
+                          className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium py-1.5 px-2 rounded transition-colors"
+                        >
+                          {isUnlocked ? "选择" : "获得"}
+                        </button>
+                        <button
+                          onClick={() => openDetailModal(summon.id)}
+                          className="bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium py-1.5 px-2 rounded transition-colors"
+                          title="查看详情"
+                        >
+                          <i className="fas fa-info"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -794,19 +569,17 @@ const SummonCatalog = ({ isOpen, onClose }) => {
       {createPortal(mainModalContent, document.body)}
 
       {/* 详细信息模态框 */}
-      <SummonDetailModal
-        summon={
-          detailModal.summonSourceId
-            ? summonConfig[detailModal.summonSourceId]
-            : null
-        }
-        summonSourceId={detailModal.summonSourceId}
-        isOpen={detailModal.isOpen}
-        onClose={closeDetailModal}
-        isUnlocked={!!unlockedSummons[detailModal.summonSourceId]}
-        isFavorite={favoriteSummons.includes(detailModal.summonSourceId)}
-        onToggleFavorite={() => toggleFavorite(detailModal.summonSourceId)}
-      />
+      {selectedSummonId && (
+        <SummonDetailModal
+          summon={allSummonTemplates.find((s) => s.id === selectedSummonId)}
+          summonSourceId={selectedSummonId}
+          isOpen={isDetailModalOpen}
+          onClose={closeDetailModal}
+          isUnlocked={unlockedSummons.has(selectedSummonId)}
+          isFavorite={favorites.has(selectedSummonId)}
+          onToggleFavorite={() => toggleFavorite(selectedSummonId)}
+        />
+      )}
     </>
   );
 };
